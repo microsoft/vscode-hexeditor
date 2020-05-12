@@ -1,0 +1,36 @@
+
+.column {
+    cursor: default;
+    float: left;
+    font-size: larger;
+    font-family: 'Courier New', Courier, monospace;
+}
+  
+.left {
+    text-align: right;
+    padding-right:  10px;
+}
+
+.right {
+    width: 25%;
+    padding-right: 10px;
+}
+
+  
+.middle {
+    width: 60%;
+}
+
+.middle>span:nth-child(8n){
+    padding-right: 15px;
+}
+
+.middle>span:nth-child(16n)::after {
+    content: '\A';
+    white-space: pre;
+    
+}
+
+.middle>span {
+    padding: 1px 5px 1px 4px;
+}

@@ -3,6 +3,9 @@
 	"displayName": "HexEditor",
 	"description": "Allows Hex Editing inside VS Code",
 	"version": "0.0.1",
+	"enableProposedApi": true,
+	"repository": "https://github.com/lramos15/hexeditor",
+	"license": "MIT",
 	"engines": {
 		"vscode": "^1.45.0"
 	},
@@ -10,14 +13,20 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:hexeditor.helloWorld"
+		"onCustomEditor:hexEditor.hexedit"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"commands": [
+		"customEditors": [
 			{
-				"command": "hexeditor.helloWorld",
-				"title": "Hello World"
+				"viewType": "hexEditor.hexedit",
+				"displayName": "Hex Editor",
+				"selector": [
+					{
+						"filenamePattern": "*.*"
+					}
+				],
+				"priority": "option"
 			}
 		]
 	},
