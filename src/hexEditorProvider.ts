@@ -106,9 +106,40 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 				<title>Hex Editor</title>
 			</head>
 			<body>
-				<div class="column left" id="hexaddr"></div>
-				<div class="column middle" id="hexbody"></div>
-				<div class="column right" id="ascii"></div>
+				<div class="column" id="data-inspector">
+					<div class="header">Data Inspector</div>
+					<div class="grid-container">
+						<div class="grid-item">
+							<label for="binary8">8 bit Binary</label>
+						</div>
+						<div class="grid-item">
+							<input type="text" autocomplete="off" spellcheck="off" id="binary8" readonly/>
+						</div>
+						<div class="grid-item">
+							<label for="int8">Int8</label>
+						</div>
+						<div class="grid-item">
+							<input type="text" autocomplete="off" spellcheck="off" id="int8" readonly/>
+						</div>
+						<div class="grid-item">
+							<label for="uint8">UInt8</label>
+						</div>
+						<div class="grid-item">
+							<input type="text" autocomplete="off" spellcheck="off" id="uint8" readonly/>
+						</div>
+					</div>
+				</div>
+				<div class="column left" id="hexaddr">
+					<div class="header">Memory Offset </div>
+				</div>
+				<div class="column middle" id="hexbody">
+					<div class="header">
+						<span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0A</span><span>0B</span><span>0C</span><span>0D</span><span>0E</span><span>0F</span>
+					</div>
+				</div>
+				<div class="column right" id="ascii">
+					<div class="header">Decoded Text</div>
+				</div>
 				<script nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 			</html>`;

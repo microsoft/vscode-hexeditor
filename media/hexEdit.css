@@ -1,36 +1,111 @@
 
+/* Disable selection color because select is different in the custom editor */
+::selection {
+    color: none;
+    background: none;
+}
+
 .column {
     cursor: default;
     float: left;
+    padding-right: 10px;
     font-size: larger;
+    font-weight: var(--vsocde-editor-font-weight);
+    /* font-size: var(--vsocde-editor-font-size); */
     font-family: 'Courier New', Courier, monospace;
+}
+
+
+.grid-container {
+    display: grid;
+    grid-template-columns: auto auto;
+    padding-top: 3px;
+    align-items: center;
+}
+
+.grid-item {
+    text-align: center;
+}
+
+.grid-item:nth-child(2n) {
+    padding-left: 15px;
 }
   
 .left {
     text-align: right;
-    padding-right:  10px;
+}
+.left > div:not(.header) {
+    background-color: rgba(169, 169, 169, 0.4);
 }
 
-.right {
-    width: 25%;
-    padding-right: 10px;
-}
-
-  
-.middle {
-    width: 60%;
-}
-
-.middle>span:nth-child(8n){
-    padding-right: 15px;
-}
-
-.middle>span:nth-child(16n)::after {
+.middle > span:nth-child(16n + 1)::after {
     content: '\A';
     white-space: pre;
     
 }
 
-.middle>span {
+.middle > span {
     padding: 1px 5px 1px 4px;
+}
+
+.right > span:nth-child(16n + 1)::after {
+    content: '\A';
+    white-space: pre;
+    
+}
+
+.right > span {
+    padding: 1px 5px 1px 4px;
+    text-align: right;
+}
+
+.nongraphic {
+    color: rgba(0, 100, 150, 0.8);
+}
+
+.header {
+    position: sticky;
+    top: 0px;
+    border-bottom: 1px solid gray;
+}
+
+/* Colors of the headers in the various themes */
+body.vscode-dark > .column > .header {
+    background-color: darkblue;
+}
+
+body.vscode-light > .column > .header {
+    background-color: lightblue;
+}
+
+body.vscode-high-contrast > .column > .header {
+    background-color: orange;
+}
+
+.header > span {
+    padding: 1px 5px 1px 4px;
+}
+
+.right > .header {
+    padding-left: 5px;
+}
+
+.hover {
+    background-color: var(--vscode-editor-hoverHighlightBackground);
+}
+
+.selected {
+    background-color: var(--vscode-editor-selectionBackground);
+    color: var(--vscode-editor-selectionForeground);
+}
+
+input {
+    background-color: var(--vscode-input-background);
+    border-width: 0;
+    color: var(--vscode-input-foreground);
+}
+
+input:focus {
+    background-color: var(--vscode-input-activeBackground);
+    outline-color: var(--vscode-focusBorder);
 }
