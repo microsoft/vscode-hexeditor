@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
-import { Disposable, disposeAll } from './dispose';
+import * as vscode from "vscode";
+import { Disposable } from "./dispose";
 
 interface HexDocumentDelegate {
     getFileData(): Promise<Uint8Array>;
@@ -12,10 +12,10 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		delegate: HexDocumentDelegate,
 	): Promise<HexDocument | PromiseLike<HexDocument> > {
 		// If we have a backup, read that. Otherwise read the resource from the workspace
-		const dataFile = typeof backupId === 'string' ? vscode.Uri.parse(backupId) : uri;
+		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
 		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
 		let fileData: Uint8Array;
-		const maxFileSize = (vscode.workspace.getConfiguration().get('hexeditor.maxFileSize') as number ) * 100000;
+		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number ) * 100000;
 		if (fileSize > maxFileSize) {
 			fileData = new Uint8Array();
 		} else {
@@ -26,7 +26,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	private readonly _uri: vscode.Uri;
 
-	private readonly _bytesize: Number;
+	private readonly _bytesize: number;
 
 	private _documentData: Uint8Array;
 
@@ -36,7 +36,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		uri: vscode.Uri,
 		initialContent: Uint8Array,
 		delegate: HexDocumentDelegate,
-		fileSize: Number
+		fileSize: number
 	) {
 		super();
 		this._uri = uri;
@@ -45,9 +45,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._bytesize = fileSize;
     }
     
-	public get uri() { return this._uri; }
+	public get uri(): vscode.Uri { return this._uri; }
 	
-	public get filesize() { return this._bytesize; }
+	public get filesize(): number  { return this._bytesize; }
 
 	public get documentData(): Uint8Array { return this._documentData; }
 
@@ -66,7 +66,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	
 	// Opens the file overriding any filesize restrictions
 	// This doesn't update the fileSize so we don't need to change that
-	async openAnyways() {
+	async openAnyways(): Promise<void> {
 		this._documentData = await vscode.workspace.fs.readFile(this.uri);
 	}
 

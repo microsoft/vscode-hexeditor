@@ -24,7 +24,7 @@ export class WebviewCollection {
 	/**
 	 * Add a new webview to the collection.
 	 */
-	public add(uri: vscode.Uri, webviewPanel: vscode.WebviewPanel) {
+	public add(uri: vscode.Uri, webviewPanel: vscode.WebviewPanel): void {
 		const entry = { resource: uri.toString(), webviewPanel };
 		this._webviews.add(entry);
 

@@ -1,21 +1,21 @@
-import * as vscode from 'vscode';
-import { HexDocument } from './hexDocument';
-import { disposeAll } from './dispose';
-import { WebviewCollection } from './webViewCollection';
-import path = require('path');
-import { getNonce } from './util';
+import * as vscode from "vscode";
+import { HexDocument } from "./hexDocument";
+import { disposeAll } from "./dispose";
+import { WebviewCollection } from "./webViewCollection";
+import path = require("path");
+import { getNonce } from "./util";
 export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<HexDocument> {
-    public static register(context: vscode.ExtensionContext) : vscode.Disposable {
+    public static register(context: vscode.ExtensionContext): vscode.Disposable {
         return vscode.window.registerCustomEditorProvider2(
             HexEditorProvider.viewType,
             new HexEditorProvider(context),
             {
                 supportsMultipleEditorsPerDocument: false
             }
-        ) 
+        ); 
     }
 
-    private static readonly viewType = 'hexEditor.hexedit';
+    private static readonly viewType = "hexEditor.hexedit";
 
     private readonly webviews = new WebviewCollection();
 
@@ -32,10 +32,10 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
             getFileData: async() => {
                 const webviewsForDocument: any = Array.from(this.webviews.get(document.uri));
 				if (!webviewsForDocument.length) {
-					throw new Error('Could not find webview to save for');
+					throw new Error("Could not find webview to save for");
 				}
                 const panel = webviewsForDocument[0];
-                const response = await this.postMessageWithResponse<{ data: number[] }>(panel, 'getFileData', {});
+                const response = await this.postMessageWithResponse<{ data: number[] }>(panel, "getFileData", {});
 				return new Uint8Array(response.data);
             }
         });
@@ -65,8 +65,8 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 
 		// Wait for the webview to be properly ready before we init
 		webviewPanel.webview.onDidReceiveMessage(e => {
-			if (e.type === 'ready') {
-				this.postMessage(webviewPanel, 'init', {
+			if (e.type === "ready") {
+				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
 					value: document.documentData,
 					html: document.documentData.length === document.filesize ? this.getBodyHTML() : undefined
@@ -75,13 +75,13 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 		});
 
 		webviewPanel.webview.onDidReceiveMessage(async e => {
-			if (e.type == 'open-anyways') {
+			if (e.type == "open-anyways") {
 				await document.openAnyways();
-				this.postMessage(webviewPanel, 'init', {
+				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
 					value: document.documentData,
 					html: this.getBodyHTML()
-				})
+				});
 			}
 		});
     }
@@ -92,10 +92,10 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Local path to script and css for the webview
 		const scriptUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, 'media', 'hexEdit.js')
+			path.join(this._context.extensionPath, "media", "hexEdit.js")
 		));
 		const styleUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, 'media', 'hexEdit.css')
+			path.join(this._context.extensionPath, "media", "hexEdit.css")
 		));
 
 		// Use a nonce to whitelist which scripts can be run
@@ -125,7 +125,7 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 			</html>`;
 	}
 
-	private getBodyHTML() {
+	private getBodyHTML(): string {
 		return `
 		<div class="column" id="data-inspector">
 			<div class="header">Data Inspector</div>
@@ -177,11 +177,11 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 		panel.webview.postMessage({ type, body });
 	}
 
-	private onMessage(document: HexDocument, message: any) {
+	private onMessage(document: HexDocument, message: any): void {
 		console.log(message);
 		switch(message.type) {
-			case 'edit':
-				vscode.window.showInformationMessage('This editor is currently readonly.');
+			case "edit":
+				vscode.window.showInformationMessage("This editor is currently readonly.");
 				return;
 		}
 	}
