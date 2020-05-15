@@ -17,6 +17,19 @@
 	],
 	"main": "./out/extension.js",
 	"contributes": {
+		"configuration":[
+			{
+				"title": "Hex Editor",
+				"properties": {
+					"hexeditor.maxFileSize": {
+						"type": "number",
+						"minimum": 0,
+						"default": 100,
+						"description": "The max file size (in MB) that the editor will try to open before warning you."
+					}
+				}
+			}
+		],
 		"customEditors": [
 			{
 				"viewType": "hexEditor.hexedit",

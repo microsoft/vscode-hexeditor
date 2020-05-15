@@ -67,13 +67,27 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 		webviewPanel.webview.onDidReceiveMessage(e => {
 			if (e.type === 'ready') {
 				this.postMessage(webviewPanel, 'init', {
-					value: document.documentData
+					fileSize: document.filesize,
+					value: document.documentData,
+					html: document.documentData.length === document.filesize ? this.getBodyHTML() : undefined
 				});
+			}
+		});
+
+		webviewPanel.webview.onDidReceiveMessage(async e => {
+			if (e.type == 'open-anyways') {
+				await document.openAnyways();
+				this.postMessage(webviewPanel, 'init', {
+					fileSize: document.filesize,
+					value: document.documentData,
+					html: this.getBodyHTML()
+				})
 			}
 		});
     }
     /**
 	 * Get the static HTML used for in our editor's webviews.
+	 * Document size is needed to decide if the document is being opened
 	*/
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Local path to script and css for the webview
@@ -102,49 +116,53 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 				<link href="${styleUri}" rel="stylesheet" />
+				<script nonce="${nonce}" src="${scriptUri}" defer></script>
 
 				<title>Hex Editor</title>
 			</head>
 			<body>
-				<div class="column" id="data-inspector">
-					<div class="header">Data Inspector</div>
-					<div class="grid-container">
-						<div class="grid-item">
-							<label for="binary8">8 bit Binary</label>
-						</div>
-						<div class="grid-item">
-							<input type="text" autocomplete="off" spellcheck="off" id="binary8" readonly/>
-						</div>
-						<div class="grid-item">
-							<label for="int8">Int8</label>
-						</div>
-						<div class="grid-item">
-							<input type="text" autocomplete="off" spellcheck="off" id="int8" readonly/>
-						</div>
-						<div class="grid-item">
-							<label for="uint8">UInt8</label>
-						</div>
-						<div class="grid-item">
-							<input type="text" autocomplete="off" spellcheck="off" id="uint8" readonly/>
-						</div>
-					</div>
-				</div>
-				<div class="column left" id="hexaddr">
-					<div class="header">Memory Offset </div>
-				</div>
-				<div class="column middle" id="hexbody">
-					<div class="header">
-						<span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0A</span><span>0B</span><span>0C</span><span>0D</span><span>0E</span><span>0F</span>
-					</div>
-				</div>
-				<div class="column right" id="ascii">
-					<div class="header">Decoded Text</div>
-				</div>
-				<script nonce="${nonce}" src="${scriptUri}"></script>
 			</body>
 			</html>`;
-    }
-    
+	}
+
+	private getBodyHTML() {
+		return `
+		<div class="column" id="data-inspector">
+			<div class="header">Data Inspector</div>
+			<div class="grid-container">
+				<div class="grid-item">
+					<label for="binary8">8 bit Binary</label>
+				</div>
+				<div class="grid-item">
+					<input type="text" autocomplete="off" spellcheck="off" id="binary8" readonly/>
+				</div>
+				<div class="grid-item">
+					<label for="int8">Int8</label>
+				</div>
+				<div class="grid-item">
+					<input type="text" autocomplete="off" spellcheck="off" id="int8" readonly/>
+				</div>
+				<div class="grid-item">
+					<label for="uint8">UInt8</label>
+				</div>
+				<div class="grid-item">
+					<input type="text" autocomplete="off" spellcheck="off" id="uint8" readonly/>
+				</div>
+			</div>
+		</div>
+		<div class="column left" id="hexaddr">
+			<div class="header">Memory Offset </div>
+		</div>
+		<div class="column middle" id="hexbody">
+			<div class="header">
+				<span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0A</span><span>0B</span><span>0C</span><span>0D</span><span>0E</span><span>0F</span>
+			</div>
+		</div>
+		<div class="column right" id="ascii">
+			<div class="header">Decoded Text</div>
+		</div>`;
+	}
+	
     private _requestId = 1;
 	private readonly _callbacks = new Map<number, (response: any) => void>();
 
@@ -160,7 +178,12 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 	}
 
 	private onMessage(document: HexDocument, message: any) {
-        console.log(message);
+		console.log(message);
+		switch(message.type) {
+			case 'edit':
+				vscode.window.showInformationMessage('This editor is currently readonly.');
+				return;
+		}
 	}
 }
 
