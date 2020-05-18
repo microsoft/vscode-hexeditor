@@ -31,22 +31,48 @@ class ByteData {
 
 	to8bitInt() {
 		let uint = this.decimal;
-		const nbit = 8
-		uint <<= 32 - nbit;
-		uint >>= 32 - nbit;
+		// Each decimal is guaranteed to be 8 bits because that is how the file is
+		uint <<= 24;
+		uint >>= 24;
 		return uint;
 	}
 
-	to16bitUInt() {
-		if (this.adjacentBytes.length == 0) return NaN;
-		// Combines two 8 bit numbers to 16 bit
-		return (((this.adjacentBytes[0].to8bitUInt() & 0xff) << 8) | (this.to8bitUInt() & 0xff));
-	}
-
-	to16bitInt() {
-		if (this.adjacentBytes.length == 0) return NaN;
-		// Combines two 8 bit numbers to 16 bit
-		return ((this.adjacentBytes[0].to8bitInt() << 8) | (this.to8bitInt() & 0xff));
+	byteConverter(numBits, signed, littleEndian) {
+		if (numBits % 8 != 0) {
+			throw new Error ('Bits must be a multiple of 8!');
+		}
+		if (this.adjacentBytes.length < (numBits / 8) - 1) return NaN;
+		const bytes = [];
+		bytes.push(this.to8bitUInt());
+		for (let i = 0; i < (numBits / 8) - 1; i++) {
+			bytes.push(this.adjacentBytes[i].to8bitUInt());
+		}
+		const uint8bytes = Uint8Array.from(bytes);
+		const dataview = new DataView(uint8bytes.buffer);
+		if (numBits == 64 && signed) {
+			return dataview.getBigInt64(0, littleEndian);
+		} else if (numBits == 64 && !signed) {
+			return dataview.getBigUint64(0, littleEndian);
+		} else if (numBits == 32 && signed) {
+			return dataview.getInt32(0, littleEndian);
+		} else if (numBits == 32 && !signed) {
+			return dataview.getUint32(0, littleEndian);
+		// 24 bit isn't supported by default so we must add it
+		} else if (numBits == 24 && signed) {
+			const first8 = (this.adjacentBytes[1].byteConverter(8, signed, littleEndian)) << 16;
+			return first8 | this.byteConverter(16, signed, littleEndian);
+		} else if (numBits == 24 && !signed) {
+			const first8 = (this.adjacentBytes[1].byteConverter(8, signed, littleEndian) & 0xFF) << 16;
+			return first8 | this.byteConverter(16, signed, littleEndian);
+		} else if (numBits == 16 && signed) {
+			return dataview.getInt16(0, littleEndian);
+		} else if (numBits == 16 && !signed) {
+			return dataview.getUint16(0, littleEndian);
+		} else if (numBits == 8 && signed) {
+			return dataview.getInt8(0);
+		} else if (numBits == 8 && !signed) {
+			return this.decimal;
+		}
 	}
 }
 
@@ -181,31 +207,38 @@ function clearDataInspector() {
 	// @ts-ignore
 	document.getElementById('binary8').value = 'Invalid';
 	// @ts-ignore
-	document.getElementById('int8').value = 'Invalid';
+	for (let i = 0; i < 4; i++) {
+		const numBits = (i + 1) * 8;
+		// @ts-ignore
+		document.getElementById(`int${numBits}`).value = 'Invalid';
+		// @ts-ignore
+		document.getElementById(`uint${numBits}`).value = 'Invalid';
+	}
 	// @ts-ignore
-	document.getElementById('uint8').value = 'Invalid';
+	document.getElementById('int64').value = 'Invalid';
 	// @ts-ignore
-	document.getElementById('int16').value = 'Invalid';
-	// @ts-ignore
-	document.getElementById('uint16').value = 'Invalid';
+	document.getElementById('uint64').value = 'Invalid';
 }
 
 // Given the byte_object representing the byte in the file populates the data inspector
 function populateDataInspector(byte_obj) {
 	// @ts-ignore
 	document.getElementById('binary8').value = byte_obj.toBinary();
+	for (let i = 0; i < 4; i++) {
+		const numBits = (i + 1) * 8;
+		const signed = byte_obj.byteConverter(numBits, true, true);
+		const unsigned = byte_obj.byteConverter(numBits, false, true);
+		// @ts-ignore
+		document.getElementById(`int${numBits}`).value = isNaN(signed) ? 'End of File' : signed;
+		// @ts-ignore
+		document.getElementById(`uint${numBits}`).value = isNaN(unsigned) ? 'End of File' : unsigned;
+	}
+	const signed64 = byte_obj.byteConverter(64, true, true);
+	const unsigned64 = byte_obj.byteConverter(64, false, true);
 	// @ts-ignore
-	document.getElementById('int8').value = byte_obj.to8bitInt();
+	document.getElementById('int64').value = isNaN(Number(signed64)) ? 'End of File' : signed64;
 	// @ts-ignore
-	document.getElementById('uint8').value = byte_obj.to8bitUInt();
-	// If it's not a number it just means we're close to the end of file and don't have enough bits left
-	const uint16 = byte_obj.to16bitUInt();
-	const int16 = byte_obj.to16bitInt();
-	// @ts-ignore
-	document.getElementById('int16').value = isNaN(int16) ? 'End of File' : int16;
-	// @ts-ignore
-	document.getElementById('uint16').value = isNaN(uint16) ? 'End of File' : uint16;
-
+	document.getElementById('uint64').value = isNaN(Number(unsigned64)) ? 'End of File' : unsigned64;
 }
 
 function openAnyway() {
