@@ -22,6 +22,8 @@ body {
 
 
 .grid-container {
+    position: sticky;
+    top: 20px;
     display: grid;
     grid-template-columns: auto auto;
     padding-top: 3px;
@@ -117,3 +119,4 @@ input:focus {
 :focus {
     outline-color: var(--vscode-focusBorder);
 }
+

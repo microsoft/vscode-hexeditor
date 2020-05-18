@@ -6,12 +6,14 @@ const vscode = acquireVsCodeApi();
 
 // This will be our class data
 class ByteData {
+
 	constructor(uint8num) {
 		this.decimal = uint8num;
+		this.adjacentBytes = [];
 	}
-	// Sets the element in the DOM associated with this object
-	setElement(element) {
-		this.element = element;
+	// adds a ByteData object to the adjacent bytes array
+	addAdjacentByte(byte_obj) {
+		this.adjacentBytes.push(byte_obj);
 	}
 
 	toHex() {
@@ -33,6 +35,18 @@ class ByteData {
 		uint <<= 32 - nbit;
 		uint >>= 32 - nbit;
 		return uint;
+	}
+
+	to16bitUInt() {
+		if (this.adjacentBytes.length == 0) return NaN;
+		// Combines two 8 bit numbers to 16 bit
+		return (((this.adjacentBytes[0].to8bitUInt() & 0xff) << 8) | (this.to8bitUInt() & 0xff));
+	}
+
+	to16bitInt() {
+		if (this.adjacentBytes.length == 0) return NaN;
+		// Combines two 8 bit numbers to 16 bit
+		return ((this.adjacentBytes[0].to8bitInt() << 8) | (this.to8bitInt() & 0xff));
 	}
 }
 
@@ -59,7 +73,12 @@ function retrieveSelectedByteObject(elements) {
 	for (const element of elements) {
 		if (element.parentElement.id == 'hexbody') {
 			const byte_object = new ByteData(parseInt(element.innerHTML, 16));
-			byte_object.setElement(element);
+			let current_element = element.nextElementSibling;
+			for (let i = 0; i < 7; i++) {
+				if (!current_element) break;
+				byte_object.addAdjacentByte(new ByteData(parseInt(current_element.innerHTML, 16)));
+				current_element = current_element.nextElementSibling;
+			}
 			return byte_object;
 		}
 	}
@@ -72,6 +91,8 @@ function clearSelected() {
 function select(event) {
 	const elements = getElementsWithGivenOffset(event.target.getAttribute('data-offset'));
 	if (elements[0].classList.contains('selected')) {
+		// @ts-ignore
+		document.activeElement.blur();
 		vscode.setState({selected_offset: undefined})
 		clearDataInspector();
 		elements[0].classList.remove('selected');
@@ -163,6 +184,10 @@ function clearDataInspector() {
 	document.getElementById('int8').value = 'Invalid';
 	// @ts-ignore
 	document.getElementById('uint8').value = 'Invalid';
+	// @ts-ignore
+	document.getElementById('int16').value = 'Invalid';
+	// @ts-ignore
+	document.getElementById('uint16').value = 'Invalid';
 }
 
 // Given the byte_object representing the byte in the file populates the data inspector
@@ -173,6 +198,14 @@ function populateDataInspector(byte_obj) {
 	document.getElementById('int8').value = byte_obj.to8bitInt();
 	// @ts-ignore
 	document.getElementById('uint8').value = byte_obj.to8bitUInt();
+	// If it's not a number it just means we're close to the end of file and don't have enough bits left
+	const uint16 = byte_obj.to16bitUInt();
+	const int16 = byte_obj.to16bitInt();
+	// @ts-ignore
+	document.getElementById('int16').value = isNaN(int16) ? 'End of File' : int16;
+	// @ts-ignore
+	document.getElementById('uint16').value = isNaN(uint16) ? 'End of File' : uint16;
+
 }
 
 function openAnyway() {
@@ -188,6 +221,13 @@ function arrowKeyNavigate(event) {
 			break;
 		// up
 		case  38:
+			const elements_above = getElementsWithGivenOffset(parseInt(event.target.getAttribute('data-offset')) - 16);
+			if (elements_above.length === 0) break;
+			if (elements_above[0].parentElement === event.target.parentElement) {
+				next = elements_above[0];
+			} else {
+				next = elements_above[1];
+			}
 			break;
 		// right
 		case 39:
@@ -195,6 +235,13 @@ function arrowKeyNavigate(event) {
 			break;
 		// down
 		case 40:
+			const elements_below = getElementsWithGivenOffset(parseInt(event.target.getAttribute('data-offset')) + 16);
+			if (elements_below.length === 0) break;
+			if (elements_below[0].parentElement === event.target.parentElement) {
+				next = elements_below[0];
+			} else {
+				next = elements_below[1];
+			}
 			break;
 	}
 	if (next && next.tagName === 'SPAN') {
@@ -218,7 +265,7 @@ function edit(event) {
 		switch (type) {
 			case 'init':
 				{
-					// Load the initial image into the canvas.
+					// Loads the html body sent over
 					if (body.html !== undefined) {
 						document.getElementsByTagName('body')[0].innerHTML = body.html;
 					}
@@ -243,6 +290,9 @@ function edit(event) {
 					if (vscode.getState() && vscode.getState().selected_offset) {
 						selectByOffset(vscode.getState().selected_offset);
 					}
+					// Sets the height of the data inspector so it will scroll
+					const hexEditorHeight = document.getElementById('hexaddr').clientHeight;
+					document.getElementById('data-inspector').style.height = `${hexEditorHeight}px`;
 					return;
 				}
 			case 'getFileData':
