@@ -1,5 +1,6 @@
 import { ByteData } from "./byteData";
 import { hover, removeHover, select, arrowKeyNavigate, selectByOffset } from "./eventHandlers";
+import { withinAnyRange, generateCharacterRanges } from "./util";
 
 declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
@@ -27,7 +28,7 @@ function populateAsciiTable(data: ByteData[]): void {
 	for (let i = 0; i < data.length; i++) {
 		const ascii_element = document.createElement("span");
 		ascii_element.setAttribute("data-offset", i.toString());
-		if (data[i].to8bitUInt() < 32 || data[i].to8bitUInt() >= 255) {
+		if (withinAnyRange(data[i].to8bitUInt(), generateCharacterRanges())) {
 			ascii_element.classList.add("nongraphic");
 			ascii_element.innerText = ".";
 		} else {

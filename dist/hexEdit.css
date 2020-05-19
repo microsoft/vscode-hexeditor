@@ -73,20 +73,21 @@ body {
 .header {
     position: sticky;
     top: 0px;
-    border-bottom: 1px solid gray;
+    border: 1px solid;
+    background-color: var(--vscode-editor-background);
 }
 
 /* Colors of the headers in the various themes */
 body.vscode-dark > .column > .header {
-    background-color: darkblue;
+    border-color: #444444;
 }
 
 body.vscode-light > .column > .header {
-    background-color: lightblue;
+    border-color: #e7e7e7;
 }
 
 body.vscode-high-contrast > .column > .header {
-    background-color: orange;
+    border-color:#6fc3df;
 }
 
 .header > span {
