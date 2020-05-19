@@ -92,10 +92,10 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Local path to script and css for the webview
 		const scriptUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "media", "hexEdit.js")
+			path.join(this._context.extensionPath, "dist", "bundle.js")
 		));
 		const styleUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "media", "hexEdit.css")
+			path.join(this._context.extensionPath, "dist", "hexEdit.css")
 		));
 
 		// Use a nonce to whitelist which scripts can be run
@@ -227,11 +227,6 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 
 	private onMessage(document: HexDocument, message: any): void {
 		console.log(message);
-		switch(message.type) {
-			case "edit":
-				vscode.window.showInformationMessage("This editor is currently readonly.");
-				return;
-		}
 	}
 }
 
