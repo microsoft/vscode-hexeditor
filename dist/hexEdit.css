@@ -31,7 +31,7 @@ body {
 }
 
 .grid-item {
-    text-align: center;
+    text-align: left;
 }
 
 .grid-item:nth-child(2n) {
@@ -72,6 +72,7 @@ body {
     position: sticky;
     top: 0px;
     border: 1px solid;
+    font-weight: bold;
     background-color: var(--vscode-editor-background);
 }
 
@@ -108,6 +109,7 @@ body.vscode-high-contrast > .column > .header {
 input {
     background-color: var(--vscode-input-background);
     border-width: 0;
+    width: 170px;
     color: var(--vscode-input-foreground);
 }
 

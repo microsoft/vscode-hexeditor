@@ -24,15 +24,7 @@ export class ByteData {
 		return this.decimal;
 	}
 
-	to8bitInt(): number {
-		let uint = this.decimal;
-		// Each decimal is guaranteed to be 8 bits because that is how the file is
-		uint <<= 24;
-		uint >>= 24;
-		return uint;
-	}
-
-	byteConverter(numBits: number, signed: boolean, littleEndian: boolean): number | bigint {
+	byteConverter(numBits: number, signed: boolean, littleEndian: boolean, float = false): number | bigint {
 		if (numBits % 8 != 0) {
 			throw new Error ("Bits must be a multiple of 8!");
 		}
@@ -44,10 +36,14 @@ export class ByteData {
 		}
 		const uint8bytes = Uint8Array.from(bytes);
 		const dataview = new DataView(uint8bytes.buffer);
-		if (numBits == 64 && signed) {
+		if (numBits == 64 && float) {
+			return dataview.getFloat64(0, littleEndian);
+		} else if (numBits == 64 && signed) {
 			return dataview.getBigInt64(0, littleEndian);
 		} else if (numBits == 64 && !signed) {
 			return dataview.getBigUint64(0, littleEndian);
+		} else if (numBits == 32 && float) {
+			return dataview.getFloat32(0, littleEndian);
 		} else if (numBits == 32 && signed) {
 			return dataview.getInt32(0, littleEndian);
 		} else if (numBits == 32 && !signed) {

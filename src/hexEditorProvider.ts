@@ -196,6 +196,30 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 				<div class="grid-item">
 					<input type="text" autocomplete="off" spellcheck="off" id="uint64" readonly/>
 				</div>
+				<div class="grid-item">
+					<label for="utf8">UTF-8</label>
+				</div>
+				<div class="grid-item">
+					<input type="text" autocomplete="off" spellcheck="off" id="utf8" readonly/>
+				</div>
+				<div class="grid-item">
+					<label for="utf16">UTF-16</label>
+				</div>
+				<div class="grid-item">
+					<input type="text" autocomplete="off" spellcheck="off" id="utf16" readonly/>
+				</div>
+				<div class="grid-item">
+					<label for="float32">Float 32</label>
+				</div>
+				<div class="grid-item">
+					<input type="text" autocomplete="off" spellcheck="off" id="float32" readonly/>
+				</div>
+				<div class="grid-item">
+					<label for="float64">Float 64</label>
+				</div>
+				<div class="grid-item">
+					<input type="text" autocomplete="off" spellcheck="off" id="float64" readonly/>
+				</div>
 				<div class="grid-item endian-select">
 					<label for="endianness">Endianness</label>
 				</div>
