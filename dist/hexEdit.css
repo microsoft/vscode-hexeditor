@@ -16,7 +16,7 @@ body {
     padding-right: 10px;
     font-size: larger;
     font-weight: var(--vsocde-editor-font-weight);
-    /* font-size: var(--vsocde-editor-font-size); */
+    /* font-size: var(--vscode-editor-font-size); */
     font-family: 'Courier New', Courier, monospace;
 }
 
