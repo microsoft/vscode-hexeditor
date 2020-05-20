@@ -1,7 +1,6 @@
 import { clearDataInspector, populateDataInspector } from "./dataInspector";
 import { vscode } from "./hexEdit";
 import { ByteData } from "./byteData";
-import { off } from "process";
 
 // Given an offset returns all the elements with that data offset value
 function getElementsWithGivenOffset(offset: number): NodeListOf<Element> {
