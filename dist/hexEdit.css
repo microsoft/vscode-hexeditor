@@ -14,10 +14,10 @@ body {
     cursor: default;
     float: left;
     padding-right: 10px;
-    font-size: larger;
+    /* font-size: larger; */
     font-weight: var(--vsocde-editor-font-weight);
-    /* font-size: var(--vscode-editor-font-size); */
-    font-family: 'Courier New', Courier, monospace;
+    font-size: var(--vscode-editor-font-size);
+    font-family: var(--vscode-editor-font-family);
 }
 
 
