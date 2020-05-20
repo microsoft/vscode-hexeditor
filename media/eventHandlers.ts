@@ -1,6 +1,7 @@
 import { clearDataInspector, populateDataInspector } from "./dataInspector";
 import { vscode } from "./hexEdit";
 import { ByteData } from "./byteData";
+import { off } from "process";
 
 // Given an offset returns all the elements with that data offset value
 function getElementsWithGivenOffset(offset: number): NodeListOf<Element> {
@@ -60,7 +61,9 @@ export function selectByOffset(offset: number): void {
 	const elements = getElementsWithGivenOffset(offset);
 	const byte_obj = retrieveSelectedByteObject(elements);
 	if (!byte_obj) return;
-	populateDataInspector(byte_obj);
+	const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
+	populateDataInspector(byte_obj, littleEndian);
+	vscode.setState({ selected_offset: offset });
 	elements[0].classList.add("selected");
 	elements[1].classList.add("selected");
 }
@@ -85,8 +88,9 @@ export function select(event: MouseEvent): void  {
 		vscode.setState({ selected_offset: (event.target as HTMLElement).getAttribute("data-offset") });
         const byte_obj = retrieveSelectedByteObject(elements);
         // This will only be undefined if we pass in bad elements which in theory shouldn't happen
-        if (!byte_obj) return;
-		populateDataInspector(byte_obj);
+		if (!byte_obj) return;
+		const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
+		populateDataInspector(byte_obj, littleEndian);
 		elements[0].classList.add("selected");
 		elements[1].classList.add("selected");
 	}
@@ -96,6 +100,9 @@ export function arrowKeyNavigate(event: KeyboardEvent): void {
 	if (!event || !event.target) return;
 	const targetElement = event.target as HTMLElement;
 	let next;
+	if (event.keyCode >= 37 && event.keyCode <= 40) {
+		event.preventDefault();
+	}
 	switch(event.keyCode) {
 		// left
 		case 37:
@@ -129,5 +136,18 @@ export function arrowKeyNavigate(event: KeyboardEvent): void {
 	if (next && next.tagName === "SPAN") {
 		(next as HTMLInputElement).focus();
 		selectByOffset(parseInt(next.getAttribute("data-offset")!));
+	}
+}
+
+// This is bound to the on change event for the select which decides to render big or little endian
+export function changeEndianness(): void {
+	if (document.activeElement && vscode.getState() && vscode.getState().selected_offset) {
+		// Since the inspector has no sense of state, it doesn't know what byte it is currently rendering
+		// We must retrieve it based on the dom
+		const elements = getElementsWithGivenOffset(vscode.getState().selected_offset);
+		const byte_obj = retrieveSelectedByteObject(elements);
+		if (!byte_obj) return;
+		const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
+		populateDataInspector(byte_obj, littleEndian);
 	}
 }

@@ -12,7 +12,7 @@ export class ByteData {
 	}
 
 	toHex(): string {
-		return this.decimal.toString(16);
+		return this.decimal.toString(16).toUpperCase();
 	}
 
 	// COnvert the uint8num into 8bit binary

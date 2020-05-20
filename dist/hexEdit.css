@@ -47,23 +47,21 @@ body {
 
 .middle > span:nth-child(16n + 1)::after {
     content: '\A';
-    white-space: pre;
-    
 }
 
 .middle > span {
     padding: 1px 5px 1px 4px;
+    white-space: pre;
 }
 
 .right > span:nth-child(16n + 1)::after {
     content: '\A';
-    white-space: pre;
-    
 }
 
 .right > span {
     padding: 1px 5px 1px 4px;
     text-align: right;
+    white-space: pre;
 }
 
 .nongraphic {
@@ -119,5 +117,16 @@ input:focus {
 
 :focus {
     outline-color: var(--vscode-focusBorder);
+}
+
+#endianness {
+    width: 100%;
+    background-color: var(--vscode-dropdown-background);
+    border: var(--vscode-dropdown-border);
+    color: var(--vscode-dropdown-foreground)
+}
+
+.endian-select {
+    padding-top: 10px;
 }
 

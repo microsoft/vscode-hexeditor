@@ -1,5 +1,5 @@
 import { ByteData } from "./byteData";
-import { hover, removeHover, select, arrowKeyNavigate, selectByOffset } from "./eventHandlers";
+import { hover, removeHover, select, arrowKeyNavigate, selectByOffset, changeEndianness } from "./eventHandlers";
 import { withinAnyRange, generateCharacterRanges } from "./util";
 
 declare const acquireVsCodeApi: any;
@@ -18,7 +18,7 @@ function populateHexAddresses(data: ByteData[]): void {
 	for (let i = 0; i < num_columns; i++) {
 		const addr = document.createElement("div");
 		addr.setAttribute("data-offset", (i * 16).toString());
-		addr.innerText = pad((i * 16).toString(16), 8);
+		addr.innerText = pad((i * 16).toString(16), 8).toUpperCase();
 		hex_addr!.appendChild(addr);
 	}
 }
@@ -103,6 +103,7 @@ function openAnyway(): void {
 					// Sets the height of the data inspector so it will scroll
 					const hexEditorHeight = document.getElementById("hexaddr")!.clientHeight;
 					document.getElementById("data-inspector")!.style.height = `${hexEditorHeight}px`;
+					document.getElementById("endianness")?.addEventListener("change", changeEndianness);
 					return;
 				}
 			case "getFileData":

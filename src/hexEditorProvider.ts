@@ -196,6 +196,15 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 				<div class="grid-item">
 					<input type="text" autocomplete="off" spellcheck="off" id="uint64" readonly/>
 				</div>
+				<div class="grid-item endian-select">
+					<label for="endianness">Endianness</label>
+				</div>
+				<div class="grid-item endian-select">
+					<select id="endianness">
+						<option value="little">Little Endian</option>
+						<option value="big">Big Endian</option>
+					</select>
+				</div>
 			</div>
 		</div>
 		<div class="column left" id="hexaddr">
