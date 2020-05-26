@@ -1,64 +1,11 @@
 import { ByteData } from "./byteData";
-import { hover, removeHover, select, arrowKeyNavigate, selectByOffset, changeEndianness } from "./eventHandlers";
-import { withinAnyRange, generateCharacterRanges } from "./util";
+import { debounce } from "ts-debounce";
+import { VirtualDocument, VirtualizedPacket } from "./virtualDocument";
+import { scrollHandler } from "./eventHandlers";
 
 declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
-
-// Pads a number with 0s up to a given width
-function pad(number: string, width: number): string {
-	number = number + "";
-	return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
-}
-
-// Takes the document data and populates the hex address column
-function populateHexAddresses(data: ByteData[]): void {
-	const num_columns = Math.ceil(data.length / 16);
-	const hex_addr = document.getElementById("hexaddr");
-	for (let i = 0; i < num_columns; i++) {
-		const addr = document.createElement("div");
-		addr.setAttribute("data-offset", (i * 16).toString());
-		addr.innerText = pad((i * 16).toString(16), 8).toUpperCase();
-		hex_addr!.appendChild(addr);
-	}
-}
-
-function populateAsciiTable(data: ByteData[]): void {
-	const ascii_table = document.getElementById("ascii");
-	for (let i = 0; i < data.length; i++) {
-		const ascii_element = document.createElement("span");
-		ascii_element.setAttribute("data-offset", i.toString());
-		if (withinAnyRange(data[i].to8bitUInt(), generateCharacterRanges())) {
-			ascii_element.classList.add("nongraphic");
-			ascii_element.innerText = ".";
-		} else {
-			const ascii_char = String.fromCharCode(data[i].to8bitUInt());
-			ascii_element.innerText = ascii_char;
-		}
-		ascii_element.tabIndex = -1;
-		ascii_element.addEventListener("keydown", arrowKeyNavigate);
-		ascii_element.addEventListener("mouseover", hover);
-		ascii_element.addEventListener("mouseleave", removeHover);
-		ascii_element.addEventListener("click", select);
-		ascii_table!.appendChild(ascii_element);
-	}
-}
-
-// Takes the byte stream and populates the webview with the hex information
-function populateHexBody(data: ByteData[]): void {
-	const hex_body = document.getElementById("hexbody");
-	for (let i = 0; i < data.length; i++) {
-		const hex_element = document.createElement("span");
-		hex_element.setAttribute("data-offset",i.toString());
-		hex_element.innerText = pad(data[i].toHex(), 2);
-		hex_element.tabIndex = -1;
-		hex_element.addEventListener("mouseover", hover);
-		hex_element.addEventListener("mouseleave", removeHover);
-		hex_element.addEventListener("click", select);
-		hex_element.addEventListener("keydown", arrowKeyNavigate);
-		hex_body!.appendChild(hex_element);
-	}
-}
+export let virtualHexDocument: VirtualDocument;
 
 function openAnyway(): void {
 	vscode.postMessage({ type: "open-anyways" });
@@ -69,7 +16,6 @@ function openAnyway(): void {
 // This is the main entry point
 ((): void=> {
     // Handle messages from the extension
-    const data: ByteData[] = [];
 	window.addEventListener("message", async e => {
 		const { type, body, requestId } = e.data;
 		switch (type) {
@@ -78,8 +24,15 @@ function openAnyway(): void {
 					// Loads the html body sent over
 					if (body.html !== undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = body.html;
+						virtualHexDocument = new VirtualDocument(body.fileSize, body.html);
+						vscode.postMessage({ type: "packet", body: {
+							initialOffset: 0,
+							numElements: Math.ceil(virtualHexDocument.numRowsInViewport * 16)
+						} });
+						// We debounce the scroll so it isn't called excessively
+						window.addEventListener("scroll", debounce(scrollHandler, 125));
 					}
-					if (body.fileSize != 0 && body.value.data === undefined) {
+					if (body.fileSize != 0 && body.html === undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = 
 						`
 							<div>
@@ -90,26 +43,26 @@ function openAnyway(): void {
 						document.getElementById("open-anyway")!.addEventListener("click", openAnyway);
 						return;
 					}
-					const numbers = new Uint8Array(body.value.data);
-					for (const num of numbers) {
-						data.push(new ByteData(num));
-					}
-					populateHexAddresses(data);
-					populateAsciiTable(data);
-					populateHexBody(data);
-					if (vscode.getState() && vscode.getState().selected_offset) {
-						selectByOffset(vscode.getState().selected_offset);
-					}
-					// Sets the height of the data inspector so it will scroll
-					const hexEditorHeight = document.getElementById("hexaddr")!.clientHeight;
-					document.getElementById("data-inspector")!.style.height = `${hexEditorHeight}px`;
-					document.getElementById("endianness")?.addEventListener("change", changeEndianness);
 					return;
 				}
 			case "getFileData":
 				{
 					vscode.postMessage({ type: "response", requestId, body: "foo" });
 					return;
+				}
+			case "packet":
+				{
+					console.log(body);
+					const offset = body.offset;
+					const packets: VirtualizedPacket[] = [];
+					for (let i = 0; i < body.data.data.length; i++) {
+						packets.push({
+							offset: i + offset,
+							data: new ByteData(body.data.data[i])
+						});
+					}
+					virtualHexDocument.addPackets(packets);
+					document.getElementsByTagName("body")[0]!.style.transform	= `translateY(${window.scrollY}px)`;
 				}
 		}
 	});

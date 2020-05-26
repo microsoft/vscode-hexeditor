@@ -1,5 +1,5 @@
 import { clearDataInspector, populateDataInspector } from "./dataInspector";
-import { vscode } from "./hexEdit";
+import { vscode, virtualHexDocument } from "./hexEdit";
 import { ByteData } from "./byteData";
 
 // Given an offset returns all the elements with that data offset value
@@ -149,4 +149,13 @@ export function changeEndianness(): void {
 		const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
 		populateDataInspector(byte_obj, littleEndian);
 	}
+}
+
+// Handles scrolling in the editor
+export function scrollHandler(): void {
+	console.log(virtualHexDocument.topOffset());
+	vscode.postMessage({ type: "packet", body: {
+		initialOffset: Math.max(virtualHexDocument.topOffset() - (16 * 30), 0),
+		numElements: Math.ceil(virtualHexDocument.numRowsInViewport * 16)
+	} });
 }

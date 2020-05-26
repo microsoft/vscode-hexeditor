@@ -22,7 +22,7 @@ body {
 
 
 .grid-container {
-    position: sticky;
+    /* position: sticky; */
     top: 20px;
     display: grid;
     grid-template-columns: auto auto;
@@ -69,7 +69,7 @@ body {
 }
 
 .header {
-    position: sticky;
+    /* position: sticky; */
     top: 0px;
     border: 1px solid;
     font-weight: bold;

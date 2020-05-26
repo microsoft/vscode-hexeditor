@@ -4,6 +4,12 @@ import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
 import path = require("path");
 import { getNonce } from "./util";
+
+interface PacketRequest {
+	initialOffset: number;
+	numElements: number;
+}
+
 export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<HexDocument> {
     public static register(context: vscode.ExtensionContext): vscode.Disposable {
         return vscode.window.registerCustomEditorProvider2(
@@ -61,14 +67,13 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 		};
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 
-		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(document, e));
+		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(webviewPanel, document, e));
 
 		// Wait for the webview to be properly ready before we init
 		webviewPanel.webview.onDidReceiveMessage(e => {
 			if (e.type === "ready") {
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
-					value: document.documentData,
 					html: document.documentData.length === document.filesize ? this.getBodyHTML() : undefined
 				});
 			}
@@ -79,7 +84,6 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 				await document.openAnyways();
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
-					value: document.documentData,
 					html: this.getBodyHTML()
 				});
 			}
@@ -258,8 +262,19 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 		panel.webview.postMessage({ type, body });
 	}
 
-	private onMessage(document: HexDocument, message: any): void {
+	private onMessage(panel: vscode.WebviewPanel, document: HexDocument, message: any): void {
 		console.log(message);
+		switch(message.type) {
+			// If it's a packet request
+			case "packet":
+				const request = message.body as PacketRequest;
+				// Return the data requested and the offset it was requested for
+				panel.webview.postMessage({ type: "packet", body: {
+					data: document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements),
+					offset: request.initialOffset
+				} });
+				return;
+		}
 	}
 }
 
