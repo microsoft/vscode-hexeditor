@@ -269,7 +269,6 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 	}
 
 	private onMessage(panel: vscode.WebviewPanel, document: HexDocument, message: any): void {
-		console.log(message);
 		switch(message.type) {
 			// If it's a packet request
 			case "packet":

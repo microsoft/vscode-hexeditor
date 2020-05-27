@@ -7,6 +7,7 @@ declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
 export let virtualHexDocument: VirtualDocument;
 
+
 function openAnyway(): void {
 	vscode.postMessage({ type: "open-anyways" });
 }
@@ -30,7 +31,7 @@ function openAnyway(): void {
 							numElements: Math.ceil(virtualHexDocument.numRowsInViewport * 16)
 						} });
 						// We debounce the scroll so it isn't called excessively
-						window.addEventListener("scroll", debounce(scrollHandler, 10));
+						window.addEventListener("scroll", debounce(scrollHandler, 100));
 					}
 					if (body.fileSize != 0 && body.html === undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = 
@@ -52,7 +53,6 @@ function openAnyway(): void {
 				}
 			case "packet":
 				{
-					console.log(body);
 					const offset = body.offset;
 					const packets: VirtualizedPacket[] = [];
 					for (let i = 0; i < body.data.data.length; i++) {
@@ -61,7 +61,7 @@ function openAnyway(): void {
 							data: new ByteData(body.data.data[i])
 						});
 					}
-					virtualHexDocument.addPackets(packets);
+					virtualHexDocument.render(packets);
 				}
 		}
 	});

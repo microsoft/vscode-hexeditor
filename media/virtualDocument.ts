@@ -1,5 +1,5 @@
 import { ByteData } from "./byteData";
-import { withinAnyRange, generateCharacterRanges } from "./util";
+import { withinAnyRange, generateCharacterRanges, elementInViewport } from "./util";
 import { arrowKeyNavigate, hover, removeHover, select, selectByOffset, changeEndianness } from "./eventHandlers";
 import { vscode } from "./hexEdit";
 
@@ -20,19 +20,21 @@ export interface VirtualizedPacket {
 // Class which handles the virtualization of the hex document
 export class VirtualDocument {
     private fileSize: number;
-    private data: VirtualizedPacket[];
     private rowHeight: number;
     private distanceBetweenRows: number;
     private documentHeight: number;
-    private rows: HTMLDivElement[][];
+    private rows: Map<string, HTMLDivElement>[];
+    private previousScrollY = 0;
+    private _scrollDirection: "down" | "up" = "down";
     constructor(fileSize: number) {
         this.fileSize = fileSize;
-        this.data = [];
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
-        this.rows = [[], [], []];
+        this.rows = [];
+        for (let i = 0; i < 3; i++) {
+            this.rows.push(new Map<string, HTMLDivElement>());
+        }
         // We create a span and place it on the DOM before removing it to get the height of a row
         const oldhtml = document.getElementById("hexbody")!.innerHTML;
-        // We don't put the row class on this initial quick layout to do calculations as it will mess up our calculations due to the fact we use absolute positioning
         let row = document.createElement("div");
         for (let i = 0; i < 17; i++) {
             if (i % 16 == 0) {
@@ -51,26 +53,50 @@ export class VirtualDocument {
         
         // Calculate document height
         this.documentHeight = document.getElementById("hexbody")!.offsetHeight + (Math.ceil(this.fileSize / 16) * this.rowHeight);
-        document.getElementsByTagName("html")[0].style.height = `${this.documentHeight}px`;
 
-        // Sets the height of the data inspector so it will scroll
-        document.getElementById("data-inspector")!.style.height = `${this.documentHeight}px`;
+        // Sets the columns heights for sticky scrolling to work
+        const columns = document.getElementsByClassName("column") as HTMLCollectionOf<HTMLElement>;
+        for (const column of columns) {
+            column.style.height = `${this.documentHeight}px`;
+        }
+
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
 
     }
 
-    render(): void {
-        this.populateHexAdresses();
-        this.populateHexBody();
-        this.populateAsciiTable();
+    render(newPackets: VirtualizedPacket[]): void {
+        let rowData: VirtualizedPacket[] = [];
+        for (let i = 0; i < newPackets.length; i++) {
+            if (i === newPackets.length - 1 || (i % 16 === 0 && i !== 0)) {
+                if (!this.rows[0].get(rowData[0].offset.toString())) {
+                    this.populateHexAdresses(rowData);
+                    this.populateHexBody(rowData);
+                    this.populateAsciiTable(rowData);
+                }
+                rowData = [];
+            }
+            rowData.push(newPackets[i]);
+        }
+
         if (vscode.getState() && vscode.getState().selected_offset) {
             selectByOffset(vscode.getState().selected_offset);
         }
+        // After rendering we move the rows around
+        // this.rows[0].forEach((value: HTMLDivElement, key: string) => {
+        //     const offset = parseInt(key);
+        //     this.translateRow(value, offset);
+        //     this.translateRow(this.rows[1].get(key)!, offset);
+        //     this.translateRow(this.rows[2].get(key)!, offset);
+        // });
     }
 
-    addPackets(newPackets: VirtualizedPacket[]): void {
-        this.data = newPackets;
-        this.render();
+    updateScrollDirection(newScrollY: number): void {
+        if (newScrollY > this.previousScrollY) {
+            this._scrollDirection = "down";
+        } else {
+            this._scrollDirection = "up";
+        }
+        this.previousScrollY = newScrollY;
     }
 
     // Gets the number of rows that can fit in the viewport
@@ -80,9 +106,18 @@ export class VirtualDocument {
         return Math.ceil(window.screen.height / this.rowHeight) + 60;
     }
 
+    public get scrollDirection(): "up" | "down" {
+        return this._scrollDirection;
+    }
+
     // Gets the offset of the item displayed at the top of the viewport
     public topOffset(): number {
-        return (Math.ceil(window.scrollY / this.distanceBetweenRows) * 16);
+        return (Math.floor(window.scrollY / this.distanceBetweenRows) * 16);
+    }
+
+    // Gets the offset of the item displayed at the bottom of the viewport
+    public bottomOffset(): number {
+        return (Math.floor(window.scrollY + window.screen.height) / this.distanceBetweenRows) * 16;
     }
 
     public offsetYPos(offset: number): number {
@@ -91,42 +126,62 @@ export class VirtualDocument {
         return (Math.floor(offset / 16) * this.distanceBetweenRows);
     }
 
-    // Takes the document data and populates the hex address column
-    private populateHexAdresses(): void {
-        const num_columns = Math.ceil(this.data.length / 16);
-        const hex_addr = document.getElementById("hexaddr");
-        for (let i = this.data[0].offset; i < this.data[0].offset + num_columns; i++) {
-            const addr = document.createElement("div");
-            addr.className = "row";
-            addr.setAttribute("data-offset", (i * 16).toString());
-            addr.innerText = pad((i * 16).toString(16), 8).toUpperCase();
-            addr.style.top = `${this.offsetYPos(i*16)}px`;
-            hex_addr!.appendChild(addr);
-            //addr.style.transform = `translateY(${this.offsetYPos(i*16)}px)`;
-            this.rows[0].push(addr);
+    // removes elements that are not in the viewport
+    // Optimized to stop when it reaches the edge of a viewport
+    public removeElementsNotInViewPort(): number {
+        let removed = 0;
+        const elementsToRemove: string[] = [];
+        let keys = Array.from(this.rows[0].keys());
+        if (this.scrollDirection === "up") {
+            keys = keys.reverse();
         }
+        for(const key of keys) {
+            const rowElement = this.rows[0].get(key);
+            if (!elementInViewport(rowElement!)) {
+                elementsToRemove.push(key);
+                removed++;
+            } else {
+                break;
+            }
+        }
+        // Remove the rows from the virtual document
+        for (let i = 0; i  < removed; i++) {
+            this.rows[0].get(elementsToRemove[i])?.remove();
+            this.rows[0].delete(elementsToRemove[i]);
+            this.rows[1].get(elementsToRemove[i])?.remove();
+            this.rows[1].delete(elementsToRemove[i]);
+            this.rows[2].get(elementsToRemove[i])?.remove();
+            this.rows[2].delete(elementsToRemove[i]);
+        }
+        return removed;
     }
 
-    private populateAsciiTable(): void {
+    // Takes the document data and populates the hex address column
+    private populateHexAdresses(rowData: VirtualizedPacket[]): void {
+        const hex_addr = document.getElementById("hexaddr");
+        const offset = rowData[0].offset;
+        const addr = document.createElement("div");
+        addr.className = "row";
+        addr.setAttribute("data-offset", offset.toString());
+        addr.innerText = pad(offset.toString(16), 8).toUpperCase();
+        hex_addr!.appendChild(addr);
+        this.rows[0].set(offset.toString(), addr);
+        this.translateRow(addr, offset);
+    }
+
+    private populateAsciiTable(rowData: VirtualizedPacket[]): void {
         const ascii_table = document.getElementById("ascii");
-        let row = document.createElement("div");
+        const row = document.createElement("div");
         row.className = "row";
-        for (let i = 0; i < this.data.length; i++) {
-            if (i % 16 === 0 && i !== 0) {
-                // i-1 is needed because that's the last offset on that row, i in this case belongs to the next row
-                row.style.top = `${this.offsetYPos(this.data[i-1].offset)}px`;
-                ascii_table?.appendChild(row);
-                this.rows[2].push(row);
-                row = document.createElement("div");
-                row.className = "row";
-            }
+        const rowOffset = rowData[0].offset.toString();
+        for (let i = 0; i < rowData.length; i++) {
             const ascii_element = document.createElement("span");
-            ascii_element.setAttribute("data-offset", this.data[i].offset.toString());
-            if (withinAnyRange(this.data[i].data.to8bitUInt(), generateCharacterRanges())) {
+            ascii_element.setAttribute("data-offset", rowData[i].offset.toString());
+            if (withinAnyRange(rowData[i].data.to8bitUInt(), generateCharacterRanges())) {
                 ascii_element.classList.add("nongraphic");
                 ascii_element.innerText = ".";
             } else {
-                const ascii_char = String.fromCharCode(this.data[i].data.to8bitUInt());
+                const ascii_char = String.fromCharCode(rowData[i].data.to8bitUInt());
                 ascii_element.innerText = ascii_char;
             }
             ascii_element.tabIndex = -1;
@@ -136,29 +191,21 @@ export class VirtualDocument {
             ascii_element.addEventListener("click", select);
             row.appendChild(ascii_element);
         }
-        // There will always be one unappended row left so we must do that after the loop
-        row.style.top = `${this.offsetYPos(this.data[this.data.length-1].offset)}px`;
         ascii_table?.appendChild(row);
-        this.rows[2].push(row);
+        this.rows[2].set(rowOffset, row);
+        this.translateRow(row, parseInt(rowOffset));
     }
 
     // Takes the byte stream and populates the webview with the hex information
-    private populateHexBody(): void {
+    private populateHexBody(rowData: VirtualizedPacket[]): void {
         const hex_body = document.getElementById("hexbody");
-        let row = document.createElement("div");
+        const row = document.createElement("div");
         row.className = "row";
-        for (let i = 0; i < this.data.length; i++) {
-            if (i % 16 === 0 && i !== 0) {
-                // i-1 is needed because that's the last offset on that row, i in this case belongs to the next row
-                row.style.top = `${this.offsetYPos(this.data[i-1].offset)}px`;
-                hex_body?.appendChild(row);
-                this.rows[1].push(row);
-                row = document.createElement("div");
-                row.className = "row";
-            }
+        const rowOffset = rowData[0].offset.toString();
+        for (let i = 0; i < rowData.length; i++) {
             const hex_element = document.createElement("span");
-            hex_element.setAttribute("data-offset", this.data[i].offset.toString());
-            hex_element.innerText = pad(this.data[i].data.toHex(), 2);
+            hex_element.setAttribute("data-offset", rowData[i].offset.toString());
+            hex_element.innerText = pad(rowData[i].data.toHex(), 2);
             hex_element.tabIndex = -1;
             hex_element.addEventListener("mouseover", hover);
             hex_element.addEventListener("mouseleave", removeHover);
@@ -166,8 +213,16 @@ export class VirtualDocument {
             hex_element.addEventListener("keydown", arrowKeyNavigate);
             row.appendChild(hex_element);
         }
-        row.style.top = `${this.offsetYPos(this.data[this.data.length-1].offset)}px`;
         hex_body?.appendChild(row);
-        this.rows[1].push(row);
+        this.rows[1].set(rowOffset, row);
+        this.translateRow(row, parseInt(rowOffset));
+    }
+
+    // Translates the row to its expected position
+    private translateRow(row: HTMLDivElement, offset: number): void {
+        const rowY = row.getBoundingClientRect().y;
+        // Add rowheight to account for the headers
+        const expectedY = this.offsetYPos(offset) + (document.getElementsByClassName("header")[2] as HTMLElement).offsetHeight;
+        row.style.transform = `translateY(${expectedY - rowY}px)`;
     }
 }

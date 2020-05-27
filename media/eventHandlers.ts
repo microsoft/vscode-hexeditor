@@ -90,7 +90,6 @@ export function select(event: MouseEvent): void  {
 		if (!byte_obj) return;
 		const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
 		populateDataInspector(byte_obj, littleEndian);
-		console.log(`Calculated: ${virtualHexDocument.offsetYPos(vscode.getState().selected_offset)}, Actual: ${elements[0].getBoundingClientRect().y}`);
 		elements[0].classList.add("selected");
 		elements[1].classList.add("selected");
 	}
@@ -154,9 +153,17 @@ export function changeEndianness(): void {
 
 // Handles scrolling in the editor
 export function scrollHandler(): void {
-	console.log(virtualHexDocument.topOffset());
-	vscode.postMessage({ type: "packet", body: {
-		initialOffset: Math.max(virtualHexDocument.topOffset() - (16 * 30), 0),
-		numElements: Math.ceil(virtualHexDocument.numRowsInViewport * 16)
-	} });
+	console.log(`Top: ${virtualHexDocument.topOffset()}, Bottom: ${virtualHexDocument.bottomOffset()}`);
+	virtualHexDocument.updateScrollDirection(window.scrollY);
+	console.log(virtualHexDocument.scrollDirection);
+	const scrollDirection = virtualHexDocument.scrollDirection;
+	let initialOffset = 0;
+	const numElements = virtualHexDocument.removeElementsNotInViewPort() * 16;
+	// If we're scrolling up we get the 50 rows above, else we get the 50 rows below
+	if (scrollDirection === "up") {
+		initialOffset = Math.max(virtualHexDocument.topOffset() - numElements, 0);
+	} else {
+		initialOffset = virtualHexDocument.bottomOffset() + 16;
+	}
+	vscode.postMessage({ type: "packet", body: { initialOffset, numElements } });
 }

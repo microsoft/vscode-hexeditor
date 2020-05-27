@@ -40,3 +40,11 @@ export function generateCharacterRanges(): Range[] {
     ranges.push(new Range(256));
     return ranges;
 }
+
+// We only check the verticle here as we are only worried about if it's in the viewport vertically
+// if it's outside it horizontally we don't want to remove it, so we don't check
+export function elementInViewport(element: HTMLElement): boolean {
+    const rectangle = element.getBoundingClientRect();
+    const windowHeight = (window.innerHeight || document.documentElement.clientHeight);
+    return rectangle.top <= windowHeight && ((rectangle.top + rectangle.height) >= 0);
+}
