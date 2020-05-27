@@ -132,3 +132,11 @@ input:focus {
 .endian-select {
     padding-top: 10px;
 }
+
+.rowwrapper {
+    position: relative;
+}
+
+.row {
+    position: absolute;
+}

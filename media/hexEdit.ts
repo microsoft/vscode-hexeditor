@@ -7,7 +7,6 @@ declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
 export let virtualHexDocument: VirtualDocument;
 
-
 function openAnyway(): void {
 	vscode.postMessage({ type: "open-anyways" });
 }
@@ -26,6 +25,7 @@ function openAnyway(): void {
 					if (body.html !== undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = body.html;
 						virtualHexDocument = new VirtualDocument(body.fileSize);
+						(window as any).virtualHexDocument = virtualHexDocument;
 						vscode.postMessage({ type: "packet", body: {
 							initialOffset: 0,
 							numElements: Math.ceil(virtualHexDocument.numRowsInViewport * 16)

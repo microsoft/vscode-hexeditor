@@ -81,13 +81,6 @@ export class VirtualDocument {
         if (vscode.getState() && vscode.getState().selected_offset) {
             selectByOffset(vscode.getState().selected_offset);
         }
-        // After rendering we move the rows around
-        // this.rows[0].forEach((value: HTMLDivElement, key: string) => {
-        //     const offset = parseInt(key);
-        //     this.translateRow(value, offset);
-        //     this.translateRow(this.rows[1].get(key)!, offset);
-        //     this.translateRow(this.rows[2].get(key)!, offset);
-        // });
     }
 
     updateScrollDirection(newScrollY: number): void {
@@ -130,7 +123,6 @@ export class VirtualDocument {
     // Optimized to stop when it reaches the edge of a viewport
     public removeElementsNotInViewPort(): number {
         let removed = 0;
-        const elementsToRemove: string[] = [];
         let keys = Array.from(this.rows[0].keys());
         if (this.scrollDirection === "up") {
             keys = keys.reverse();
@@ -138,20 +130,16 @@ export class VirtualDocument {
         for(const key of keys) {
             const rowElement = this.rows[0].get(key);
             if (!elementInViewport(rowElement!)) {
-                elementsToRemove.push(key);
+                rowElement!.remove();
+                this.rows[0].delete(key);
+                this.rows[1].get(key)?.remove();
+                this.rows[1].delete(key);
+                this.rows[2].get(key)?.remove();
+                this.rows[2].delete(key);
                 removed++;
             } else {
                 break;
             }
-        }
-        // Remove the rows from the virtual document
-        for (let i = 0; i  < removed; i++) {
-            this.rows[0].get(elementsToRemove[i])?.remove();
-            this.rows[0].delete(elementsToRemove[i]);
-            this.rows[1].get(elementsToRemove[i])?.remove();
-            this.rows[1].delete(elementsToRemove[i]);
-            this.rows[2].get(elementsToRemove[i])?.remove();
-            this.rows[2].delete(elementsToRemove[i]);
         }
         return removed;
     }
@@ -220,9 +208,8 @@ export class VirtualDocument {
 
     // Translates the row to its expected position
     private translateRow(row: HTMLDivElement, offset: number): void {
-        const rowY = row.getBoundingClientRect().y;
-        // Add rowheight to account for the headers
-        const expectedY = this.offsetYPos(offset) + (document.getElementsByClassName("header")[2] as HTMLElement).offsetHeight;
-        row.style.transform = `translateY(${expectedY - rowY}px)`;
+        // Get the expected Y value
+        const expectedY = this.offsetYPos(offset);
+        row.style.top = `${expectedY}px`;
     }
 }
