@@ -24,13 +24,13 @@ function openAnyway(): void {
 					// Loads the html body sent over
 					if (body.html !== undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = body.html;
-						virtualHexDocument = new VirtualDocument(body.fileSize, body.html);
+						virtualHexDocument = new VirtualDocument(body.fileSize);
 						vscode.postMessage({ type: "packet", body: {
 							initialOffset: 0,
 							numElements: Math.ceil(virtualHexDocument.numRowsInViewport * 16)
 						} });
 						// We debounce the scroll so it isn't called excessively
-						window.addEventListener("scroll", debounce(scrollHandler, 125));
+						window.addEventListener("scroll", debounce(scrollHandler, 10));
 					}
 					if (body.fileSize != 0 && body.html === undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = 
@@ -62,7 +62,6 @@ function openAnyway(): void {
 						});
 					}
 					virtualHexDocument.addPackets(packets);
-					document.getElementsByTagName("body")[0]!.style.transform	= `translateY(${window.scrollY}px)`;
 				}
 		}
 	});

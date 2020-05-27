@@ -24,19 +24,26 @@ export class VirtualDocument {
     private rowHeight: number;
     private distanceBetweenRows: number;
     private documentHeight: number;
-    private bodyTemplate: string;
-    constructor(fileSize: number, body: string) {
+    private rows: HTMLDivElement[][];
+    constructor(fileSize: number) {
         this.fileSize = fileSize;
         this.data = [];
-        this.bodyTemplate = body;
+        // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
+        this.rows = [[], [], []];
         // We create a span and place it on the DOM before removing it to get the height of a row
         const oldhtml = document.getElementById("hexbody")!.innerHTML;
+        // We don't put the row class on this initial quick layout to do calculations as it will mess up our calculations due to the fact we use absolute positioning
+        let row = document.createElement("div");
         for (let i = 0; i < 17; i++) {
+            if (i % 16 == 0) {
+                document.getElementById("hexbody")?.appendChild(row);
+                row = document.createElement("div");
+            }
             const hex_element = document.createElement("span");
             hex_element.innerText = "FF";
-            
-            document.getElementById("hexbody")?.appendChild(hex_element);
+            row.appendChild(hex_element);
         }
+        document.getElementById("hexbody")?.appendChild(row);
         const spans = document.getElementsByTagName("span");
         this.rowHeight = spans[16].offsetHeight;
         this.distanceBetweenRows = spans[32].getBoundingClientRect().y - spans[16].getBoundingClientRect().y;
@@ -53,7 +60,6 @@ export class VirtualDocument {
     }
 
     render(): void {
-        document.getElementsByTagName("body")[0].innerHTML = this.bodyTemplate;
         this.populateHexAdresses();
         this.populateHexBody();
         this.populateAsciiTable();
@@ -80,7 +86,9 @@ export class VirtualDocument {
     }
 
     public offsetYPos(offset: number): number {
-        return Math.floor(offset / 16) * this.rowHeight;
+        // The last addition piece is to account for the header and its 1px border
+        // return (Math.floor(offset / 16) * this.distanceBetweenRows) + (this.distanceBetweenRows + 1);
+        return (Math.floor(offset / 16) * this.distanceBetweenRows);
     }
 
     // Takes the document data and populates the hex address column
@@ -89,22 +97,36 @@ export class VirtualDocument {
         const hex_addr = document.getElementById("hexaddr");
         for (let i = this.data[0].offset; i < this.data[0].offset + num_columns; i++) {
             const addr = document.createElement("div");
+            addr.className = "row";
             addr.setAttribute("data-offset", (i * 16).toString());
             addr.innerText = pad((i * 16).toString(16), 8).toUpperCase();
+            addr.style.top = `${this.offsetYPos(i*16)}px`;
             hex_addr!.appendChild(addr);
+            //addr.style.transform = `translateY(${this.offsetYPos(i*16)}px)`;
+            this.rows[0].push(addr);
         }
     }
 
     private populateAsciiTable(): void {
         const ascii_table = document.getElementById("ascii");
-        for (const packet of this.data) {
+        let row = document.createElement("div");
+        row.className = "row";
+        for (let i = 0; i < this.data.length; i++) {
+            if (i % 16 === 0 && i !== 0) {
+                // i-1 is needed because that's the last offset on that row, i in this case belongs to the next row
+                row.style.top = `${this.offsetYPos(this.data[i-1].offset)}px`;
+                ascii_table?.appendChild(row);
+                this.rows[2].push(row);
+                row = document.createElement("div");
+                row.className = "row";
+            }
             const ascii_element = document.createElement("span");
-            ascii_element.setAttribute("data-offset", packet.offset.toString());
-            if (withinAnyRange(packet.data.to8bitUInt(), generateCharacterRanges())) {
+            ascii_element.setAttribute("data-offset", this.data[i].offset.toString());
+            if (withinAnyRange(this.data[i].data.to8bitUInt(), generateCharacterRanges())) {
                 ascii_element.classList.add("nongraphic");
                 ascii_element.innerText = ".";
             } else {
-                const ascii_char = String.fromCharCode(packet.data.to8bitUInt());
+                const ascii_char = String.fromCharCode(this.data[i].data.to8bitUInt());
                 ascii_element.innerText = ascii_char;
             }
             ascii_element.tabIndex = -1;
@@ -112,23 +134,40 @@ export class VirtualDocument {
             ascii_element.addEventListener("mouseover", hover);
             ascii_element.addEventListener("mouseleave", removeHover);
             ascii_element.addEventListener("click", select);
-            ascii_table!.appendChild(ascii_element);
+            row.appendChild(ascii_element);
         }
+        // There will always be one unappended row left so we must do that after the loop
+        row.style.top = `${this.offsetYPos(this.data[this.data.length-1].offset)}px`;
+        ascii_table?.appendChild(row);
+        this.rows[2].push(row);
     }
 
     // Takes the byte stream and populates the webview with the hex information
     private populateHexBody(): void {
         const hex_body = document.getElementById("hexbody");
-        for (const packet of this.data) {
+        let row = document.createElement("div");
+        row.className = "row";
+        for (let i = 0; i < this.data.length; i++) {
+            if (i % 16 === 0 && i !== 0) {
+                // i-1 is needed because that's the last offset on that row, i in this case belongs to the next row
+                row.style.top = `${this.offsetYPos(this.data[i-1].offset)}px`;
+                hex_body?.appendChild(row);
+                this.rows[1].push(row);
+                row = document.createElement("div");
+                row.className = "row";
+            }
             const hex_element = document.createElement("span");
-            hex_element.setAttribute("data-offset", packet.offset.toString());
-            hex_element.innerText = pad(packet.data.toHex(), 2);
+            hex_element.setAttribute("data-offset", this.data[i].offset.toString());
+            hex_element.innerText = pad(this.data[i].data.toHex(), 2);
             hex_element.tabIndex = -1;
             hex_element.addEventListener("mouseover", hover);
             hex_element.addEventListener("mouseleave", removeHover);
             hex_element.addEventListener("click", select);
             hex_element.addEventListener("keydown", arrowKeyNavigate);
-            hex_body!.appendChild(hex_element);
+            row.appendChild(hex_element);
         }
+        row.style.top = `${this.offsetYPos(this.data[this.data.length-1].offset)}px`;
+        hex_body?.appendChild(row);
+        this.rows[1].push(row);
     }
 }

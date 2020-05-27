@@ -22,7 +22,7 @@ body {
 
 
 .grid-container {
-    /* position: sticky; */
+    position: sticky;
     top: 20px;
     display: grid;
     grid-template-columns: auto auto;
@@ -41,24 +41,24 @@ body {
 .left {
     text-align: right;
 }
-.left > div:not(.header) {
+.left > .rowwrapper {
     background-color: rgba(169, 169, 169, 0.4);
 }
 
-.middle > span:nth-child(16n + 1)::after {
+/* #hexbody > span:nth-child(16n)::after {
     content: '\A';
-}
+} */
 
-.middle > span {
+#hexbody > .row > span {
     padding: 1px 5px 1px 4px;
     white-space: pre;
 }
 
-.right > span:nth-child(16n + 1)::after {
+/* #ascii > span:nth-child(16n)::after {
     content: '\A';
-}
+} */
 
-.right > span {
+#ascii > .row > span {
     padding: 1px 5px 1px 4px;
     text-align: right;
     white-space: pre;
@@ -69,7 +69,7 @@ body {
 }
 
 .header {
-    /* position: sticky; */
+    position: sticky;
     top: 0px;
     border: 1px solid;
     font-weight: bold;
@@ -130,5 +130,13 @@ input:focus {
 
 .endian-select {
     padding-top: 10px;
+}
+
+.rowwrapper {
+    position: relative;
+}
+
+.row {
+    position: absolute;
 }
 

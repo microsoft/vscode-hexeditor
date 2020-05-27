@@ -40,7 +40,7 @@ function clearSelected(): void {
 // Given two elements (the hex and ascii) returns a ByteData object representing the combined elements
 function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteData | undefined {
 	for (const element of Array.from(elements)) {
-		if (element.parentElement && element.parentElement.id == "hexbody") {
+		if (element.parentElement?.parentElement && element.parentElement.parentElement.id == "hexbody") {
 			const byte_object = new ByteData(parseInt(element.innerHTML, 16));
 			let current_element = element.nextElementSibling;
 			for (let i = 0; i < 7; i++) {
@@ -90,6 +90,7 @@ export function select(event: MouseEvent): void  {
 		if (!byte_obj) return;
 		const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
 		populateDataInspector(byte_obj, littleEndian);
+		console.log(`Calculated: ${virtualHexDocument.offsetYPos(vscode.getState().selected_offset)}, Actual: ${elements[0].getBoundingClientRect().y}`);
 		elements[0].classList.add("selected");
 		elements[1].classList.add("selected");
 	}
