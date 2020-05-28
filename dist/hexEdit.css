@@ -14,7 +14,6 @@ body {
     cursor: default;
     float: left;
     padding-right: 10px;
-    /* font-size: larger; */
     font-weight: var(--vsocde-editor-font-weight);
     font-size: var(--vscode-editor-font-size);
     font-family: var(--vscode-editor-font-family);
@@ -45,18 +44,12 @@ body {
     background-color: rgba(169, 169, 169, 0.4);
 }
 
-/* #hexbody > span:nth-child(16n)::after {
-    content: '\A';
-} */
 
 #hexbody > .row > span {
     padding: 1px 5px 1px 4px;
     white-space: pre;
 }
 
-/* #ascii > span:nth-child(16n)::after {
-    content: '\A';
-} */
 
 #ascii > .row > span {
     padding: 1px 5px 1px 4px;
@@ -65,7 +58,7 @@ body {
 }
 
 .nongraphic {
-    color: rgba(0, 100, 150, 0.4);
+    color: rgba(0, 100, 150, 0.2);
 }
 
 .header {

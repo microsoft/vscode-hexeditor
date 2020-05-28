@@ -1,11 +1,12 @@
-import { ByteData } from "./byteData";
 import { debounce } from "ts-debounce";
-import { VirtualDocument, VirtualizedPacket } from "./virtualDocument";
-import { scrollHandler } from "./eventHandlers";
+import { VirtualDocument } from "./virtualDocument";
+import { ChunkHandler } from "./chunkHandler";
 
 declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
 export let virtualHexDocument: VirtualDocument;
+// Construct a chunk handler which holds chunks of 50 rows (50 * 16)
+export const chunkHandler: ChunkHandler = new ChunkHandler(800);
 
 function openAnyway(): void {
 	vscode.postMessage({ type: "open-anyways" });
@@ -26,12 +27,13 @@ function openAnyway(): void {
 						document.getElementsByTagName("body")[0].innerHTML = body.html;
 						virtualHexDocument = new VirtualDocument(body.fileSize);
 						(window as any).virtualHexDocument = virtualHexDocument;
-						vscode.postMessage({ type: "packet", body: {
-							initialOffset: 0,
-							numElements: Math.ceil(virtualHexDocument.numRowsInViewport * 16)
-						} });
+						// We initially load 4 chunks below the viewport (normally we buffer 2 above as well, but there is no above at the start)
+						chunkHandler.ensureBuffer(0, {
+							topBufferSize: 0,
+							bottomBufferSize: 4
+						});
 						// We debounce the scroll so it isn't called excessively
-						window.addEventListener("scroll", debounce(scrollHandler, 100));
+						window.addEventListener("scroll", debounce(virtualHexDocument.scrollHandler.bind(virtualHexDocument), 100));
 					}
 					if (body.fileSize != 0 && body.html === undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = 
@@ -53,15 +55,7 @@ function openAnyway(): void {
 				}
 			case "packet":
 				{
-					const offset = body.offset;
-					const packets: VirtualizedPacket[] = [];
-					for (let i = 0; i < body.data.data.length; i++) {
-						packets.push({
-							offset: i + offset,
-							data: new ByteData(body.data.data[i])
-						});
-					}
-					virtualHexDocument.render(packets);
+					chunkHandler.processChunks(body.offset, body.data.data);
 				}
 		}
 	});
