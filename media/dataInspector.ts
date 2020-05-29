@@ -1,8 +1,10 @@
 import { ByteData } from "./byteData";
 
-// Clears the data inspector of populated data
+/**
+ * @description Clears the data spector back to its default state
+ */
 export function clearDataInspector(): void {
-    // Thi function only gets called when these elements exist so these casts are safe
+    // This function only gets called when these elements exist so these casts are safe
 	(document.getElementById("binary8") as HTMLInputElement).value = "Invalid";
 	for (let i = 0; i < 4; i++) {
 		const numBits = (i + 1) * 8;
@@ -18,7 +20,11 @@ export function clearDataInspector(): void {
 	(document.getElementById("float64") as HTMLInputElement).value = "Invalid";
 }
 
-// Given the byte_object representing the byte in the file populates the data inspector
+/**
+ * @description Giving a ByteData object and what endianness, populates the data inspector
+ * @param {ByteData} byte_obj The ByteData object to represent on the data inspector
+ * @param {boolean} littleEndian Wether the data inspector is in littleEndian or bigEndian mode
+ */
 export function populateDataInspector(byte_obj: ByteData, littleEndian: boolean): void {
 	(document.getElementById("binary8") as HTMLInputElement).value = byte_obj.toBinary();
 	for (let i = 0; i < 4; i++) {
