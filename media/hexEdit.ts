@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { debounce } from "ts-debounce";
 import { VirtualDocument } from "./virtualDocument";
 import { ChunkHandler } from "./chunkHandler";

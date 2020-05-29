@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 export class ByteData {
     private decimal: number;
     private adjacentBytes: ByteData[];

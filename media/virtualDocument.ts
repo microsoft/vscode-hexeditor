@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license
+
 import { ByteData } from "./byteData";
 import { withinAnyRange, generateCharacterRanges } from "./util";
 import { arrowKeyNavigate, hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";

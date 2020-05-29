@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { vscode, virtualHexDocument } from "./hexEdit";
 import { VirtualizedPacket } from "./virtualDocument";
 import { ByteData } from "./byteData";

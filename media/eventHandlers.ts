@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import { clearDataInspector, populateDataInspector } from "./dataInspector";
 import { vscode } from "./hexEdit";
 import { ByteData } from "./byteData";

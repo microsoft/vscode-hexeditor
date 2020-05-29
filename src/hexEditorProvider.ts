@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 import * as vscode from "vscode";
 import { HexDocument } from "./hexDocument";
 import { disposeAll } from "./dispose";
