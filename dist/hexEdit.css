@@ -14,7 +14,6 @@ body {
     cursor: default;
     float: left;
     padding-right: 10px;
-    /* font-size: larger; */
     font-weight: var(--vsocde-editor-font-weight);
     font-size: var(--vscode-editor-font-size);
     font-family: var(--vscode-editor-font-family);
@@ -41,31 +40,25 @@ body {
 .left {
     text-align: right;
 }
-.left > div:not(.header) {
+.left > .rowwrapper {
     background-color: rgba(169, 169, 169, 0.4);
 }
 
-.middle > span:nth-child(16n + 1)::after {
-    content: '\A';
-}
 
-.middle > span {
+#hexbody > .row > span {
     padding: 1px 5px 1px 4px;
     white-space: pre;
 }
 
-.right > span:nth-child(16n + 1)::after {
-    content: '\A';
-}
 
-.right > span {
+#ascii > .row > span {
     padding: 1px 5px 1px 4px;
     text-align: right;
     white-space: pre;
 }
 
 .nongraphic {
-    color: rgba(0, 100, 150, 0.8);
+    color: rgba(0, 100, 150, 0.2);
 }
 
 .header {
@@ -74,6 +67,7 @@ body {
     border: 1px solid;
     font-weight: bold;
     background-color: var(--vscode-editor-background);
+    z-index: 10;
 }
 
 /* Colors of the headers in the various themes */
@@ -132,3 +126,10 @@ input:focus {
     padding-top: 10px;
 }
 
+.rowwrapper {
+    position: relative;
+}
+
+.row {
+    position: absolute;
+}
