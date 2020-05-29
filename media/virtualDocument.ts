@@ -4,12 +4,16 @@ import { arrowKeyNavigate, hover, removeHover, select, changeEndianness, selectB
 import { chunkHandler, virtualHexDocument, vscode } from "./hexEdit";
 
 
-// Pads a number with 0s up to a given width
+/**
+ * @description Given a string 0 pads it up unitl the string is of length width
+ * @param {string} number The number you want to 0 pad (it's a string as you're 0 padding it to display it, not to do arithmetic) 
+ * @param {number} width The length of the final string (if smaller than the string provided nothing happens)
+ * @returns {string} The newly padded string
+ */
 function pad(number: string, width: number): string {
 	number = number + "";
 	return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
 }
-
 
 
 export interface VirtualizedPacket {
@@ -17,12 +21,18 @@ export interface VirtualizedPacket {
     data: ByteData;
 }
 
-// Class which handles the virtualization of the hex document
+/**
+ * @description Handles the presentation layer virtualizing the hex document
+ */
 export class VirtualDocument {
     private fileSize: number;
     private rowHeight: number;
     private documentHeight: number;
     private rows: Map<string, HTMLDivElement>[];
+    /**
+     * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
+     * @param {number} fileSize The size, in bytes, of the file which is being displayed
+     */
     constructor(fileSize: number) {
         this.fileSize = fileSize;
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
@@ -91,6 +101,10 @@ export class VirtualDocument {
 
     }
 
+    /**
+     * @description Renders the newly provided packets onto the DOM
+     * @param {VirtualizedPacket[]} newPackets the packets which will be rendered
+     */
     render(newPackets: VirtualizedPacket[]): void {
         let rowData: VirtualizedPacket[] = [];
         // Construct rows of 16 and render them one row at a time
@@ -111,16 +125,26 @@ export class VirtualDocument {
         }
     }
 
-    // Gets the offset of the item displayed at the top of the viewport
+    /**
+     * @description Gets the offset of the packet at the top of the viewport
+     * @returns {number} the offset
+     */
     public topOffset(): number {
         return (Math.floor(window.scrollY / this.rowHeight) * 16);
     }
 
+    /**
+     * @description Retrieves the Y position a given offset is at
+     * @param {number} offset The offset to calculate the y position of
+     * @returns {number} The Y position the offset is at
+     */
     public offsetYPos(offset: number): number {
         return (Math.floor(offset / 16) * this.rowHeight);
     }
 
-    // Handles scrolling in the editor
+    /**
+     * @description Gets executed everytime the document is scrolled, this talks to the data layer to request more packets
+     */
     scrollHandler(): void {
         // We want to ensure there are at least 2 chunks above us and 4 chunks below us
         // These numbers were chosen arbitrarily under the assumption that scrolling down is more common
@@ -141,7 +165,10 @@ export class VirtualDocument {
         }
     }
 
-    // Takes the document data and populates the hex address column
+    /**
+     * @description Renders the gutter which holds the hex address memory offset
+     * @param {VirtualizedPacket[]} rowData An array of 16 bytes representing one row
+     */
     private populateHexAdresses(rowData: VirtualizedPacket[]): void {
         const hex_addr = document.getElementById("hexaddr");
         const offset = rowData[0].offset;
@@ -156,6 +183,10 @@ export class VirtualDocument {
         this.translateRow(addr, offset);
     }
 
+    /**
+     * @description Renders the decoded text section
+     * @param {VirtualizedPacket[]} rowData An array of 16 bytes representing one row
+     */
     private populateAsciiTable(rowData: VirtualizedPacket[]): void {
         const ascii_table = document.getElementById("ascii");
         const row = document.createElement("div");
@@ -184,7 +215,10 @@ export class VirtualDocument {
         this.translateRow(row, parseInt(rowOffset));
     }
 
-    // Takes the byte stream and populates the webview with the hex information
+    /**
+     * @description Renders the decoded text section
+     * @param {VirtualizedPacket[]} rowData An array of 16 bytes representing one row
+     */
     private populateHexBody(rowData: VirtualizedPacket[]): void {
         const hex_body = document.getElementById("hexbody");
         const row = document.createElement("div");
@@ -206,7 +240,11 @@ export class VirtualDocument {
         this.translateRow(row, parseInt(rowOffset));
     }
 
-    // Translates the row to its expected position
+    /**
+     * @description Moves the rows from where they were placed to where they are supposed to be (this is due to absolute positioning)
+     * @param {HTMLDivElement} row  The DivElement which needs to be moved
+     * @param {number} offset The offset of the element at the beginning of the row
+     */
     private translateRow(row: HTMLDivElement, offset: number): void {
         // Get the expected Y value
         const expectedY = this.offsetYPos(offset);

@@ -8,6 +8,9 @@ export let virtualHexDocument: VirtualDocument;
 // Construct a chunk handler which holds chunks of 50 rows (50 * 16)
 export const chunkHandler: ChunkHandler = new ChunkHandler(800);
 
+/**
+ * @description Fires when the user clicks the openAnyway link on large files
+ */
 function openAnyway(): void {
 	vscode.postMessage({ type: "open-anyways" });
 }

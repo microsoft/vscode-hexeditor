@@ -2,28 +2,55 @@ export class ByteData {
     private decimal: number;
     private adjacentBytes: ByteData[];
 
+	/**
+	 * @description Creates a ByteData object which acts as the datalayer for a single hex value
+	 * @param uint8num The 8bit number from the file to be represented
+	 */
 	constructor(uint8num: number) {
 		this.decimal = uint8num;
 		this.adjacentBytes = [];
 	}
-	// adds a ByteData object to the adjacent bytes array
+
+	/**
+	 * @description Adds a given ByteData object as adjancent to the current one (utilized for higher than 8bit calculations) 
+	 * @param {ByteData} byte_obj The ByteData obvject to add to the array
+	 */
 	addAdjacentByte(byte_obj: ByteData): void {
 		this.adjacentBytes.push(byte_obj);
 	}
 
+	/**
+	 * @description Returns the hex representation of the ByteData object
+	 * @returns {string} The ByteData represented as a hex string
+	 */
 	toHex(): string {
 		return this.decimal.toString(16).toUpperCase();
 	}
 
-	// COnvert the uint8num into 8bit binary
+	/**
+	 * @description Returns the binary representation of the ByteData object
+	 * @returns {string} The ByteData represented a binary string
+	 */
 	toBinary(): string {
 		return ("00000000"+ this.decimal.toString(2)).slice(-8);
 	}
 
+	/**
+	 * @description Returns the 8bit unsigned int representation of the ByteData object
+	 * @returns {number} The 8 bit unsigned int
+	 */
 	to8bitUInt(): number {
 		return this.decimal;
 	}
 
+	/**
+	 * @description Handles converting the ByteData object into many of the unsigned and signed integer formats
+	 * @param {number} numBits The numbers of bits you want represented, must be a multiple of 8 and <= 64
+	 * @param {boolean} signed Whether you want the returned representation to be signed or unsigned
+	 * @param {boolean} littleEndian True if you want it represented in little endian, false if big endian
+	 * @param {boolean} float If you pass in 32 or 64 as numBits do you want them to be float32 or float64, defaults to false
+	 * @returns {number | bigint} The new representation
+	 */
 	byteConverter(numBits: number, signed: boolean, littleEndian: boolean, float = false): number | bigint {
 		if (numBits % 8 != 0) {
 			throw new Error ("Bits must be a multiple of 8!");
