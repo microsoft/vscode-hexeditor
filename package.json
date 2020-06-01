@@ -5,7 +5,10 @@
 	"version": "0.0.1",
 	"publisher": "Microsoft",
 	"enableProposedApi": true,
-	"repository": "https://github.com/microsoft/vscode-hexeditor",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/microsoft/vscode-hexeditor"
+	},
 	"license": "MIT",
 	"engines": {
 		"vscode": "^1.45.0"
