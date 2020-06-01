@@ -46,19 +46,11 @@ export class VirtualDocument {
         // We create a span and place it on the DOM before removing it to get heights and widths of rows to setup layout correctly
         const oldHexHtml = document.getElementById("hexbody")!.innerHTML;
         const oldAsciiHtml = document.getElementById("ascii")!.innerHTML;
-        let row = document.createElement("div");
+        const row = document.createElement("div");
         const asciiRow = document.createElement("div");
         asciiRow.className = "row";
         row.className = "row";
-        for (let i = 0; i < 17; i++) {
-            if (i % 16 === 0 && i !== 0) {
-                row.style.top = "0px";
-                asciiRow.style.top = "0px";
-                document.getElementById("hexbody")?.appendChild(row);
-                document.getElementById("ascii")?.appendChild(asciiRow);
-                row = document.createElement("div");
-                row.className = "row";
-            }
+        for (let i = 0; i < 16; i++) {
             const hex_element = document.createElement("span");
             const ascii_element = document.createElement("span");
             hex_element.innerText = "FF";
@@ -67,7 +59,11 @@ export class VirtualDocument {
             row.appendChild(hex_element);
         }
 
+        row.style.top = "0px";
+        asciiRow.style.top = "0px";
         document.getElementById("hexbody")?.appendChild(row);
+        document.getElementById("ascii")?.appendChild(asciiRow);
+        
         const spans = document.getElementsByTagName("span");
         this.rowHeight = spans[16].offsetHeight;
         // Utilize the fake rows to get the widths of them and alter the widths of the headers etc to fit

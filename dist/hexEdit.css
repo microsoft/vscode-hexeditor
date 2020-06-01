@@ -43,7 +43,8 @@ body {
     text-align: right;
 }
 .left > .rowwrapper {
-    background-color: rgba(169, 169, 169, 0.4);
+    background-color: var(--vscode-editorGutter-background);
+    color: var(--vscode-editorLineNumber-foreground);
 }
 
 
@@ -59,16 +60,13 @@ body {
     white-space: pre;
 }
 
-.nongraphic {
-    color: rgba(0, 100, 150, 0.2);
-}
-
 .header {
     position: sticky;
     top: 0px;
     border: 1px solid;
     font-weight: bold;
     background-color: var(--vscode-editor-background);
+    color: var(--vscode-editorLineNumber-foreground);
     z-index: 10;
 }
 
@@ -134,4 +132,8 @@ input:focus {
 
 .row {
     position: absolute;
+}
+
+.nongraphic {
+    color: var(--vscode-tab-unfocusedInactiveForeground);
 }
