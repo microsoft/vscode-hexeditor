@@ -18,7 +18,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
 		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
 		let fileData: Uint8Array;
-		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number ) * 100000;
+		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number ) * 1000000;
 		if (fileSize > maxFileSize) {
 			fileData = new Uint8Array();
 		} else {
