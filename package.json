@@ -3,6 +3,7 @@
 	"displayName": "HexEditor",
 	"description": "Allows Hex Editing inside VS Code",
 	"version": "0.0.1",
+	"publisher": "Microsoft",
 	"enableProposedApi": true,
 	"repository": "https://github.com/microsoft/vscode-hexeditor",
 	"license": "MIT",
@@ -12,6 +13,7 @@
 	"categories": [
 		"Other"
 	],
+	"icon": "icon.png",
 	"activationEvents": [
 		"onCustomEditor:hexEditor.hexedit"
 	],
