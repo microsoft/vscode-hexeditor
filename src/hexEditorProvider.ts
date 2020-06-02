@@ -15,7 +15,7 @@ interface PacketRequest {
 
 export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<HexDocument> {
     public static register(context: vscode.ExtensionContext): vscode.Disposable {
-        return vscode.window.registerCustomEditorProvider2(
+        return vscode.window.registerCustomEditorProvider(
             HexEditorProvider.viewType,
             new HexEditorProvider(context),
             {

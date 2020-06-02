@@ -2,9 +2,8 @@
 	"name": "hexeditor",
 	"displayName": "HexEditor",
 	"description": "Allows Hex Editing inside VS Code",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"publisher": "Microsoft",
-	"enableProposedApi": true,
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/microsoft/vscode-hexeditor"
