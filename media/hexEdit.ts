@@ -9,7 +9,7 @@ declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
 export let virtualHexDocument: VirtualDocument;
 // Construct a chunk handler which holds chunks of 50 rows (50 * 16)
-export const chunkHandler: ChunkHandler = new ChunkHandler(800);
+export const chunkHandler: ChunkHandler = new ChunkHandler(16);
 
 /**
  * @description Fires when the user clicks the openAnyway link on large files
@@ -36,10 +36,10 @@ function openAnyway(): void {
 						// We initially load 4 chunks below the viewport (normally we buffer 2 above as well, but there is no above at the start)
 						chunkHandler.ensureBuffer(0, {
 							topBufferSize: 0,
-							bottomBufferSize: 4
+							bottomBufferSize: 100
 						});
 						// We debounce the scroll so it isn't called excessively
-						window.addEventListener("scroll", debounce(virtualHexDocument.scrollHandler.bind(virtualHexDocument), 100));
+						window.addEventListener("scroll", debounce(virtualHexDocument.scrollHandler.bind(virtualHexDocument), 10));
 					}
 					if (body.fileSize != 0 && body.html === undefined && body.fileSize <= (1000000 * 18)) {
 						document.getElementsByTagName("body")[0].innerHTML = 

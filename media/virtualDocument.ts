@@ -31,6 +31,7 @@ export class VirtualDocument {
     private fileSize: number;
     private rowHeight: number;
     private documentHeight: number;
+    private hexAddrPadding = NaN;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -148,8 +149,8 @@ export class VirtualDocument {
         // We want to ensure there are at least 2 chunks above us and 4 chunks below us
         // These numbers were chosen arbitrarily under the assumption that scrolling down is more common
         const removedChunks: number[] = chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
-            topBufferSize: 2,
-            bottomBufferSize: 4
+            topBufferSize: 20,
+            bottomBufferSize: 100
         });
         // We remove the chunks from the DOM as the chunk handler is no longer tracking them
         for (const chunk of removedChunks) {
@@ -177,8 +178,12 @@ export class VirtualDocument {
         addr.innerText = pad(offset.toString(16), 8).toUpperCase();
         hex_addr!.appendChild(addr);
         this.rows[0].set(offset.toString(), addr);
+        // We only calculate the padding the first time to prevent many reflows
+        if (isNaN(this.hexAddrPadding)) {
+            this.hexAddrPadding = addr.parentElement!.clientWidth - addr.clientWidth;
+        }
         // We add a left px offset to effectively right align the column
-        addr.style.left = `${addr.parentElement!.clientWidth - addr.clientWidth}px`;
+        addr.style.left = `${this.hexAddrPadding}px`;
         this.translateRow(addr, offset);
     }
 
