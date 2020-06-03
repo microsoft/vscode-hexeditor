@@ -146,7 +146,7 @@ export function arrowKeyNavigate(event: KeyboardEvent): void {
 		case  38:
 			const elements_above = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) - 16);
 			if (elements_above.length === 0) break;
-			if (elements_above[0].parentElement === targetElement.parentElement) {
+			if (elements_above[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
 				next = elements_above[0];
 			} else {
 				next = elements_above[1];
@@ -160,7 +160,7 @@ export function arrowKeyNavigate(event: KeyboardEvent): void {
 		case 40:
 			const elements_below = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) + 16);
 			if (elements_below.length === 0) break;
-			if (elements_below[0].parentElement === targetElement.parentElement) {
+			if (elements_below[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
 				next = elements_below[0];
 			} else {
 				next = elements_below[1];
