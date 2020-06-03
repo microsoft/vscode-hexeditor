@@ -4,18 +4,21 @@
 import { debounce } from "ts-debounce";
 import { VirtualDocument } from "./virtualDocument";
 import { ChunkHandler } from "./chunkHandler";
+import { MessageHandler } from "./messageHandler";
 
 declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
 export let virtualHexDocument: VirtualDocument;
 // Construct a chunk handler which holds chunks of 50 rows (50 * 16)
-export const chunkHandler: ChunkHandler = new ChunkHandler(16);
+export const chunkHandler: ChunkHandler = new ChunkHandler(800);
+// Message handler which will handle the messages between the exthost and the webview (We'll allow a max of 10 pending requests)
+export const messageHandler: MessageHandler = new MessageHandler(10);
 
 /**
  * @description Fires when the user clicks the openAnyway link on large files
  */
 function openAnyway(): void {
-	vscode.postMessage({ type: "open-anyways" });
+	messageHandler.postMessage("open-anyways");
 }
 
 
@@ -24,7 +27,7 @@ function openAnyway(): void {
 ((): void=> {
     // Handle messages from the extension
 	window.addEventListener("message", async e => {
-		const { type, body, requestId } = e.data;
+		const { type, body } = e.data;
 		switch (type) {
 			case "init":
 				{
@@ -36,10 +39,10 @@ function openAnyway(): void {
 						// We initially load 4 chunks below the viewport (normally we buffer 2 above as well, but there is no above at the start)
 						chunkHandler.ensureBuffer(0, {
 							topBufferSize: 0,
-							bottomBufferSize: 100
+							bottomBufferSize: 5
 						});
 						// We debounce the scroll so it isn't called excessively
-						window.addEventListener("scroll", debounce(virtualHexDocument.scrollHandler.bind(virtualHexDocument), 10));
+						window.addEventListener("scroll", virtualHexDocument.scrollHandler.bind(virtualHexDocument));
 					}
 					if (body.fileSize != 0 && body.html === undefined && body.fileSize <= (1000000 * 18)) {
 						document.getElementsByTagName("body")[0].innerHTML = 
@@ -62,18 +65,23 @@ function openAnyway(): void {
 					}
 					return;
 				}
-			case "getFileData":
+			default:
 				{
-					vscode.postMessage({ type: "response", requestId, body: "foo" });
+					messageHandler.incomingMessageHandler(e.data);
 					return;
 				}
-			case "packet":
-				{
-					chunkHandler.processChunks(body.offset, body.data.data);
-				}
+			// case "getFileData":
+			// 	{
+			// 		vscode.postMessage({ type: "response", requestId, body: "foo" });
+			// 		return;
+			// 	}
+			// case "packet":
+			// 	{
+			// 		chunkHandler.processChunks(body.offset, body.data.data);
+			// 	}
 		}
 	});
 
 	// Signal to VS Code that the webview is initialized.
-	vscode.postMessage({ type: "ready" });
+	messageHandler.postMessage("ready");
 })();

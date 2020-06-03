@@ -31,7 +31,7 @@ export class VirtualDocument {
     private fileSize: number;
     private rowHeight: number;
     private documentHeight: number;
-    private hexAddrPadding = NaN;
+    private hexAddrPadding: number;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -44,11 +44,17 @@ export class VirtualDocument {
         for (let i = 0; i < 3; i++) {
             this.rows.push(new Map<string, HTMLDivElement>());
         }
-        // We create a span and place it on the DOM before removing it to get heights and widths of rows to setup layout correctly
-        const oldHexHtml = document.getElementById("hexbody")!.innerHTML;
-        const oldAsciiHtml = document.getElementById("ascii")!.innerHTML;
+        // We create elements and place them on the DOM before removing them to get heights and widths of rows to setup layout correctly
+        const ascii = document.getElementById("ascii")!;
+        const hex = document.getElementById("hexbody")!;
+        const hexaddr = document.getElementById("hexaddr")!;
+        const oldHexAddrHtml = hexaddr.innerHTML;
+        const oldHexHtml = hex.innerHTML;
+        const oldAsciiHtml = ascii.innerHTML;
         const row = document.createElement("div");
         const asciiRow = document.createElement("div");
+        const hexAddrRow = document.createElement("div");
+        hexAddrRow.className = "row";
         asciiRow.className = "row";
         row.className = "row";
         for (let i = 0; i < 16; i++) {
@@ -59,11 +65,12 @@ export class VirtualDocument {
             asciiRow.appendChild(ascii_element);
             row.appendChild(hex_element);
         }
-
+        hexAddrRow.innerText = "00000000";
         row.style.top = "0px";
         asciiRow.style.top = "0px";
-        document.getElementById("hexbody")?.appendChild(row);
-        document.getElementById("ascii")?.appendChild(asciiRow);
+        hex.appendChild(row);
+        hexaddr.appendChild(hexAddrRow);
+        ascii.appendChild(asciiRow);
         
         const spans = document.getElementsByTagName("span");
         this.rowHeight = spans[16].offsetHeight;
@@ -72,10 +79,14 @@ export class VirtualDocument {
         const hexRowWidth = spans[16].parentElement!.offsetWidth;
         // Calculate document height
         this.documentHeight = Math.ceil(this.fileSize / 16) * this.rowHeight;
+        // Calculate the padding needed to make the offset column right aligned
+        this.hexAddrPadding = hexAddrRow.parentElement!.clientWidth - hexAddrRow.clientWidth;
+
 
         // We set the document back to its original state
-        document.getElementById("hexbody")!.innerHTML = oldHexHtml;
-        document.getElementById("ascii")!.innerHTML = oldAsciiHtml;
+        hex.innerHTML = oldHexHtml;
+        ascii.innerHTML = oldAsciiHtml;
+        hexaddr.innerHTML = oldHexAddrHtml;
 
         // Sets the columns heights for sticky scrolling to work
         const columns = document.getElementsByClassName("column") as HTMLCollectionOf<HTMLElement>;
@@ -96,9 +107,16 @@ export class VirtualDocument {
         (document.getElementsByClassName("header")[3] as HTMLElement).style.width = `${asciiRowWidth}px`;
         rowWrappers[2].style.width = `${asciiRowWidth}px`;
         rowWrappers[2].style.height = `${this.documentHeight}px`;
-        
-        document.getElementById("endianness")?.addEventListener("change", changeEndianness);
 
+        // Bind the event listeners
+        document.getElementById("endianness")?.addEventListener("change", changeEndianness);
+        ascii.addEventListener("keydown", arrowKeyNavigate);
+        ascii.addEventListener("mouseover", hover);
+        ascii.addEventListener("click", select);
+        hex.addEventListener("mouseover", hover);
+        hex.addEventListener("mouseleave", removeHover);
+        hex.addEventListener("click", select);
+        hex.addEventListener("keydown", arrowKeyNavigate);
     }
 
     /**
@@ -107,18 +125,26 @@ export class VirtualDocument {
      */
     render(newPackets: VirtualizedPacket[]): void {
         let rowData: VirtualizedPacket[] = [];
-        // Construct rows of 16 and render them one row at a time
+        const addrFragment = document.createDocumentFragment();
+        const hexFragment = document.createDocumentFragment();
+        const asciiFragment = document.createDocumentFragment();
+        // Construct rows of 16 and add them to the associated fragments
         for (let i = 0; i < newPackets.length; i++) {
             rowData.push(newPackets[i]);
             if (i === newPackets.length - 1 || rowData.length == 16) {
                 if (!this.rows[0].get(rowData[0].offset.toString())) {
-                    this.populateHexAdresses(rowData);
-                    this.populateHexBody(rowData);
-                    this.populateAsciiTable(rowData);
+                    this.populateHexAdresses(addrFragment, rowData);
+                    this.populateHexBody(hexFragment, rowData);
+                    this.populateAsciiTable(asciiFragment, rowData);
                 }
                 rowData = [];
             }
         }
+
+        // Render the fragments to the DOM
+        document.getElementById("hexaddr")?.appendChild(addrFragment);
+        document.getElementById("hexbody")?.appendChild(hexFragment);
+        document.getElementById("ascii")?.appendChild(asciiFragment);
 
         if (vscode.getState() && vscode.getState().selected_offset) {
             selectByOffset(vscode.getState().selected_offset);
@@ -149,8 +175,8 @@ export class VirtualDocument {
         // We want to ensure there are at least 2 chunks above us and 4 chunks below us
         // These numbers were chosen arbitrarily under the assumption that scrolling down is more common
         const removedChunks: number[] = chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
-            topBufferSize: 20,
-            bottomBufferSize: 100
+            topBufferSize: 2,
+            bottomBufferSize: 4
         });
         // We remove the chunks from the DOM as the chunk handler is no longer tracking them
         for (const chunk of removedChunks) {
@@ -167,21 +193,17 @@ export class VirtualDocument {
 
     /**
      * @description Renders the gutter which holds the hex address memory offset
+     * @param {DocumentFragment} fragment The fragment which elements get added to
      * @param {VirtualizedPacket[]} rowData An array of 16 bytes representing one row
      */
-    private populateHexAdresses(rowData: VirtualizedPacket[]): void {
-        const hex_addr = document.getElementById("hexaddr");
+    private populateHexAdresses(fragment: DocumentFragment, rowData: VirtualizedPacket[]): void {
         const offset = rowData[0].offset;
         const addr = document.createElement("div");
         addr.className = "row";
         addr.setAttribute("data-offset", offset.toString());
         addr.innerText = pad(offset.toString(16), 8).toUpperCase();
-        hex_addr!.appendChild(addr);
+        fragment.appendChild(addr);
         this.rows[0].set(offset.toString(), addr);
-        // We only calculate the padding the first time to prevent many reflows
-        if (isNaN(this.hexAddrPadding)) {
-            this.hexAddrPadding = addr.parentElement!.clientWidth - addr.clientWidth;
-        }
         // We add a left px offset to effectively right align the column
         addr.style.left = `${this.hexAddrPadding}px`;
         this.translateRow(addr, offset);
@@ -189,10 +211,10 @@ export class VirtualDocument {
 
     /**
      * @description Renders the decoded text section
+     * @param {DocumentFragment} fragment The fragment which elements get added to
      * @param {VirtualizedPacket[]} rowData An array of 16 bytes representing one row
      */
-    private populateAsciiTable(rowData: VirtualizedPacket[]): void {
-        const ascii_table = document.getElementById("ascii");
+    private populateAsciiTable(fragment: DocumentFragment, rowData: VirtualizedPacket[]): void {
         const row = document.createElement("div");
         row.className = "row";
         const rowOffset = rowData[0].offset.toString();
@@ -207,24 +229,21 @@ export class VirtualDocument {
                 const ascii_char = String.fromCharCode(rowData[i].data.to8bitUInt());
                 ascii_element.innerText = ascii_char;
             }
-            ascii_element.tabIndex = -1;
-            ascii_element.addEventListener("keydown", arrowKeyNavigate);
-            ascii_element.addEventListener("mouseover", hover);
             ascii_element.addEventListener("mouseleave", removeHover);
-            ascii_element.addEventListener("click", select);
+            ascii_element.tabIndex = -1;
             row.appendChild(ascii_element);
         }
-        ascii_table?.appendChild(row);
+        fragment.appendChild(row);
         this.rows[2].set(rowOffset, row);
         this.translateRow(row, parseInt(rowOffset));
     }
 
     /**
      * @description Renders the decoded text section
+     * @param {DocumentFragment} fragment The fragment which elements get added to
      * @param {VirtualizedPacket[]} rowData An array of 16 bytes representing one row
      */
-    private populateHexBody(rowData: VirtualizedPacket[]): void {
-        const hex_body = document.getElementById("hexbody");
+    private populateHexBody(fragment: DocumentFragment, rowData: VirtualizedPacket[]): void {
         const row = document.createElement("div");
         row.className = "row";
         const rowOffset = rowData[0].offset.toString();
@@ -233,13 +252,10 @@ export class VirtualDocument {
             hex_element.setAttribute("data-offset", rowData[i].offset.toString());
             hex_element.innerText = pad(rowData[i].data.toHex(), 2);
             hex_element.tabIndex = -1;
-            hex_element.addEventListener("mouseover", hover);
             hex_element.addEventListener("mouseleave", removeHover);
-            hex_element.addEventListener("click", select);
-            hex_element.addEventListener("keydown", arrowKeyNavigate);
             row.appendChild(hex_element);
         }
-        hex_body?.appendChild(row);
+        fragment.appendChild(row);
         this.rows[1].set(rowOffset, row);
         this.translateRow(row, parseInt(rowOffset));
     }
