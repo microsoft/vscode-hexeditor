@@ -66,11 +66,11 @@ function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteData | u
 	for (const element of Array.from(elements)) {
 		if (element.parentElement?.parentElement && element.parentElement.parentElement.id == "hexbody") {
 			const byte_object = new ByteData(parseInt(element.innerHTML, 16));
-			let current_element = element.nextElementSibling;
+			let current_element = element.nextElementSibling || element.parentElement.nextElementSibling?.children[0];
 			for (let i = 0; i < 7; i++) {
 				if (!current_element) break;
 				byte_object.addAdjacentByte(new ByteData(parseInt(current_element.innerHTML, 16)));
-				current_element = current_element.nextElementSibling;
+				current_element = current_element.nextElementSibling || current_element.parentElement?.nextElementSibling?.children[0];
 			}
 			return byte_object;
 		}
