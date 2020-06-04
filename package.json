@@ -41,7 +41,7 @@
 				"displayName": "Hex Editor",
 				"selector": [
 					{
-						"filenamePattern": "*.*"
+						"filenamePattern": "*"
 					}
 				],
 				"priority": "option"
