@@ -3,6 +3,7 @@
 
 import * as vscode from "vscode";
 import { Disposable } from "./dispose";
+import { telemetryReporter } from "./extension";
 
 interface HexDocumentDelegate {
     getFileData(): Promise<Uint8Array>;
@@ -17,6 +18,12 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// If we have a backup, read that. Otherwise read the resource from the workspace
 		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
 		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
+		/* __GDPR__
+			"fileOpen" : {
+				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+			}
+		*/
+		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
 		let fileData: Uint8Array;
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number ) * 1000000;
 		if (fileSize > maxFileSize) {
