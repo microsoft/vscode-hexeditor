@@ -279,7 +279,7 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 			case "packet":
 				const request = message.body as PacketRequest;
 				// Return the data requested and the offset it was requested for
-				panel.webview.postMessage({ type: "packet", body: {
+				panel.webview.postMessage({ type: "packet", requestId: message.requestId, body: {
 					data: document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements),
 					offset: request.initialOffset
 				} });
