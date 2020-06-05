@@ -3,7 +3,7 @@
 
 import * as vscode from "vscode";
 import { Disposable } from "./dispose";
-import { telemetryReporter } from "./extension";
+import TelemetryReporter from "vscode-extension-telemetry";
 
 interface HexDocumentDelegate {
     getFileData(): Promise<Uint8Array>;
@@ -13,6 +13,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
     static async create(
 		uri: vscode.Uri,
 		backupId: string | undefined,
+		telemetryReporter: TelemetryReporter,
 		delegate: HexDocumentDelegate,
 	): Promise<HexDocument | PromiseLike<HexDocument> > {
 		// If we have a backup, read that. Otherwise read the resource from the workspace

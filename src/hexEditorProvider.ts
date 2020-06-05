@@ -7,6 +7,7 @@ import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
 import path = require("path");
 import { getNonce } from "./util";
+import TelemetryReporter from "vscode-extension-telemetry";
 
 interface PacketRequest {
 	initialOffset: number;
@@ -14,10 +15,10 @@ interface PacketRequest {
 }
 
 export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<HexDocument> {
-    public static register(context: vscode.ExtensionContext): vscode.Disposable {
+    public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter): vscode.Disposable {
         return vscode.window.registerCustomEditorProvider(
             HexEditorProvider.viewType,
-            new HexEditorProvider(context),
+            new HexEditorProvider(context, telemetryReporter),
             {
                 supportsMultipleEditorsPerDocument: false
             }
@@ -29,7 +30,8 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
     private readonly webviews = new WebviewCollection();
 
     constructor(
-		private readonly _context: vscode.ExtensionContext
+		private readonly _context: vscode.ExtensionContext,
+		private readonly _telemetryReporter: TelemetryReporter
     ) { }
     
     async openCustomDocument(
@@ -37,7 +39,7 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
         openContext: vscode.CustomDocumentOpenContext,
         token: vscode.CancellationToken
     ): Promise<HexDocument> {
-        const document = await HexDocument.create(uri, openContext.backupId, {
+        const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter, {
             getFileData: async() => {
                 const webviewsForDocument: any = Array.from(this.webviews.get(document.uri));
 				if (!webviewsForDocument.length) {

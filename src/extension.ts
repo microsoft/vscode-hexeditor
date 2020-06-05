@@ -8,13 +8,14 @@ import { HexEditorProvider } from "./hexEditorProvider";
 
 // Telemetry information
 const extensionID = `vscode-${name}`;
-export let telemetryReporter: TelemetryReporter;
+
+let telemetryReporter: TelemetryReporter;
 
 export function activate(context: vscode.ExtensionContext): void {
 	console.log("Hexeditor is active!");
 	telemetryReporter = new TelemetryReporter(extensionID, version, aiKey);
 	context.subscriptions.push(telemetryReporter);
-	context.subscriptions.push(HexEditorProvider.register(context));
+	context.subscriptions.push(HexEditorProvider.register(context, telemetryReporter));
 }
 
 export function deactivate(): void {
