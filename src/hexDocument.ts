@@ -21,7 +21,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
 		/* __GDPR__
 			"fileOpen" : {
-				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
+				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
 			}
 		*/
 		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
