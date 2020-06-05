@@ -2,17 +2,22 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
+import TelemetryReporter   from "vscode-extension-telemetry";
+const { name, version, aiKey } = require("./../../package.json") as {name: string; version: string; aiKey: string};
 import { HexEditorProvider } from "./hexEditorProvider";
 
+// Telemetry information
+const extensionID = `vscode-${name}`;
+
+let telemetryReporter: TelemetryReporter;
+
 export function activate(context: vscode.ExtensionContext): void {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
 	console.log("Hexeditor is active!");
-
-	context.subscriptions.push(HexEditorProvider.register(context));
+	telemetryReporter = new TelemetryReporter(extensionID, version, aiKey);
+	context.subscriptions.push(telemetryReporter);
+	context.subscriptions.push(HexEditorProvider.register(context, telemetryReporter));
 }
 
-// this method is called when your extension is deactivated
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export function deactivate(): void {}
+export function deactivate(): void {
+	telemetryReporter.dispose();
+}
