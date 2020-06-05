@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { vscode, virtualHexDocument } from "./hexEdit";
+import { virtualHexDocument, messageHandler } from "./hexEdit";
 import { VirtualizedPacket } from "./virtualDocument";
 import { ByteData } from "./byteData";
 
@@ -50,12 +50,17 @@ export class ChunkHandler {
      * @description Sends a request to the extension for the packets which would make up the requested chunks
      * @param {number} chunkStart The start of the chunk which you're requesting
      */
-    private requestMoreChunks(chunkStart: number): void {
+    private async requestMoreChunks(chunkStart: number): Promise<void> {
         // Requests the chunks from the extension
-        vscode.postMessage({ type: "packet", body: { 
-            initialOffset: chunkStart,
-            numElements: this.chunkSize
-        } });
+        try {
+            const request = await messageHandler.postMessageWithResponse("packet", {
+                initialOffset: chunkStart,
+                numElements: this.chunkSize
+            });
+            this.processChunks(request.offset, request.data.data);
+        } catch (err) {
+            return;
+        }
     }
 
     /**
