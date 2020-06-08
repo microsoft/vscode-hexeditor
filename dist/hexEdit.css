@@ -3,6 +3,7 @@ Licensed under the MIT license. */
 
 body {
     min-width: 1224px;
+    overflow-y: hidden;
     overflow-x: scroll;
 }
 
@@ -136,4 +137,17 @@ input:focus {
 
 .nongraphic {
     color: var(--vscode-tab-unfocusedInactiveForeground);
+}
+
+#scrollbar {
+    position: fixed;
+    right: 0px;
+    height: 100%;
+    width: 16px;
+    background-color: hotpink;
+}
+
+#scroll-thumb {
+    height: 10%;
+    background-color: purple;
 }

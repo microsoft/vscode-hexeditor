@@ -256,7 +256,12 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 			<div class="header">Decoded Text</div>
 			<div class="rowwrapper" id="ascii">
 			</div>
-		</div>`;
+		</div>
+		<div id="scrollbar">
+			<div id="scroll-thumb">
+			</div>
+		</div>
+		`;
 	}
 	
     private _requestId = 1;

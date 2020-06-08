@@ -5,6 +5,7 @@ import { ByteData } from "./byteData";
 import { withinAnyRange, generateCharacterRanges } from "./util";
 import { arrowKeyNavigate, hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument, vscode } from "./hexEdit";
+import { ScrollBarHandler } from "./srollBarHandler";
 
 
 /**
@@ -32,12 +33,14 @@ export class VirtualDocument {
     private rowHeight: number;
     private documentHeight: number;
     private hexAddrPadding: number;
+    private readonly scrollBarHandler: ScrollBarHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
      * @param {number} fileSize The size, in bytes, of the file which is being displayed
      */
     constructor(fileSize: number) {
+        this.scrollBarHandler = new ScrollBarHandler("scrollbar");
         this.fileSize = fileSize;
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
         this.rows = [];
@@ -156,7 +159,7 @@ export class VirtualDocument {
      * @returns {number} the offset
      */
     public topOffset(): number {
-        return (Math.floor(window.scrollY / this.rowHeight) * 16);
+        return (Math.floor(this.scrollBarHandler.virtualScrollTop / this.rowHeight) * 16);
     }
 
     /**
