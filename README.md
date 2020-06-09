@@ -10,15 +10,11 @@ This an extension for Visual Studio Code 1.4.6+ which utilizes the custom editor
 - Navigating and scrolling through them
 - Viewing the hex values in various different formats
 
-<!-- For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow. -->
+![Navigating a file](hex-editor.gif)
 
 ## Requirements
 
-- Visual Studio Code 1.4.6+
+- Visual Studio Code 1.46+
 
 ## Extension Settings
 
