@@ -31,13 +31,14 @@ export class ScrollBarHandler {
         }
         window.addEventListener("wheel", this.onMouseWheel.bind(this));
         this.scrollBar.addEventListener("mousedown", () => {
+            this.scrollThumb.classList.add("scrolling");
             this.isDragging = true;
         });
         this.scrollBar.addEventListener("mouseup", () => {
-            this.scrollThumb.style.backgroundColor = "purple";
+            this.scrollThumb.classList.remove("scrolling");
             this.isDragging = false;
         });
-        this.scrollBar.addEventListener("mousemove", this.scrollThumbDrag.bind(this));
+        window.addEventListener("mousemove", this.scrollThumbDrag.bind(this));
         this.rowHeight = rowHeight;
         this.updateScrollBar(numRows);
     }
@@ -66,15 +67,14 @@ export class ScrollBarHandler {
         // This helps the case where we lose track as the user releases the button outside the webview
         if (!this.isDragging || event.buttons == 0){
             this.isDragging = false;
-            this.scrollThumb.style.backgroundColor = "purple";
+            this.scrollThumb.classList.remove("scrolling");
             return;
         }
         if (event.clientY > this.scrollBarHeight - this.scrollThumbHeight) {
             this.scrollTop = (this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump;
         } else {
-            this.scrollTop = event.clientY * this.scrollJump;
+            this.scrollTop = Math.max(0, event.clientY * this.scrollJump);
         }
-        this.scrollThumb.style.backgroundColor = "black";
         this.updateScrolledPosition();
     }
 
@@ -121,6 +121,37 @@ export class ScrollBarHandler {
             // If we're at the bottom of the document we don't want to do anything here
             if (this.scrollTop / this.scrollJump >= this.scrollBarHeight - this.scrollThumbHeight) return;
             this.scrollTop += this.rowHeight * numRows;
+        }
+        this.updateScrolledPosition();
+    }
+
+    /**
+     * @description Scrolls to the top of the document
+     */
+    public scrollToTop(): void {
+        this.scrollTop = 0;
+        this.updateScrolledPosition();
+    }
+
+    /**
+     * @description Scrolls to the bottom of the document
+     */
+    public scrollToBottom(): void {
+        this.scrollTop = (this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump;
+        this.updateScrolledPosition();
+    }
+
+    /** TODO: FINSIH implemetning this
+     * @description Controls scrolling up and down one viewport. Which occurs when the user presses page up or page down
+     * @param {number} viewportHeight The height of the viewport in pixels
+     * @param {string} direction Whether you want to page up or down
+     */
+    public page(viewportHeight: number, direction: "up" | "down"): void {
+        if (direction == "up") {
+            this.scrollTop = Math.max(0, this.scrollTop - viewportHeight);
+        } else {
+            // Don't overshoot the end of the document
+            this.scrollTop = Math.min((this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump, this.scrollTop - viewportHeight);
         }
         this.updateScrolledPosition();
     }

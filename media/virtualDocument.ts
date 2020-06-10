@@ -116,16 +116,15 @@ export class VirtualDocument {
         // Intializes a few things such as viewport size and the scrollbar positions
         this.documentResize();
 
+        const editorContainer = document.getElementById("editor-container")!;
         // Bind the event listeners
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
-        ascii.addEventListener("keydown", this.arrowKeyNavigate.bind(this));
-        ascii.addEventListener("mouseover", hover);
-        ascii.addEventListener("click", select);
-        hex.addEventListener("mouseover", hover);
-        hex.addEventListener("mouseleave", removeHover);
-        hex.addEventListener("click", select);
-        hex.addEventListener("keydown", this.arrowKeyNavigate.bind(this));
+        editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
+        editorContainer.addEventListener("mouseover", hover);
+        editorContainer.addEventListener("mouseleave", removeHover);
+        editorContainer.addEventListener("click", select);
         window.addEventListener("resize", this.documentResize.bind(this));
+        window.addEventListener("keydown", this.keyBoardScroller.bind(this));
     }
 
     /**
@@ -291,17 +290,52 @@ export class VirtualDocument {
     }
 
     /**
-     * @description Handles when the user uses the arrow keys to navigate the editor
-     * @param {KeyboardEvent} event  The KeyboardEvent passed to the event handler.
+     * @description Handles all keyboard interaction with the document
+     * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
-    private arrowKeyNavigate(event: KeyboardEvent): void {
+    private keyBoardHandler(event: KeyboardEvent): void {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
-        let next;
         if (event.keyCode >= 37 && event.keyCode <= 40) {
+            this.arrowKeyNavigate(event.keyCode, targetElement);
             event.preventDefault();
+        // If the user presses Home we go to the front of the line
+        } else if (event.keyCode == 36) {
+            const firstElement = targetElement.parentElement!.children[0] as HTMLElement;
+            firstElement.focus();
+            selectByOffset(parseInt(firstElement.getAttribute("data-offset")!));
+        // If the user presses end we go to the end of the line
+        } else if (event.keyCode == 35) {
+            const parentChildren = targetElement.parentElement!.children;
+            const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
+            lastElement.focus();
+            selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
         }
-        switch(event.keyCode) {
+    }
+
+    /**
+     * @description Handles scrolling using ctrl + home and ctrl + end
+     * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler. 
+     */
+    private keyBoardScroller(event: KeyboardEvent): void {
+        if (!event || !event.target) return;
+        // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
+        if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey)
+            event.keyCode == 36 ? this.scrollBarHandler.scrollToTop() : this.scrollBarHandler.scrollToBottom();
+    }
+
+    /**
+     * @description Handles when the user uses the arrow keys to navigate the editor
+     * @param {number} keyCode The keyCode of the key pressed
+     * @param {HTMLElement} targetElement The element
+     */
+    private arrowKeyNavigate(keyCode: number, targetElement: HTMLElement): void {
+        if (!event || !event.target) return;
+        let next;
+        if (keyCode < 37 || keyCode > 40) {
+            return;
+        }
+        switch(keyCode) {
             // left
             case 37:
                 next = targetElement.previousElementSibling;
@@ -332,12 +366,12 @@ export class VirtualDocument {
                 break;
         }
         if (next && next.tagName === "SPAN") {
-            // const nextRect = next.getBoundingClientRect();
-            // if (this.viewPortHeight + this.rowHeight >= nextRect.bottom) {
-            //     this.scrollBarHandler.scrollDocument(2, "down");
-            // } else if (nextRect.bottom - (this.rowHeight * 2) <= 0) {
-            //     this.scrollBarHandler.scrollDocument(2, "up");
-            // }
+            const nextRect = next.getBoundingClientRect();
+            if (this.viewPortHeight <= nextRect.bottom) {
+                this.scrollBarHandler.scrollDocument(1, "down");
+            } else if (nextRect.top <= 0) {
+                this.scrollBarHandler.scrollDocument(1, "up");
+            }
             (next as HTMLInputElement).focus();
             selectByOffset(parseInt(next.getAttribute("data-offset")!));
 

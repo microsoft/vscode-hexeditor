@@ -71,19 +71,6 @@ body {
     z-index: 10;
 }
 
-/* Colors of the headers in the various themes */
-body.vscode-dark > .column > .header {
-    border-color: #444444;
-}
-
-body.vscode-light > .column > .header {
-    border-color: #e7e7e7;
-}
-
-body.vscode-high-contrast > .column > .header {
-    border-color:#6fc3df;
-}
-
 .header > span {
     padding: 1px 5px 1px 4px;
 }
@@ -145,10 +132,16 @@ input:focus {
     right: 0px;
     height: 100%;
     width: 16px;
-    background-color: hotpink;
+    border-left: 1px solid;
+    border-color: var(--vscode-editorLineNumber-foreground);
+    background-color: transparent
 }
 
 #scroll-thumb {
     padding: 0, 0, 0, 0;
-    background-color: purple;
+    background-color: var(--vscode-scrollbarSlider-background);
+}
+
+.scrolling {
+    background-color: var(--vscode-scrollbarSlider-activeBackground) !important;
 }
