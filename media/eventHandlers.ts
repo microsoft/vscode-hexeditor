@@ -4,28 +4,8 @@
 import { clearDataInspector, populateDataInspector } from "./dataInspector";
 import { vscode } from "./hexEdit";
 import { ByteData } from "./byteData";
+import { getElementsGivenMouseEvent, getElementsWithGivenOffset } from "./util";
 
-/**
- * @description Given an offset gets all spans with that offset
- * @param {number} offset The offset to find elements of
- * @returns {NodeListOf<HTMLElement>} returns a list of HTMLElements which have the given offset
- */
-function getElementsWithGivenOffset(offset: number): NodeListOf<HTMLElement> {
-	return document.querySelectorAll(`span[data-offset='${offset}'`);
-}
-
-/**
- * @description Returns the elements with the same offset as the one clicked
- * @param {MouseEvent} event The event which is handed to a mouse event listener 
- * @returns {NodeListOf<Element> | undefined} The elements with the same offset as the clicked element, or undefined if none could be retrieved
- */
-function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Element> | undefined {
-    if (!event || !event.target) return;
-    const hovered = event.target as Element;
-    const data_offset = hovered.getAttribute("data-offset");
-    if (!data_offset) return;
-    return getElementsWithGivenOffset(parseInt(data_offset));
-}
 
 
 /**
@@ -123,53 +103,6 @@ export function select(event: MouseEvent): void  {
 		populateDataInspector(byte_obj, littleEndian);
 		elements[0].classList.add("selected");
 		elements[1].classList.add("selected");
-	}
-}
-
-/**
- * @description Handles when the user uses the arrow keys to navigate the editor
- * @param {KeyboardEvent} event  The KeyboardEvent passed to the event handler.
- */
-export function arrowKeyNavigate(event: KeyboardEvent): void {
-	if (!event || !event.target) return;
-	const targetElement = event.target as HTMLElement;
-	let next;
-	if (event.keyCode >= 37 && event.keyCode <= 40) {
-		event.preventDefault();
-	}
-	switch(event.keyCode) {
-		// left
-		case 37:
-			next = targetElement.previousElementSibling;
-			break;
-		// up
-		case  38:
-			const elements_above = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) - 16);
-			if (elements_above.length === 0) break;
-			if (elements_above[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
-				next = elements_above[0];
-			} else {
-				next = elements_above[1];
-			}
-			break;
-		// right
-		case 39:
-			next = targetElement.nextElementSibling;
-			break;
-		// down
-		case 40:
-			const elements_below = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) + 16);
-			if (elements_below.length === 0) break;
-			if (elements_below[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
-				next = elements_below[0];
-			} else {
-				next = elements_below[1];
-			}
-			break;
-	}
-	if (next && next.tagName === "SPAN") {
-		(next as HTMLInputElement).focus();
-		selectByOffset(parseInt(next.getAttribute("data-offset")!));
 	}
 }
 

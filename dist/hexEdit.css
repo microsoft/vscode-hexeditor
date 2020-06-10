@@ -140,6 +140,7 @@ input:focus {
 }
 
 #scrollbar {
+    padding: 0, 0, 0, 0;
     position: fixed;
     right: 0px;
     height: 100%;
@@ -148,6 +149,6 @@ input:focus {
 }
 
 #scroll-thumb {
-    height: 1%;
+    padding: 0, 0, 0, 0;
     background-color: purple;
 }

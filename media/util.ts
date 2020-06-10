@@ -61,3 +61,26 @@ export function generateCharacterRanges(): Range[] {
     ranges.push(new Range(256));
     return ranges;
 }
+
+
+/**
+ * @description Given an offset gets all spans with that offset
+ * @param {number} offset The offset to find elements of
+ * @returns {NodeListOf<HTMLElement>} returns a list of HTMLElements which have the given offset
+ */
+export function getElementsWithGivenOffset(offset: number): NodeListOf<HTMLElement> {
+	return document.querySelectorAll(`span[data-offset='${offset}'`);
+}
+
+/**
+ * @description Returns the elements with the same offset as the one clicked
+ * @param {MouseEvent} event The event which is handed to a mouse event listener 
+ * @returns {NodeListOf<Element> | undefined} The elements with the same offset as the clicked element, or undefined if none could be retrieved
+ */
+export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Element> | undefined {
+    if (!event || !event.target) return;
+    const hovered = event.target as Element;
+    const data_offset = hovered.getAttribute("data-offset");
+    if (!data_offset) return;
+    return getElementsWithGivenOffset(parseInt(data_offset));
+}

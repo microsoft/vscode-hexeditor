@@ -43,7 +43,7 @@ function openAnyway(): void {
 						// We debounce the scroll so it isn't called excessively
 						window.addEventListener("scroll", virtualHexDocument.scrollHandler.bind(virtualHexDocument));
 					}
-					if (body.fileSize != 0 && body.html === undefined && body.fileSize <= (1000000 * 18)) {
+					if (body.fileSize != 0 && body.html === undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = 
 						`
 							<div>
@@ -53,14 +53,6 @@ function openAnyway(): void {
                         // We construct the element right above this so it is definitely never null
 						document.getElementById("open-anyway")!.addEventListener("click", openAnyway);
 						return;
-					// Temporary restraint on files over 18MB until scrolling issue is resolved
-					} else if (body.html === undefined && body.fileSize != 0 && body.fileSize > ((1000000 * 18))) {
-						document.getElementsByTagName("body")[0].innerHTML = 
-						`
-							<div>
-							<p> Files over 18 MB are currently not supported.</p>
-							</div>
-						`;
 					}
 					return;
 				}
