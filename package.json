@@ -18,7 +18,8 @@
 	],
 	"icon": "icon.png",
 	"activationEvents": [
-		"onCustomEditor:hexEditor.hexedit"
+		"onCustomEditor:hexEditor.hexedit",
+		"onCommand:hexEditor.openFile"
 	],
 	"main": "./out/src/extension.js",
 	"contributes": {
@@ -47,6 +48,12 @@
 				],
 				"priority": "option"
 			}
+		],
+		"commands": [
+			{
+				"command": "hexEditor.openFile",
+				"title": "Open file using Hex Editor"
+			}
 		]
 	},
 	"scripts": {
@@ -61,7 +68,7 @@
 	"devDependencies": {
 		"@types/glob": "^7.1.2",
 		"@types/mocha": "^7.0.2",
-		"@types/node": "^13.13.10",
+		"@types/node": "^13.13.12",
 		"@types/vscode": "^1.46.0",
 		"@typescript-eslint/eslint-plugin": "^2.34.0",
 		"@typescript-eslint/parser": "^2.34.0",

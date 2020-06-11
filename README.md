@@ -16,6 +16,12 @@ This an extension for Visual Studio Code 1.46+ which utilizes the custom editor 
 
 - Visual Studio Code 1.46+
 
+## How to Use
+There are three ways to open a file as hex
+1. Trigger the command palette (Ctrl / Cmd + Shift + P) -> Reopen With -> Hex Editor
+2. Right click a file -> Open With -> Hex Editor
+3. Trigger the command palette (Ctrl / Cmd + Shift + P) -> Open File using Hex Editor
+
 ## Extension Settings
 
 This extension contributes the following settings:
@@ -30,7 +36,11 @@ This extension contributes the following settings:
 
 ### 1.0.0
 
-Hex Editor initial release
+- Hex Editor initial release
+
+### 1.0.1
+- Add instructions to the README on how to use the extension
+- Add an Open with HexEditor command
 
 -----------------------------------------------------------------------------------------------------------
 
