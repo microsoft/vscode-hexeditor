@@ -3,6 +3,7 @@ Licensed under the MIT license. */
 
 body {
     min-width: 1224px;
+    color: var(--vscode-editor-foreground);
     overflow-y: hidden;
     overflow-x: scroll;
 }
@@ -100,7 +101,7 @@ input:focus {
 }
 
 :focus {
-    outline-color: var(--vscode-focusBorder) !important;
+    outline-color: var(--vscode-statusBar-background) !important;
 }
 
 #endianness {
