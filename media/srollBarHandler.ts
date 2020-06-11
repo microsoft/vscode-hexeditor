@@ -70,6 +70,7 @@ export class ScrollBarHandler {
             this.scrollThumb.classList.remove("scrolling");
             return;
         }
+        event.preventDefault();
         if (event.clientY > this.scrollBarHeight - this.scrollThumbHeight) {
             this.scrollTop = (this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump;
         } else {
