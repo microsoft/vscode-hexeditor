@@ -22,6 +22,22 @@ There are three ways to open a file as hex
 2. Right click a file -> Open With -> Hex Editor
 3. Trigger the command palette (Ctrl / Cmd + Shift + P) -> Open File using Hex Editor
 
+If you would like to use the hex editor as the default hex editor for certain file types you can add the `workbench.editorAssocations` setting to your `settings.json`.
+
+For example, this would associate all files with .hex or .ini to open by default in the hex editor
+```json
+    "workbench.editorAssociations": [
+        {
+            "viewType": "hexEditor.hexedit",
+            "filenamePattern": "*.hex"
+        },
+        {
+            "viewType": "hexEditor.hexedit",
+            "filenamePattern": "*.ini"
+        }
+    ],
+```
+
 ## Extension Settings
 
 This extension contributes the following settings:
@@ -30,7 +46,9 @@ This extension contributes the following settings:
 
 ## Known Issues
 
-- [Files over 18 MB are corrupted at the bottom](https://github.com/microsoft/vscode-hexeditor/issues/3)
+- Currently No major issues
+
+To track all issues / file a new issue please go to the Github repo https://github.com/microsoft/vscode-hexeditor/issues
 
 ## Release Notes
 
