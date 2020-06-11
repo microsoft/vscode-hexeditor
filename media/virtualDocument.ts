@@ -300,12 +300,12 @@ export class VirtualDocument {
             this.arrowKeyNavigate(event.keyCode, targetElement);
             event.preventDefault();
         // If the user presses Home we go to the front of the line
-        } else if (event.keyCode == 36) {
+        } else if (event.keyCode == 36 && !event.ctrlKey) {
             const firstElement = targetElement.parentElement!.children[0] as HTMLElement;
             firstElement.focus();
             selectByOffset(parseInt(firstElement.getAttribute("data-offset")!));
         // If the user presses end we go to the end of the line
-        } else if (event.keyCode == 35) {
+        } else if (event.keyCode == 35 && !event.ctrlKey) {
             const parentChildren = targetElement.parentElement!.children;
             const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
             lastElement.focus();
@@ -322,6 +322,13 @@ export class VirtualDocument {
         // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
         if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey)
             event.keyCode == 36 ? this.scrollBarHandler.scrollToTop() : this.scrollBarHandler.scrollToBottom();
+        // PG Up
+        else if (event.keyCode == 33) {
+            this.scrollBarHandler.page(this.viewPortHeight, "up");
+        // PG Down
+        } else if (event.keyCode == 34) {
+            this.scrollBarHandler.page(this.viewPortHeight, "down");
+        }
     }
 
     /**

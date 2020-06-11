@@ -100,7 +100,7 @@ input:focus {
 }
 
 :focus {
-    outline-color: var(--vscode-focusBorder);
+    outline-color: var(--vscode-focusBorder) !important;
 }
 
 #endianness {

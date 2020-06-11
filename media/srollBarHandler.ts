@@ -142,7 +142,7 @@ export class ScrollBarHandler {
         this.updateScrolledPosition();
     }
 
-    /** TODO: FINSIH implemetning this
+    /**
      * @description Controls scrolling up and down one viewport. Which occurs when the user presses page up or page down
      * @param {number} viewportHeight The height of the viewport in pixels
      * @param {string} direction Whether you want to page up or down
@@ -152,7 +152,7 @@ export class ScrollBarHandler {
             this.scrollTop = Math.max(0, this.scrollTop - viewportHeight);
         } else {
             // Don't overshoot the end of the document
-            this.scrollTop = Math.min((this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump, this.scrollTop - viewportHeight);
+            this.scrollTop = Math.min((this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump, this.scrollTop + viewportHeight);
         }
         this.updateScrolledPosition();
     }
