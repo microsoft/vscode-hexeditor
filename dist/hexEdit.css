@@ -3,6 +3,7 @@ Licensed under the MIT license. */
 
 body {
     min-width: 1224px;
+    overflow-y: hidden;
     overflow-x: scroll;
 }
 
@@ -70,19 +71,6 @@ body {
     z-index: 10;
 }
 
-/* Colors of the headers in the various themes */
-body.vscode-dark > .column > .header {
-    border-color: #444444;
-}
-
-body.vscode-light > .column > .header {
-    border-color: #e7e7e7;
-}
-
-body.vscode-high-contrast > .column > .header {
-    border-color:#6fc3df;
-}
-
 .header > span {
     padding: 1px 5px 1px 4px;
 }
@@ -112,7 +100,7 @@ input:focus {
 }
 
 :focus {
-    outline-color: var(--vscode-focusBorder);
+    outline-color: var(--vscode-focusBorder) !important;
 }
 
 #endianness {
@@ -136,4 +124,24 @@ input:focus {
 
 .nongraphic {
     color: var(--vscode-tab-unfocusedInactiveForeground);
+}
+
+#scrollbar {
+    padding: 0, 0, 0, 0;
+    position: fixed;
+    right: 0px;
+    height: 100%;
+    width: 16px;
+    border-left: 1px solid;
+    border-color: var(--vscode-editorLineNumber-foreground);
+    background-color: transparent
+}
+
+#scroll-thumb {
+    padding: 0, 0, 0, 0;
+    background-color: var(--vscode-scrollbarSlider-background);
+}
+
+.scrolling {
+    background-color: var(--vscode-scrollbarSlider-activeBackground) !important;
 }

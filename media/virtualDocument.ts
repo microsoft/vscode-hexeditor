@@ -2,9 +2,10 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { withinAnyRange, generateCharacterRanges } from "./util";
-import { arrowKeyNavigate, hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";
+import { withinAnyRange, generateCharacterRanges, getElementsWithGivenOffset } from "./util";
+import { hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument, vscode } from "./hexEdit";
+import { ScrollBarHandler } from "./srollBarHandler";
 
 
 /**
@@ -30,8 +31,10 @@ export interface VirtualizedPacket {
 export class VirtualDocument {
     private fileSize: number;
     private rowHeight: number;
-    private documentHeight: number;
+    public readonly documentHeight: number;
+    private viewPortHeight!: number
     private hexAddrPadding: number;
+    private readonly scrollBarHandler: ScrollBarHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -77,8 +80,8 @@ export class VirtualDocument {
         // Utilize the fake rows to get the widths of them and alter the widths of the headers etc to fit
         const asciiRowWidth = asciiRow.offsetWidth;
         const hexRowWidth = spans[16].parentElement!.offsetWidth;
-        // Calculate document height
-        this.documentHeight = Math.ceil(this.fileSize / 16) * this.rowHeight;
+        // Calculate document height, we max out at 500k due to browser limitations on large div
+        this.documentHeight = Math.min(Math.ceil(this.fileSize / 16) * this.rowHeight, 500000);
         // Calculate the padding needed to make the offset column right aligned
         this.hexAddrPadding = hexAddrRow.parentElement!.clientWidth - hexAddrRow.clientWidth;
 
@@ -108,22 +111,27 @@ export class VirtualDocument {
         rowWrappers[2].style.width = `${asciiRowWidth}px`;
         rowWrappers[2].style.height = `${this.documentHeight}px`;
 
+        // Creates the scrollBar Handler
+        this.scrollBarHandler = new ScrollBarHandler("scrollbar", this.fileSize / 16, this.rowHeight);
+        // Intializes a few things such as viewport size and the scrollbar positions
+        this.documentResize();
+
+        const editorContainer = document.getElementById("editor-container")!;
         // Bind the event listeners
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
-        ascii.addEventListener("keydown", arrowKeyNavigate);
-        ascii.addEventListener("mouseover", hover);
-        ascii.addEventListener("click", select);
-        hex.addEventListener("mouseover", hover);
-        hex.addEventListener("mouseleave", removeHover);
-        hex.addEventListener("click", select);
-        hex.addEventListener("keydown", arrowKeyNavigate);
+        editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
+        editorContainer.addEventListener("mouseover", hover);
+        editorContainer.addEventListener("mouseleave", removeHover);
+        editorContainer.addEventListener("click", select);
+        window.addEventListener("resize", this.documentResize.bind(this));
+        window.addEventListener("keydown", this.keyBoardScroller.bind(this));
     }
 
     /**
      * @description Renders the newly provided packets onto the DOM
      * @param {VirtualizedPacket[]} newPackets the packets which will be rendered
      */
-    render(newPackets: VirtualizedPacket[]): void {
+    public render(newPackets: VirtualizedPacket[]): void {
         let rowData: VirtualizedPacket[] = [];
         const addrFragment = document.createDocumentFragment();
         const hexFragment = document.createDocumentFragment();
@@ -152,11 +160,21 @@ export class VirtualDocument {
     }
 
     /**
+     * @description Event handler which is called everytime the viewport is resized
+     */
+    private documentResize(): void {
+        this.viewPortHeight = (window.innerHeight || document.documentElement.clientHeight);
+        if (this.scrollBarHandler) {
+            this.scrollBarHandler.updateScrollBar(this.fileSize / 16);
+        }
+    }
+
+    /**
      * @description Gets the offset of the packet at the top of the viewport
      * @returns {number} the offset
      */
     public topOffset(): number {
-        return (Math.floor(window.scrollY / this.rowHeight) * 16);
+        return (Math.floor(this.scrollBarHandler.virtualScrollTop / this.rowHeight) * 16);
     }
 
     /**
@@ -165,7 +183,7 @@ export class VirtualDocument {
      * @returns {number} The Y position the offset is at
      */
     public offsetYPos(offset: number): number {
-        return (Math.floor(offset / 16) * this.rowHeight);
+        return (Math.floor(offset / 16) * this.rowHeight) % this.documentHeight;
     }
 
     /**
@@ -269,5 +287,101 @@ export class VirtualDocument {
         // Get the expected Y value
         const expectedY = this.offsetYPos(offset);
         row.style.top = `${expectedY}px`;
+    }
+
+    /**
+     * @description Handles all keyboard interaction with the document
+     * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
+     */
+    private keyBoardHandler(event: KeyboardEvent): void {
+        if (!event || !event.target) return;
+        const targetElement = event.target as HTMLElement;
+        if (event.keyCode >= 37 && event.keyCode <= 40) {
+            this.arrowKeyNavigate(event.keyCode, targetElement);
+            event.preventDefault();
+        // If the user presses Home we go to the front of the line
+        } else if (event.keyCode == 36 && !event.ctrlKey) {
+            const firstElement = targetElement.parentElement!.children[0] as HTMLElement;
+            firstElement.focus();
+            selectByOffset(parseInt(firstElement.getAttribute("data-offset")!));
+        // If the user presses end we go to the end of the line
+        } else if (event.keyCode == 35 && !event.ctrlKey) {
+            const parentChildren = targetElement.parentElement!.children;
+            const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
+            lastElement.focus();
+            selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
+        }
+    }
+
+    /**
+     * @description Handles scrolling using ctrl + home and ctrl + end
+     * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler. 
+     */
+    private keyBoardScroller(event: KeyboardEvent): void {
+        if (!event || !event.target) return;
+        // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
+        if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey)
+            event.keyCode == 36 ? this.scrollBarHandler.scrollToTop() : this.scrollBarHandler.scrollToBottom();
+        // PG Up
+        else if (event.keyCode == 33) {
+            this.scrollBarHandler.page(this.viewPortHeight, "up");
+        // PG Down
+        } else if (event.keyCode == 34) {
+            this.scrollBarHandler.page(this.viewPortHeight, "down");
+        }
+    }
+
+    /**
+     * @description Handles when the user uses the arrow keys to navigate the editor
+     * @param {number} keyCode The keyCode of the key pressed
+     * @param {HTMLElement} targetElement The element
+     */
+    private arrowKeyNavigate(keyCode: number, targetElement: HTMLElement): void {
+        if (!event || !event.target) return;
+        let next;
+        if (keyCode < 37 || keyCode > 40) {
+            return;
+        }
+        switch(keyCode) {
+            // left
+            case 37:
+                next = targetElement.previousElementSibling;
+                break;
+            // up
+            case  38:
+                const elements_above = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) - 16);
+                if (elements_above.length === 0) break;
+                if (elements_above[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
+                    next = elements_above[0];
+                } else {
+                    next = elements_above[1];
+                }
+                break;
+            // right
+            case 39:
+                next = targetElement.nextElementSibling;
+                break;
+            // down
+            case 40:
+                const elements_below = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) + 16);
+                if (elements_below.length === 0) break;
+                if (elements_below[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
+                    next = elements_below[0];
+                } else {
+                    next = elements_below[1];
+                }
+                break;
+        }
+        if (next && next.tagName === "SPAN") {
+            const nextRect = next.getBoundingClientRect();
+            if (this.viewPortHeight <= nextRect.bottom) {
+                this.scrollBarHandler.scrollDocument(1, "down");
+            } else if (nextRect.top <= 0) {
+                this.scrollBarHandler.scrollDocument(1, "up");
+            }
+            (next as HTMLInputElement).focus();
+            selectByOffset(parseInt(next.getAttribute("data-offset")!));
+
+        }
     }
 }
