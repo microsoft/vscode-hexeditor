@@ -51,13 +51,13 @@ body {
 
 
 #hexbody > .row > span {
-    padding: 1px 5px 1px 4px;
+    padding: 4px;
     white-space: pre;
 }
 
 
 #ascii > .row > span {
-    padding: 1px 5px 1px 4px;
+    padding: 4px;
     text-align: right;
     white-space: pre;
 }
@@ -73,7 +73,7 @@ body {
 }
 
 .header > span {
-    padding: 1px 5px 1px 4px;
+    padding: 4px;
 }
 
 .right > .header {
@@ -102,6 +102,11 @@ input:focus {
 
 :focus {
     outline-color: var(--vscode-statusBar-background) !important;
+}
+
+span:focus {
+    outline-offset: 1px;
+    outline: 2px solid;
 }
 
 #endianness {
