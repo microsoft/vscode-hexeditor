@@ -85,7 +85,7 @@ export class ScrollBarHandler {
     private updateScrolledPosition(): void {
         // The virtual document upon first load is undefined so we want to prevent any errors and just not do anything in that case
         if (!virtualHexDocument || !virtualHexDocument.documentHeight) return;
-        this.scrollThumb.style.transform = `translateY(${Math.min(this.scrollTop / this.scrollJump, this.scrollBarHeight - this.scrollThumbHeight )}px)`;
+        this.scrollThumb.style.transform = `translateY(${this.scrollTop / this.scrollJump}px)`;
         // This makes sure it doesn't scroll past the bottom of the viewport
         (document.getElementsByClassName("rowwrapper")[0] as HTMLElement)!.style.transform = `translateY(-${this.scrollTop % virtualHexDocument.documentHeight}px)`;
         (document.getElementsByClassName("rowwrapper")[1] as HTMLElement)!.style.transform = `translateY(-${this.scrollTop % virtualHexDocument.documentHeight}px)`;
@@ -99,12 +99,9 @@ export class ScrollBarHandler {
      */
     private onMouseWheel(event: MouseWheelEvent): void {
         if (event.deltaY > 0) {
-            // If we're at the bottom of the document we don't want the user to be able to keep scrolling down
-            if (this.scrollTop / this.scrollJump >= this.scrollBarHeight - this.scrollThumbHeight) return;
-            this.scrollTop += this.rowHeight;
+            this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
         } else {
-            this.scrollTop -= this.rowHeight;
-            this.scrollTop = Math.max(0, this.scrollTop);
+            this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
         }
         
         this.updateScrolledPosition();
@@ -116,12 +113,9 @@ export class ScrollBarHandler {
      */
     public scrollDocument(numRows: number, direction: "up" | "down"): void {
         if (direction === "up") {
-            this.scrollTop -= this.rowHeight * numRows;
-            this.scrollTop = Math.max(0, this.scrollTop);
+            this.updateVirtualScrollTop(this.scrollTop - (this.rowHeight * numRows));
         } else {
-            // If we're at the bottom of the document we don't want to do anything here
-            if (this.scrollTop / this.scrollJump >= this.scrollBarHeight - this.scrollThumbHeight) return;
-            this.scrollTop += this.rowHeight * numRows;
+            this.updateVirtualScrollTop(this.scrollTop + (this.rowHeight * numRows));
         }
         this.updateScrolledPosition();
     }
@@ -130,7 +124,7 @@ export class ScrollBarHandler {
      * @description Scrolls to the top of the document
      */
     public scrollToTop(): void {
-        this.scrollTop = 0;
+        this.updateVirtualScrollTop(0);
         this.updateScrolledPosition();
     }
 
@@ -138,7 +132,7 @@ export class ScrollBarHandler {
      * @description Scrolls to the bottom of the document
      */
     public scrollToBottom(): void {
-        this.scrollTop = (this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump;
+        this.updateVirtualScrollTop(((this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump) + this.rowHeight);
         this.updateScrolledPosition();
     }
 
@@ -149,12 +143,21 @@ export class ScrollBarHandler {
      */
     public page(viewportHeight: number, direction: "up" | "down"): void {
         if (direction == "up") {
-            this.scrollTop = Math.max(0, this.scrollTop - viewportHeight);
+            this.updateVirtualScrollTop(this.scrollTop - viewportHeight);
         } else {
-            // Don't overshoot the end of the document
-            this.scrollTop = Math.min((this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump, this.scrollTop + viewportHeight);
+            this.updateVirtualScrollTop(this.scrollTop + viewportHeight);
         }
         this.updateScrolledPosition();
+    }
+
+    /***
+     * @description Sets the virtualScrollTop ensuring it never exceeds the document bounds
+     * @param {number} newScrollTop The number you're trying to set the virtual scroll top to
+     */
+    private updateVirtualScrollTop(newScrollTop: number): void {
+        this.scrollTop = Math.max(0, newScrollTop);
+        newScrollTop = this.scrollTop;
+        this.scrollTop = Math.min(newScrollTop, ((this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump) + this.rowHeight);
     }
 
     /**
