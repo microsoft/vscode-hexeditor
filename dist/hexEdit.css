@@ -90,6 +90,8 @@ body {
 }
 
 input {
+    padding-left: 4px;
+    padding-right: 4px;
     background-color: var(--vscode-input-background);
     border-width: 0;
     width: 170px;
