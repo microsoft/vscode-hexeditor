@@ -153,3 +153,11 @@ span:focus {
 .scrolling {
     background-color: var(--vscode-scrollbarSlider-activeBackground) !important;
 }
+
+.editing {
+    background-color: rgba(201, 165, 8, 0.2);
+}
+
+.edited {
+    background-color: rgba(248, 203, 0, 0.5);
+}

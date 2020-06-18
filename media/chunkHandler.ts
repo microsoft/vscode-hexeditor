@@ -4,6 +4,7 @@
 import { virtualHexDocument, messageHandler } from "./hexEdit";
 import { VirtualizedPacket } from "./virtualDocument";
 import { ByteData } from "./byteData";
+import { EditMessage } from "./editHandler";
 
 
 /**
@@ -57,7 +58,7 @@ export class ChunkHandler {
                 initialOffset: chunkStart,
                 numElements: this.chunkSize
             });
-            this.processChunks(request.offset, request.data.data);
+            this.processChunks(request.offset, request.data.data, request.edits);
         } catch (err) {
             return;
         }
@@ -109,7 +110,8 @@ export class ChunkHandler {
      * @param offset The offset which was requestd
      * @param data The data which was returned back
      */
-    public processChunks(offset: number, data: Uint8Array): void {
+    public processChunks(offset: number, data: Uint8Array, edits: EditMessage[]): void {
+        console.log(edits);
         const packets: VirtualizedPacket[] = [];
         for (let i = 0; i < data.length; i++) {
             // If it's a chunk boundary we want to make sure we're tracking that chunk
@@ -122,6 +124,7 @@ export class ChunkHandler {
             });
         }
         virtualHexDocument.render(packets);
+        virtualHexDocument.redo(edits);
     }
      
     /**

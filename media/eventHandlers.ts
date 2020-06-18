@@ -44,7 +44,7 @@ function clearSelected(): void {
  */
 function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteData | undefined {
 	for (const element of Array.from(elements)) {
-		if (element.parentElement?.parentElement && element.parentElement.parentElement.id == "hexbody") {
+		if (element.parentElement && element.classList.contains("hex")) {
 			const byte_object = new ByteData(parseInt(element.innerHTML, 16));
 			let current_element = element.nextElementSibling || element.parentElement.nextElementSibling?.children[0];
 			for (let i = 0; i < 7; i++) {

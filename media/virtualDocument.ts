@@ -2,23 +2,11 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { withinAnyRange, generateCharacterRanges, getElementsWithGivenOffset } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad } from "./util";
 import { hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument, vscode } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
-
-
-/**
- * @description Given a string 0 pads it up unitl the string is of length width
- * @param {string} number The number you want to 0 pad (it's a string as you're 0 padding it to display it, not to do arithmetic) 
- * @param {number} width The length of the final string (if smaller than the string provided nothing happens)
- * @returns {string} The newly padded string
- */
-function pad(number: string, width: number): string {
-	number = number + "";
-	return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
-}
-
+import { EditHandler, EditMessage } from "./editHandler";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -35,6 +23,7 @@ export class VirtualDocument {
     private viewPortHeight!: number
     private hexAddrPadding: number;
     private readonly scrollBarHandler: ScrollBarHandler;
+    private readonly editHandler: EditHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -42,6 +31,7 @@ export class VirtualDocument {
      */
     constructor(fileSize: number) {
         this.fileSize = fileSize;
+        this.editHandler = new EditHandler();
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
         this.rows = [];
         for (let i = 0; i < 3; i++) {
@@ -122,7 +112,10 @@ export class VirtualDocument {
         editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
         editorContainer.addEventListener("mouseover", hover);
         editorContainer.addEventListener("mouseleave", removeHover);
-        editorContainer.addEventListener("click", select);
+        editorContainer.addEventListener("click", (click: MouseEvent) => {
+            select(click);
+            this.editHandler.completePendingEdits();
+        });
         window.addEventListener("resize", this.documentResize.bind(this));
         window.addEventListener("keydown", this.keyBoardScroller.bind(this));
     }
@@ -239,14 +232,8 @@ export class VirtualDocument {
         for (let i = 0; i < rowData.length; i++) {
             const ascii_element = document.createElement("span");
             ascii_element.setAttribute("data-offset", rowData[i].offset.toString());
-            // If it's some sort of character we cannot render we just represent it as a period with the nographic class
-            if (withinAnyRange(rowData[i].data.to8bitUInt(), generateCharacterRanges())) {
-                ascii_element.classList.add("nongraphic");
-                ascii_element.innerText = ".";
-            } else {
-                const ascii_char = String.fromCharCode(rowData[i].data.to8bitUInt());
-                ascii_element.innerText = ascii_char;
-            }
+            ascii_element.classList.add("ascii");
+            updateAsciiValue(rowData[i].data, ascii_element);
             ascii_element.addEventListener("mouseleave", removeHover);
             ascii_element.tabIndex = -1;
             row.appendChild(ascii_element);
@@ -267,6 +254,7 @@ export class VirtualDocument {
         const rowOffset = rowData[0].offset.toString();
         for (let i = 0; i < rowData.length; i++) {
             const hex_element = document.createElement("span");
+            hex_element.classList.add("hex");
             hex_element.setAttribute("data-offset", rowData[i].offset.toString());
             hex_element.innerText = pad(rowData[i].data.toHex(), 2);
             hex_element.tabIndex = -1;
@@ -310,7 +298,21 @@ export class VirtualDocument {
             const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
             lastElement.focus();
             selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
+        } else if (!event.ctrlKey && targetElement.classList.contains("hex")) {
+            this.editHandler.editHex(targetElement, event.key, event.keyCode);
+            // If this cell has been edited
+            if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
+                targetElement.classList.remove("editing");
+                this.arrowKeyNavigate(39, targetElement);
+            }
+        } else if (!event.ctrlKey && targetElement.classList.contains("ascii")) {
+            this.editHandler.editAscii(targetElement, event.key);
+            if (targetElement.classList.contains("editing")) {
+                targetElement.classList.remove("editing");
+                this.arrowKeyNavigate(39, targetElement);
+            }
         }
+        this.editHandler.completePendingEdits();
     }
 
     /**
@@ -329,6 +331,7 @@ export class VirtualDocument {
         } else if (event.keyCode == 34) {
             this.scrollBarHandler.page(this.viewPortHeight, "down");
         }
+        this.editHandler.completePendingEdits();
     }
 
     /**
@@ -345,7 +348,7 @@ export class VirtualDocument {
         switch(keyCode) {
             // left
             case 37:
-                next = targetElement.previousElementSibling;
+                next = targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15];
                 break;
             // up
             case  38:
@@ -359,7 +362,7 @@ export class VirtualDocument {
                 break;
             // right
             case 39:
-                next = targetElement.nextElementSibling;
+                next = targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0];
                 break;
             // down
             case 40:
@@ -383,5 +386,13 @@ export class VirtualDocument {
             selectByOffset(parseInt(next.getAttribute("data-offset")!));
 
         }
+    }
+
+    public undo(edits: EditMessage[]): void {
+        this.editHandler.undo(edits);
+    }
+
+    public redo(edits: EditMessage[]): void {
+        this.editHandler.redo(edits);
     }
 }

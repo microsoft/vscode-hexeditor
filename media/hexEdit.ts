@@ -56,20 +56,28 @@ function openAnyway(): void {
 					}
 					return;
 				}
+			case "update":
+				{
+					if (body.type === "undo") {
+						virtualHexDocument.undo(body.edits);
+					} else if (body.type === "redo") {
+						virtualHexDocument.redo(body.edits);
+					} else {
+						console.log("TODO");
+					}
+					return;
+				}
+			case "save":
+				{
+					const dirtyCells = Array.from(document.getElementsByClassName("edited"));
+					dirtyCells.map(cell => cell.classList.remove("edited"));
+					return;
+				}
 			default:
 				{
 					messageHandler.incomingMessageHandler(e.data);
 					return;
 				}
-			// case "getFileData":
-			// 	{
-			// 		vscode.postMessage({ type: "response", requestId, body: "foo" });
-			// 		return;
-			// 	}
-			// case "packet":
-			// 	{
-			// 		chunkHandler.processChunks(body.offset, body.data.data);
-			// 	}
 		}
 	});
 

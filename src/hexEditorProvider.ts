@@ -14,7 +14,7 @@ interface PacketRequest {
 	numElements: number;
 }
 
-export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<HexDocument> {
+export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
     public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter): vscode.Disposable {
         return vscode.window.registerCustomEditorProvider(
             HexEditorProvider.viewType,
@@ -39,19 +39,28 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
         openContext: vscode.CustomDocumentOpenContext,
         token: vscode.CancellationToken
     ): Promise<HexDocument> {
-        const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter, {
-            getFileData: async() => {
-                const webviewsForDocument: any = Array.from(this.webviews.get(document.uri));
-				if (!webviewsForDocument.length) {
-					throw new Error("Could not find webview to save for");
-				}
-                const panel = webviewsForDocument[0];
-                const response = await this.postMessageWithResponse<{ data: number[] }>(panel, "getFileData", {});
-				return new Uint8Array(response.data);
-            }
-        });
+        const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
         // We don't need any listeners right now because the document is readonly, but this will help to have when we enable edits
-        const listeners: vscode.Disposable[] = [];
+		const listeners: vscode.Disposable[] = [];
+		
+		listeners.push(document.onDidChange(e => {
+			// Tell VS Code that the document has been edited by the use.
+			this._onDidChangeCustomDocument.fire({
+				document,
+				...e,
+			});
+		}));
+
+		listeners.push(document.onDidChangeContent(e => {
+			// Update all webviews when the document changes
+			for (const webviewPanel of this.webviews.get(document.uri)) {
+				this.postMessage(webviewPanel, "update", {
+					type: e.type,
+					edits: e.edits,
+					content: e.content,
+				});
+			}
+		}));
 
         document.onDidDispose(() => disposeAll(listeners));
 
@@ -93,7 +102,31 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 				});
 			}
 		});
-    }
+	}
+	
+	private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<HexDocument>>();
+	public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
+
+	public saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Thenable<void> {
+		// Update all webviews that a save has just occured
+		for (const webviewPanel of this.webviews.get(document.uri)) {
+			this.postMessage(webviewPanel, "save", {});
+		}
+		return document.save(cancellation);
+	}
+
+	public saveCustomDocumentAs(document: HexDocument, destination: vscode.Uri, cancellation: vscode.CancellationToken): Thenable<void> {
+		return document.saveAs(destination, cancellation);
+	}
+
+	public revertCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Thenable<void> {
+		return document.revert(cancellation);
+	}
+
+	public backupCustomDocument(document: HexDocument, context: vscode.CustomDocumentBackupContext, cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
+		return document.backup(context.destination, cancellation);
+	}
+
     /**
 	 * Get the static HTML used for in our editor's webviews.
 	 * Document size is needed to decide if the document is being opened
@@ -288,8 +321,12 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 				// Return the data requested and the offset it was requested for
 				panel.webview.postMessage({ type: "packet", requestId: message.requestId, body: {
 					data: document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements),
-					offset: request.initialOffset
+					offset: request.initialOffset,
+					edits: document.unsavedEdits
 				} });
+				return;
+			case "edit":
+				document.makeEdit(message.body);
 				return;
 		}
 	}

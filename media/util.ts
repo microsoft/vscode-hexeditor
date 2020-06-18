@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { ByteData } from "./byteData";
+
 // Assorted helper functions
 
 
@@ -83,4 +85,33 @@ export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Elemen
     const data_offset = hovered.getAttribute("data-offset");
     if (!data_offset) return;
     return getElementsWithGivenOffset(parseInt(data_offset));
+}
+
+/**
+ * @description Given a bytedata object updates the ascii element with the correct decoded text
+ * @param {ByteData} byteData The object containing information about a given byte
+ * @param {HTMLSpanElement} asciiElement The decoded text element on the DOM
+ */
+export function updateAsciiValue(byteData: ByteData, asciiElement: HTMLSpanElement): void {
+    asciiElement.classList.remove("nongraphic");
+    // If it's some sort of character we cannot render we just represent it as a period with the nographic class
+    if (withinAnyRange(byteData.to8bitUInt(), generateCharacterRanges())) {
+        asciiElement.classList.add("nongraphic");
+        asciiElement.innerText = ".";
+    } else {
+        const ascii_char = String.fromCharCode(byteData.to8bitUInt());
+        asciiElement.innerText = ascii_char;
+    }
+}
+
+
+/**
+ * @description Given a string 0 pads it up unitl the string is of length width
+ * @param {string} number The number you want to 0 pad (it's a string as you're 0 padding it to display it, not to do arithmetic) 
+ * @param {number} width The length of the final string (if smaller than the string provided nothing happens)
+ * @returns {string} The newly padded string
+ */
+export function pad(number: string, width: number): string {
+	number = number + "";
+	return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
 }
