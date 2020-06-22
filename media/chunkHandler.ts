@@ -6,7 +6,6 @@ import { VirtualizedPacket } from "./virtualDocument";
 import { ByteData } from "./byteData";
 import { EditMessage } from "./editHandler";
 
-
 /**
  * @description BufferOptions type used to describe how many chunks are wanted above and below a given chunk 
  */
@@ -111,7 +110,6 @@ export class ChunkHandler {
      * @param data The data which was returned back
      */
     public processChunks(offset: number, data: Uint8Array, edits: EditMessage[]): void {
-        console.log(edits);
         const packets: VirtualizedPacket[] = [];
         for (let i = 0; i < data.length; i++) {
             // If it's a chunk boundary we want to make sure we're tracking that chunk
@@ -122,6 +120,13 @@ export class ChunkHandler {
                 offset: i + offset,
                 data: new ByteData(data[i])
             });
+            // At the very end we want the plus cell, so we add a dummy packet that is greater than the filesize
+            if (i + offset + 1 === virtualHexDocument.documentSize) {
+                packets.push({
+                    offset: i + offset + 1,
+                    data: new ByteData(0)
+                });
+            }
         }
         virtualHexDocument.render(packets);
         virtualHexDocument.redo(edits);

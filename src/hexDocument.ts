@@ -125,7 +125,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				// If undone edit is undefined then we didn't undo anything
 				if (!undoneEdit) return;
 				// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
-				undoneEdit.sameOnDisk = undoneEdit.oldValue === this.documentData[undoneEdit.offset];
+				undoneEdit.sameOnDisk = undoneEdit.oldValue && undoneEdit.oldValue === this.documentData[undoneEdit.offset] || false;
 				this._onDidChangeDocument.fire({
 					type: "undo",
 					edits: [undoneEdit],
@@ -148,10 +148,17 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 */
 	async save(cancellation: vscode.CancellationToken): Promise<void> {
 		// Map the edits into the document before saving
+		const documentArray = Array.from(this.documentData);
 		this._unsavedEdits.map((edit) => {
-			this.documentData[edit.offset] = edit.newValue;
+			if (edit.oldValue) {
+				documentArray[edit.offset] = edit.newValue;
+			} else {
+				documentArray.push(edit.newValue);
+			}
+			
 			edit.sameOnDisk = true;
 		});
+		this._documentData = new Uint8Array(documentArray);
 		await this.saveAs(this.uri, cancellation);
 		this._unsavedEdits = [];
 	}

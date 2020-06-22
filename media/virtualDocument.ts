@@ -71,7 +71,8 @@ export class VirtualDocument {
         const asciiRowWidth = asciiRow.offsetWidth;
         const hexRowWidth = spans[16].parentElement!.offsetWidth;
         // Calculate document height, we max out at 500k due to browser limitations on large div
-        this.documentHeight = Math.min(Math.ceil(this.fileSize / 16) * this.rowHeight, 500000);
+        //this.documentHeight = Math.min(Math.ceil(this.fileSize / 16) * this.rowHeight, 500000);
+        this.documentHeight = 500000;
         // Calculate the padding needed to make the offset column right aligned
         this.hexAddrPadding = hexAddrRow.parentElement!.clientWidth - hexAddrRow.clientWidth;
 
@@ -230,12 +231,7 @@ export class VirtualDocument {
         row.className = "row";
         const rowOffset = rowData[0].offset.toString();
         for (let i = 0; i < rowData.length; i++) {
-            const ascii_element = document.createElement("span");
-            ascii_element.setAttribute("data-offset", rowData[i].offset.toString());
-            ascii_element.classList.add("ascii");
-            updateAsciiValue(rowData[i].data, ascii_element);
-            ascii_element.addEventListener("mouseleave", removeHover);
-            ascii_element.tabIndex = -1;
+            const ascii_element = this.createAsciiElement(rowData[i]);
             row.appendChild(ascii_element);
         }
         fragment.appendChild(row);
@@ -253,17 +249,54 @@ export class VirtualDocument {
         row.className = "row";
         const rowOffset = rowData[0].offset.toString();
         for (let i = 0; i < rowData.length; i++) {
-            const hex_element = document.createElement("span");
-            hex_element.classList.add("hex");
-            hex_element.setAttribute("data-offset", rowData[i].offset.toString());
-            hex_element.innerText = pad(rowData[i].data.toHex(), 2);
-            hex_element.tabIndex = -1;
-            hex_element.addEventListener("mouseleave", removeHover);
+            const hex_element = this.createHexElement(rowData[i]);
             row.appendChild(hex_element);
         }
         fragment.appendChild(row);
         this.rows[1].set(rowOffset, row);
         this.translateRow(row, parseInt(rowOffset));
+    }
+
+    /**
+     * @description Creates a single hex span element from a packet
+     * @param {VirtualizedPacket} packet The VirtualizedPacket holding the data needed to generate the element
+     * @returns {HTMLSpanElement} The html span element ready to be added to the DOM
+     */
+    private createHexElement(packet: VirtualizedPacket): HTMLSpanElement {
+        const hex_element = document.createElement("span");
+        hex_element.classList.add("hex");
+        hex_element.setAttribute("data-offset", packet.offset.toString());
+        // If the offset is greater than or equal to fileSize that's our placeholder so it's just a + symbol to signal you can type and add bytes there
+        if (packet.offset < this.fileSize) {
+            hex_element.innerText = pad(packet.data.toHex(), 2);
+        } else {
+            hex_element.classList.add("add-cell");
+            hex_element.innerText = "+";
+        }
+        hex_element.tabIndex = -1;
+        hex_element.addEventListener("mouseleave", removeHover);
+        return hex_element;
+    }
+
+    /**
+     * @description Creates a single ascii span element from a packet
+     * @param {VirtualizedPacket} packet The VirtualizedPacket holding the data needed to generate the element
+     * @returns {HTMLSpanElement} The html span element ready to be added to the DOM
+     */
+    private createAsciiElement(packet: VirtualizedPacket): HTMLSpanElement {
+        const ascii_element = document.createElement("span");
+        ascii_element.setAttribute("data-offset", packet.offset.toString());
+        ascii_element.classList.add("ascii");
+        // If the offset is greater than or equal to fileSize that's our placeholder so it's just a + symbol to signal you can type and add bytes there
+        if (packet.offset < this.fileSize) {
+            updateAsciiValue(packet.data, ascii_element);
+        } else {
+            ascii_element.classList.add("add-cell");
+            ascii_element.innerText = "+";
+        }
+        ascii_element.addEventListener("mouseleave", removeHover);
+        ascii_element.tabIndex = -1;
+        return ascii_element;
     }
 
     /**
@@ -388,11 +421,48 @@ export class VirtualDocument {
         }
     }
 
+    /**
+     * @description Undoes the given edits from the document
+     * @param {EditMessage[]} edits The edits that will be undone 
+     */
     public undo(edits: EditMessage[]): void {
         this.editHandler.undo(edits);
     }
 
+    /**
+     * @description Redoes the given edits from the document
+     * @param {EditMessage[]} edits The edits that will be redone 
+     */
     public redo(edits: EditMessage[]): void {
         this.editHandler.redo(edits);
     }
+
+    /**
+     * @description Creates an add cell (the little plus placeholder) and places it at the end of the document
+     */
+    public createAddCell(): void {
+        // This is because the previous add cell is full so the file is now bigger
+        this.fileSize += 1;
+        // This will start a new row
+        const packet: VirtualizedPacket = {
+            offset: this.fileSize,
+            data: new ByteData(0)
+        };
+        if (this.fileSize % 16 === 0) {
+            this.render([packet]);
+        } else {
+            const hex_element = this.createHexElement(packet);
+            const ascii_element = this.createAsciiElement(packet);
+            const elements = getElementsWithGivenOffset(this.fileSize - 1);
+            elements[0].parentElement?.appendChild(hex_element);
+            elements[1].parentElement?.appendChild(ascii_element);
+        }
+    }
+
+    /**
+     * @description Simple getter for the fileSize
+     * @returns {number} The fileSize
+     */
+    public get documentSize(): number { return this.fileSize;}
+
 }
