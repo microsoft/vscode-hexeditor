@@ -51,13 +51,15 @@ export class ChunkHandler {
      * @param {number} chunkStart The start of the chunk which you're requesting
      */
     private async requestMoreChunks(chunkStart: number): Promise<void> {
+        // If the chunk start is above the document size we know it will not give us anything back so we don't do anything
+        if (chunkStart >= virtualHexDocument.documentSize) return;
         // Requests the chunks from the extension
         try {
             const request = await messageHandler.postMessageWithResponse("packet", {
                 initialOffset: chunkStart,
                 numElements: this.chunkSize
             });
-            this.processChunks(request.offset, request.data.data, request.edits);
+            this.processChunks(request.offset, request.data, request.edits, request.fileSize);
         } catch (err) {
             return;
         }
@@ -106,10 +108,11 @@ export class ChunkHandler {
 
     /**
      * @description Handles the incoming chunks from the extension (this gets called by the message handler)
-     * @param offset The offset which was requestd
-     * @param data The data which was returned back
+     * @param {number} offset The offset which was requestd
+     * @param {Uint8Array} data The data which was returned back
+     * @param {number} fileSize The size of the file, this is passed back from the exthost and helps to ensure the webview and exthost sizes are synced
      */
-    public processChunks(offset: number, data: Uint8Array, edits: EditMessage[]): void {
+    public processChunks(offset: number, data: Uint8Array, edits: EditMessage[], fileSize: number): void {
         const packets: VirtualizedPacket[] = [];
         for (let i = 0; i < data.length; i++) {
             // If it's a chunk boundary we want to make sure we're tracking that chunk
@@ -129,7 +132,7 @@ export class ChunkHandler {
             }
         }
         virtualHexDocument.render(packets);
-        virtualHexDocument.redo(edits);
+        virtualHexDocument.redo(edits, fileSize);
     }
      
     /**

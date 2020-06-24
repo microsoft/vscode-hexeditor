@@ -59,9 +59,9 @@ function openAnyway(): void {
 			case "update":
 				{
 					if (body.type === "undo") {
-						virtualHexDocument.undo(body.edits);
+						virtualHexDocument.undo(body.edits, body.fileSize);
 					} else if (body.type === "redo") {
-						virtualHexDocument.redo(body.edits);
+						virtualHexDocument.redo(body.edits, body.fileSize);
 					} else {
 						console.log("TODO");
 					}

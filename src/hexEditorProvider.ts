@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import { HexDocument } from "./hexDocument";
+import { HexDocument, HexDocumentEdits } from "./hexDocument";
 import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
 import path = require("path");
@@ -44,7 +44,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const listeners: vscode.Disposable[] = [];
 		
 		listeners.push(document.onDidChange(e => {
-			// Tell VS Code that the document has been edited by the use.
+			// Tell VS Code that the document has been edited by the user.
 			this._onDidChangeCustomDocument.fire({
 				document,
 				...e,
@@ -55,6 +55,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			// Update all webviews when the document changes
 			for (const webviewPanel of this.webviews.get(document.uri)) {
 				this.postMessage(webviewPanel, "update", {
+					fileSize: e.fileSize,
 					type: e.type,
 					edits: e.edits,
 					content: e.content,
@@ -319,14 +320,30 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case "packet":
 				const request = message.body as PacketRequest;
 				// Return the data requested and the offset it was requested for
+				const packet = Array.from(document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements));
+				const edits: HexDocumentEdits[] = [];
+				document.unsavedEdits.forEach((edit) => {
+					if (edit.offset >= request.initialOffset && edit.offset < request.initialOffset + request.numElements) {
+						edits.push(edit);
+						// If it wasn't in the document before we will add it to the disk contents
+						if (!edit.oldValue) {
+							packet.push(edit.newValue);
+						}
+					}
+				});
 				panel.webview.postMessage({ type: "packet", requestId: message.requestId, body: {
-					data: document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements),
+					fileSize: document.filesize,
+					data: packet,
 					offset: request.initialOffset,
-					edits: document.unsavedEdits
+					edits: edits
 				} });
 				return;
 			case "edit":
 				document.makeEdit(message.body);
+				// We respond with the size of the file so that the webview is always in sync with the ext host
+				panel.webview.postMessage({type: "edit", _requestId: message.requestId, body: {
+					fileSize: document.filesize
+				}});
 				return;
 		}
 	}

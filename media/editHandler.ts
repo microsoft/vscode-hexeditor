@@ -46,19 +46,23 @@ export class EditHandler {
         element.innerText = element.innerText.length == 2 || element.innerText === "+" ?`${keyPressed.toUpperCase()} ` : element.innerText + keyPressed.toUpperCase();
         this.pendingEdit.newValue = element.innerText;
         if(element.innerText.trimRight().length == 2) {
+            element.classList.remove("add-cell");
             // Not really an edit if nothing changed
             if (this.pendingEdit.newValue == this.pendingEdit.previousValue) {
                 this.pendingEdit = undefined;
                 return;
             }
+            this.updateAscii(element.innerText, offset);
+            element.classList.add("edited");
             // Means the last cell of the document was filled in so we add another placeholder afterwards
             if (!this.pendingEdit.previousValue) {
+                // While we don't want the webview to have to track state, but this is needed to not have to wait for the ext host reply
+                // The exthost will resync the webview later
+                virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
                 virtualHexDocument.createAddCell();
             }
             this.sendEditToExtHost(this.pendingEdit);
             this.pendingEdit = undefined;
-            this.updateAscii(element.innerText, offset);
-            element.classList.add("edited");
         }
     }
 
@@ -75,15 +79,19 @@ export class EditHandler {
             newValue: keyPressed.charCodeAt(0).toString(16).toUpperCase(),
             element: element
         };
+        element.classList.remove("add-cell");
         element.classList.add("editing");
         element.classList.add("edited");
-        this.sendEditToExtHost(this.pendingEdit);
         this.updateAscii(this.pendingEdit.newValue, offset);
         this.updateHex(keyPressed, offset);
         // Means the last cell of the document was filled in so we add another placeholder afterwards
         if (!this.pendingEdit.previousValue) {
+            // While we don't want the webview to have to track state, but this is needed to not have to wait for the ext host reply
+            // The exthost will resync the webview later
+            virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
             virtualHexDocument.createAddCell();
         }
+        this.sendEditToExtHost(this.pendingEdit);
         this.pendingEdit = undefined;
     }
 
@@ -92,6 +100,7 @@ export class EditHandler {
         if (!hexValue) return;
         // The way the DOM is constructed the ascii element will always be the second one
         const ascii = getElementsWithGivenOffset(offset)[1];
+        ascii.classList.remove("add-cell");
         updateAsciiValue(new ByteData(parseInt(hexValue, 16)), ascii);
         ascii.classList.add("edited");
     }
@@ -100,6 +109,7 @@ export class EditHandler {
         // The way the DOM is constructed the hex element will always be the first one
         const hex = getElementsWithGivenOffset(offset)[0];
         hex.innerText = asciiValue.charCodeAt(0).toString(16).toUpperCase();
+        hex.classList.remove("add-cell");
         hex.classList.add("edited");
     }
 
@@ -107,21 +117,23 @@ export class EditHandler {
         if (this.pendingEdit && this.pendingEdit.element && this.pendingEdit.newValue) {
             // We don't want to stop the edit if it is selected as that can mean the user will be making further edits
             if (this.pendingEdit.element.classList.contains("selected")) return;
-            if (!this.pendingEdit.previousValue) {
-                virtualHexDocument.createAddCell();
-            }
             // Ensure the hex value has 2 characters, if not we add a 0 in front
             this.pendingEdit.newValue = this.pendingEdit.newValue.trimRight().length == 1 ? "0" + this.pendingEdit.newValue.trimRight() : this.pendingEdit.newValue;
             this.pendingEdit.element.classList.remove("editing");
             this.pendingEdit.element.classList.add("edited");
+            this.pendingEdit.element.classList.remove("add-cell");
             this.pendingEdit.element.innerText = this.pendingEdit.newValue;
             this.updateAscii(this.pendingEdit.newValue, this.pendingEdit.offset);
+            if (!this.pendingEdit.previousValue) {
+                virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
+                virtualHexDocument.createAddCell();
+            }
             this.sendEditToExtHost(this.pendingEdit);
             this.pendingEdit = undefined;
         }
     }
 
-    private sendEditToExtHost(edit: DocumentEdit): void {
+    private async sendEditToExtHost(edit: DocumentEdit): Promise<void> {
         // The ext host only accepts 8bit unsigned ints, so we must convert the edits back into that representation
         const oldValue = edit.previousValue ? parseInt(edit.previousValue, 16) : undefined;
         const newValue = edit.newValue ? parseInt(edit.newValue, 16) : undefined;
@@ -131,13 +143,22 @@ export class EditHandler {
             newValue,
             sameOnDisk: false,
         };
-        messageHandler.postMessage("edit", extHostMessage);
+        try {
+            const syncedFileSize = (await messageHandler.postMessageWithResponse("edit", extHostMessage)).fileSize;
+            // virtualHexDocument.updateDocumentSize(syncedFileSize);
+        // Empty catch because we just don't do anything if for some reason the exthost doesn't respond with the new fileSize,
+        // we just sync at the next available opportunity
+        } catch {}
+
     }
 
     public undo(edits: EditMessage[]): void {
         for (const edit of edits) {
             // This would be the delete case, but for now we will leave it alone
-            if (!edit.oldValue) return;
+            if (!edit.oldValue) {
+                virtualHexDocument.removeLastCell();
+                return;
+            }
             const elements = getElementsWithGivenOffset(edit.offset);
             // We're executing an undo and the elements aren't on the DOM so there's no point in doing anything
             if (elements.length != 2) return;
@@ -160,6 +181,8 @@ export class EditHandler {
             const elements = getElementsWithGivenOffset(edit.offset);
             // We're executing an redo and the elements aren't on the DOM so there's no point in doing anything
             if (elements.length != 2) return;
+            elements[0].classList.remove("add-cell");
+            elements[1].classList.remove("add-cell");
             if (edit.sameOnDisk) {
                 elements[0].classList.remove("edited");
                 elements[1].classList.remove("edited");
@@ -170,6 +193,10 @@ export class EditHandler {
             elements[0].innerText = edit.newValue.toString(16).toUpperCase();
             elements[0].innerText = elements[0].innerText.length == 2 ? elements[0].innerText : `0${elements[0].innerText}`;
             updateAsciiValue(new ByteData(edit.newValue), elements[1]);
+            // We want to make sure the last cell is always an add cell, the function takes care of preventing duplicates
+            if (edit.offset === virtualHexDocument.documentSize - 1) {
+                virtualHexDocument.createAddCell();
+            }
         }
     }
 }

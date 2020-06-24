@@ -331,7 +331,7 @@ export class VirtualDocument {
             const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
             lastElement.focus();
             selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
-        } else if (!event.ctrlKey && targetElement.classList.contains("hex")) {
+        } else if (!event.ctrlKey && !event.shiftKey && targetElement.classList.contains("hex")) {
             this.editHandler.editHex(targetElement, event.key, event.keyCode);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
@@ -424,16 +424,20 @@ export class VirtualDocument {
     /**
      * @description Undoes the given edits from the document
      * @param {EditMessage[]} edits The edits that will be undone 
+     * @param {number} fileSize The size of the file, the ext host tracks this and passes it back
      */
-    public undo(edits: EditMessage[]): void {
+    public undo(edits: EditMessage[], fileSize: number): void {
+        this.fileSize = fileSize;
         this.editHandler.undo(edits);
     }
 
     /**
      * @description Redoes the given edits from the document
-     * @param {EditMessage[]} edits The edits that will be redone 
+     * @param {EditMessage[]} edits The edits that will be r
+     * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone 
      */
-    public redo(edits: EditMessage[]): void {
+    public redo(edits: EditMessage[], fileSize: number): void {
+        this.fileSize = fileSize;
         this.editHandler.redo(edits);
     }
 
@@ -441,8 +445,8 @@ export class VirtualDocument {
      * @description Creates an add cell (the little plus placeholder) and places it at the end of the document
      */
     public createAddCell(): void {
-        // This is because the previous add cell is full so the file is now bigger
-        this.fileSize += 1;
+        // Don't make more more add cells until there are none left on the DOM
+        if (document.getElementsByClassName("add-cell").length !== 0) return;
         // This will start a new row
         const packet: VirtualizedPacket = {
             offset: this.fileSize,
@@ -450,6 +454,11 @@ export class VirtualDocument {
         };
         if (this.fileSize % 16 === 0) {
             this.render([packet]);
+            // If it's a new chunk we want the chunkhandler to track it
+            if (this.fileSize + 2 % chunkHandler.chunkSize === 0) {
+                chunkHandler.addChunk(this.fileSize);
+            }
+            this.scrollBarHandler.updateScrollBar(this.fileSize + 1 / 16);
         } else {
             const hex_element = this.createHexElement(packet);
             const ascii_element = this.createAsciiElement(packet);
@@ -458,11 +467,50 @@ export class VirtualDocument {
             elements[1].parentElement?.appendChild(ascii_element);
         }
     }
+    
+    /**
+     * @description Removes the last cell from the virtual document 
+     */
+     public removeLastCell(): void {
+         // We can use the add cell as the last cell offset since a plus cell should always be the last cell
+         const plusCellOffset = document.getElementsByClassName("add-cell")[0].getAttribute("data-offset");
+         if (!plusCellOffset) return;
+         const lastCellOffset = parseInt(plusCellOffset);
+         const lastCells = getElementsWithGivenOffset(lastCellOffset);
+         const secondToLastCells = getElementsWithGivenOffset(lastCellOffset - 1);
+         // If the last cell was on its own row we remove the new row
+         if (lastCellOffset % 16 === 0) {
+            this.rows[0].get(lastCellOffset.toString())?.remove();
+            this.rows[0].delete(lastCellOffset.toString());
+            this.rows[1].get(lastCellOffset.toString())?.remove();
+            this.rows[1].delete(lastCellOffset.toString());
+            this.rows[2].get(lastCellOffset.toString())?.remove();
+            this.rows[2].delete(lastCellOffset.toString());
+            this.scrollBarHandler.updateScrollBar((lastCellOffset - 1) / 16);
+         } else {
+             lastCells[0].remove();
+             lastCells[1].remove();
+         }
+         secondToLastCells[0].innerText = "+";
+         secondToLastCells[0].classList.add("add-cell");
+         secondToLastCells[0].classList.remove("edited");
+         secondToLastCells[1].innerText = "+";
+         secondToLastCells[1].classList.add("add-cell");
+         secondToLastCells[1].classList.remove("edited");
+     }
 
     /**
      * @description Simple getter for the fileSize
      * @returns {number} The fileSize
      */
     public get documentSize(): number { return this.fileSize;}
+
+    /**
+     * @description Updates the file size so its in sync with ext host
+     * @param {number} newSize The new filesize
+     */
+    public updateDocumentSize(newSize: number): void {
+        this.fileSize = newSize;
+    }
 
 }
