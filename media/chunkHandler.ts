@@ -52,7 +52,7 @@ export class ChunkHandler {
      */
     private async requestMoreChunks(chunkStart: number): Promise<void> {
         // If the chunk start is above the document size we know it will not give us anything back so we don't do anything
-        if (chunkStart >= virtualHexDocument.documentSize) return;
+        // if (chunkStart >= virtualHexDocument.documentSize) return;
         // Requests the chunks from the extension
         try {
             const request = await messageHandler.postMessageWithResponse("packet", {

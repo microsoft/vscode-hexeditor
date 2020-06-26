@@ -89,7 +89,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			if (e.type === "ready") {
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
-					html: document.documentData.length === document.filesize ? this.getBodyHTML() : undefined
+					html: document.documentData.length !== 0 ? this.getBodyHTML() : undefined
 				});
 			}
 		});
@@ -326,7 +326,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					if (edit.offset >= request.initialOffset && edit.offset < request.initialOffset + request.numElements) {
 						edits.push(edit);
 						// If it wasn't in the document before we will add it to the disk contents
-						if (!edit.oldValue) {
+						if (!edit.oldValue && edit.newValue) {
 							packet.push(edit.newValue);
 						}
 					}
@@ -341,7 +341,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case "edit":
 				document.makeEdit(message.body);
 				// We respond with the size of the file so that the webview is always in sync with the ext host
-				panel.webview.postMessage({type: "edit", _requestId: message.requestId, body: {
+				panel.webview.postMessage({type: "edit", requestId: message.requestId, body: {
 					fileSize: document.filesize
 				}});
 				return;

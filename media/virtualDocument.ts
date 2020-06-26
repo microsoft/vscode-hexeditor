@@ -314,7 +314,7 @@ export class VirtualDocument {
      * @description Handles all keyboard interaction with the document
      * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
-    private keyBoardHandler(event: KeyboardEvent): void {
+    private async keyBoardHandler(event: KeyboardEvent): Promise<void> {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         if (event.keyCode >= 37 && event.keyCode <= 40) {
@@ -332,14 +332,14 @@ export class VirtualDocument {
             lastElement.focus();
             selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
         } else if (!event.ctrlKey && !event.shiftKey && targetElement.classList.contains("hex")) {
-            this.editHandler.editHex(targetElement, event.key, event.keyCode);
+            await this.editHandler.editHex(targetElement, event.key, event.keyCode);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");
                 this.arrowKeyNavigate(39, targetElement);
             }
         } else if (!event.ctrlKey && targetElement.classList.contains("ascii")) {
-            this.editHandler.editAscii(targetElement, event.key);
+            await this.editHandler.editAscii(targetElement, event.key);
             if (targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");
                 this.arrowKeyNavigate(39, targetElement);
@@ -455,10 +455,10 @@ export class VirtualDocument {
         if (this.fileSize % 16 === 0) {
             this.render([packet]);
             // If it's a new chunk we want the chunkhandler to track it
-            if (this.fileSize + 2 % chunkHandler.chunkSize === 0) {
+            if (this.fileSize % chunkHandler.chunkSize === 0) {
                 chunkHandler.addChunk(this.fileSize);
             }
-            this.scrollBarHandler.updateScrollBar(this.fileSize + 1 / 16);
+            this.scrollBarHandler.updateScrollBar(this.fileSize / 16);
         } else {
             const hex_element = this.createHexElement(packet);
             const ascii_element = this.createAsciiElement(packet);

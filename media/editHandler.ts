@@ -27,7 +27,7 @@ export class EditHandler {
         this.pendingEdit = undefined;
     }
 
-    public editHex(element: HTMLSpanElement, keyPressed: string, keyCode: number): void {
+    public async editHex(element: HTMLSpanElement, keyPressed: string, keyCode: number): Promise<void> {
         // If it's not a valid hex input we ignore it
         if (!((keyCode >= 65 && keyCode <= 70) || (keyCode >= 48 && keyCode <= 57))) return;
 
@@ -52,30 +52,28 @@ export class EditHandler {
                 this.pendingEdit = undefined;
                 return;
             }
+            await this.sendEditToExtHost(this.pendingEdit);
             this.updateAscii(element.innerText, offset);
             element.classList.add("edited");
             // Means the last cell of the document was filled in so we add another placeholder afterwards
             if (!this.pendingEdit.previousValue) {
-                // While we don't want the webview to have to track state, but this is needed to not have to wait for the ext host reply
-                // The exthost will resync the webview later
-                virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
                 virtualHexDocument.createAddCell();
             }
-            this.sendEditToExtHost(this.pendingEdit);
             this.pendingEdit = undefined;
         }
     }
 
-    public editAscii(element: HTMLSpanElement, keyPressed: string): void {
+    public async editAscii(element: HTMLSpanElement, keyPressed: string): Promise<void> {
         // We don't want to do anything if the user presses a key such as home etc which will register as greater than 1 char
         if (keyPressed.length != 1) return;
         // No need to call it edited if it's the same value
         if (element.innerText === keyPressed) return;
         const offset: number = parseInt(element.getAttribute("data-offset")!);
+        const hexElement = getElementsWithGivenOffset(offset)[0];
         // We store all pending edits as hex as ascii isn't always representative due to control characters
         this.pendingEdit = {
             offset: offset,
-            previousValue: getElementsWithGivenOffset(offset)[0].innerText === "+" ? undefined : element.innerText,
+            previousValue: hexElement.innerText === "+" ? undefined : hexElement.innerText,
             newValue: keyPressed.charCodeAt(0).toString(16).toUpperCase(),
             element: element
         };
@@ -84,14 +82,11 @@ export class EditHandler {
         element.classList.add("edited");
         this.updateAscii(this.pendingEdit.newValue, offset);
         this.updateHex(keyPressed, offset);
+        await this.sendEditToExtHost(this.pendingEdit);
         // Means the last cell of the document was filled in so we add another placeholder afterwards
         if (!this.pendingEdit.previousValue) {
-            // While we don't want the webview to have to track state, but this is needed to not have to wait for the ext host reply
-            // The exthost will resync the webview later
-            virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
             virtualHexDocument.createAddCell();
         }
-        this.sendEditToExtHost(this.pendingEdit);
         this.pendingEdit = undefined;
     }
 
@@ -113,7 +108,7 @@ export class EditHandler {
         hex.classList.add("edited");
     }
 
-    public completePendingEdits(): void {
+    public async completePendingEdits(): Promise<void> {
         if (this.pendingEdit && this.pendingEdit.element && this.pendingEdit.newValue) {
             // We don't want to stop the edit if it is selected as that can mean the user will be making further edits
             if (this.pendingEdit.element.classList.contains("selected")) return;
@@ -124,11 +119,10 @@ export class EditHandler {
             this.pendingEdit.element.classList.remove("add-cell");
             this.pendingEdit.element.innerText = this.pendingEdit.newValue;
             this.updateAscii(this.pendingEdit.newValue, this.pendingEdit.offset);
+            await this.sendEditToExtHost(this.pendingEdit);
             if (!this.pendingEdit.previousValue) {
-                virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
                 virtualHexDocument.createAddCell();
             }
-            this.sendEditToExtHost(this.pendingEdit);
             this.pendingEdit = undefined;
         }
     }
@@ -145,7 +139,7 @@ export class EditHandler {
         };
         try {
             const syncedFileSize = (await messageHandler.postMessageWithResponse("edit", extHostMessage)).fileSize;
-            // virtualHexDocument.updateDocumentSize(syncedFileSize);
+            virtualHexDocument.updateDocumentSize(syncedFileSize);
         // Empty catch because we just don't do anything if for some reason the exthost doesn't respond with the new fileSize,
         // we just sync at the next available opportunity
         } catch {}

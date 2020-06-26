@@ -6,8 +6,8 @@ import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
 
 export interface HexDocumentEdits {
-	readonly oldValue: number;
-	readonly newValue: number;
+	readonly oldValue: number | undefined;
+	readonly newValue: number | undefined;
 	readonly offset: number;
 	// Indicates if the cell will be dirty after an undo
 	sameOnDisk: boolean;
@@ -21,6 +21,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	): Promise<HexDocument | PromiseLike<HexDocument> > {
 		// If we have a backup, read that. Otherwise read the resource from the workspace
 		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
+		const unsavedEditURI = typeof backupId === "string" ? vscode.Uri.parse(backupId + ".json") : undefined;
 		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
 		/* __GDPR__
 			"fileOpen" : {
@@ -30,12 +31,18 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
 		let fileData: Uint8Array;
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number ) * 1000000;
-		if (fileSize > maxFileSize) {
+		let unsavedEdits: HexDocumentEdits[] = [];
+		// If there's a backup the user already hit open anyways so we will open it even if above max file size
+		if (fileSize > maxFileSize && !backupId) {
 			fileData = new Uint8Array();
 		} else {
 			fileData = await vscode.workspace.fs.readFile(dataFile);
+			if (unsavedEditURI) {
+				const jsonData = await vscode.workspace.fs.readFile(unsavedEditURI);
+				unsavedEdits = JSON.parse(Buffer.from(jsonData).toString("utf-8"));
+			}
 		}
-		return new HexDocument(uri, fileData, fileSize);
+		return new HexDocument(uri, fileData, fileSize, unsavedEdits);
 	}
 
 	private readonly _uri: vscode.Uri;
@@ -51,12 +58,16 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	private constructor(
 		uri: vscode.Uri,
 		initialContent: Uint8Array,
-		fileSize: number
+		fileSize: number,
+		unsavedEdits: HexDocumentEdits[]
 	) {
 		super();
 		this._uri = uri;
 		this._documentData = initialContent;
 		this._bytesize = fileSize;
+		this._unsavedEdits = unsavedEdits;
+		// If we don't do this Array.from casting then both will reference the same array causing bad behavior
+		this._edits = Array.from(unsavedEdits);
     }
     
 	public get uri(): vscode.Uri { return this._uri; }
@@ -65,8 +76,10 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		let numAdditions = 0;
 		// We add the extra unsaved cells to the size of the file
 		this.unsavedEdits.forEach(edit => {
-			if (edit.offset >= this._bytesize) {
+			if (edit.newValue && !edit.oldValue) {
 				numAdditions++;
+			} else if (edit.oldValue && !edit.newValue) {
+				numAdditions--;
 			}
 		});
 		return this._bytesize + numAdditions;
@@ -131,11 +144,19 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 		this._onDidChange.fire({
 			undo: async () => {
-				// We need to remove from both arrays
 				const undoneEdit = this._edits.pop();
-				if (this._unsavedEdits[this._unsavedEdits.length - 1] === undoneEdit) this._unsavedEdits.pop();
 				// If undone edit is undefined then we didn't undo anything
 				if (!undoneEdit) return;
+				if (this._unsavedEdits[this._unsavedEdits.length - 1] === undoneEdit) {
+					this._unsavedEdits.pop();
+				} else if (!undoneEdit.oldValue) {
+					this.unsavedEdits.push({
+						newValue: undefined,
+						oldValue: undoneEdit.newValue,
+						offset: undoneEdit.offset,
+						sameOnDisk: undoneEdit.sameOnDisk
+					});
+				}
 				// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
 				undoneEdit.sameOnDisk = undoneEdit.oldValue && undoneEdit.oldValue === this.documentData[undoneEdit.offset] || false;
 				this._onDidChangeDocument.fire({
@@ -165,10 +186,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// Map the edits into the document before saving
 		const documentArray = Array.from(this.documentData);
 		this._unsavedEdits.map((edit) => {
-			if (edit.oldValue) {
+			if (edit.oldValue && edit.newValue) {
 				documentArray[edit.offset] = edit.newValue;
-			} else {
+			} else if (!edit.oldValue && edit.newValue){
 				documentArray.push(edit.newValue);
+			} else {
+				// If it was in the document and has since been removed we must remove it from the document data like so
+				documentArray.splice(edit.offset, 1);
 			}
 			
 			edit.sameOnDisk = true;
@@ -215,12 +239,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 */
 	async backup(destination: vscode.Uri, cancellation: vscode.CancellationToken): Promise<vscode.CustomDocumentBackup> {
 		await this.saveAs(destination, cancellation);
-
+		await vscode.workspace.fs.writeFile(vscode.Uri.parse(destination.path + ".json"), Buffer.from(JSON.stringify(this.unsavedEdits), "utf-8"));
 		return {
 			id: destination.toString(),
 			delete: async (): Promise<void> => {
 				try {
 					await vscode.workspace.fs.delete(destination);
+					await vscode.workspace.fs.delete(vscode.Uri.parse(destination.path + ".json"));
 				} catch {
 					// noop
 				}

@@ -71,11 +71,7 @@ export class ScrollBarHandler {
             return;
         }
         event.preventDefault();
-        if (event.clientY > this.scrollBarHeight - this.scrollThumbHeight) {
-            this.scrollTop = (this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump;
-        } else {
-            this.scrollTop = Math.max(0, event.clientY * this.scrollJump);
-        }
+        this.updateVirtualScrollTop(event.clientY);
         this.updateScrolledPosition();
     }
 
