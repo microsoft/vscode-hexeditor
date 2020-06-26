@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import { HexDocument } from "./hexDocument";
+import { HexDocument, HexDocumentEdits } from "./hexDocument";
 import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
 import path = require("path");
@@ -14,7 +14,7 @@ interface PacketRequest {
 	numElements: number;
 }
 
-export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<HexDocument> {
+export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
     public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter): vscode.Disposable {
         return vscode.window.registerCustomEditorProvider(
             HexEditorProvider.viewType,
@@ -39,19 +39,29 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
         openContext: vscode.CustomDocumentOpenContext,
         token: vscode.CancellationToken
     ): Promise<HexDocument> {
-        const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter, {
-            getFileData: async() => {
-                const webviewsForDocument: any = Array.from(this.webviews.get(document.uri));
-				if (!webviewsForDocument.length) {
-					throw new Error("Could not find webview to save for");
-				}
-                const panel = webviewsForDocument[0];
-                const response = await this.postMessageWithResponse<{ data: number[] }>(panel, "getFileData", {});
-				return new Uint8Array(response.data);
-            }
-        });
+        const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
         // We don't need any listeners right now because the document is readonly, but this will help to have when we enable edits
-        const listeners: vscode.Disposable[] = [];
+		const listeners: vscode.Disposable[] = [];
+		
+		listeners.push(document.onDidChange(e => {
+			// Tell VS Code that the document has been edited by the user.
+			this._onDidChangeCustomDocument.fire({
+				document,
+				...e,
+			});
+		}));
+
+		listeners.push(document.onDidChangeContent(e => {
+			// Update all webviews when the document changes
+			for (const webviewPanel of this.webviews.get(document.uri)) {
+				this.postMessage(webviewPanel, "update", {
+					fileSize: e.fileSize,
+					type: e.type,
+					edits: e.edits,
+					content: e.content,
+				});
+			}
+		}));
 
         document.onDidDispose(() => disposeAll(listeners));
 
@@ -79,7 +89,7 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 			if (e.type === "ready") {
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
-					html: document.documentData.length === document.filesize ? this.getBodyHTML() : undefined
+					html: document.documentData.length !== 0 ? this.getBodyHTML() : undefined
 				});
 			}
 		});
@@ -93,7 +103,31 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 				});
 			}
 		});
-    }
+	}
+	
+	private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<HexDocument>>();
+	public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
+
+	public saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Thenable<void> {
+		// Update all webviews that a save has just occured
+		for (const webviewPanel of this.webviews.get(document.uri)) {
+			this.postMessage(webviewPanel, "save", {});
+		}
+		return document.save(cancellation);
+	}
+
+	public saveCustomDocumentAs(document: HexDocument, destination: vscode.Uri, cancellation: vscode.CancellationToken): Thenable<void> {
+		return document.saveAs(destination, cancellation);
+	}
+
+	public revertCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Thenable<void> {
+		return document.revert(cancellation);
+	}
+
+	public backupCustomDocument(document: HexDocument, context: vscode.CustomDocumentBackupContext, cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
+		return document.backup(context.destination, cancellation);
+	}
+
     /**
 	 * Get the static HTML used for in our editor's webviews.
 	 * Document size is needed to decide if the document is being opened
@@ -286,9 +320,29 @@ export class HexEditorProvider implements vscode.CustomReadonlyEditorProvider<He
 			case "packet":
 				const request = message.body as PacketRequest;
 				// Return the data requested and the offset it was requested for
+				const packet = Array.from(document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements));
+				const edits: HexDocumentEdits[] = [];
+				document.unsavedEdits.forEach((edit) => {
+					if (edit.offset >= request.initialOffset && edit.offset < request.initialOffset + request.numElements) {
+						edits.push(edit);
+						// If it wasn't in the document before we will add it to the disk contents
+						if (edit.oldValue === undefined && edit.newValue !== undefined) {
+							packet.push(edit.newValue);
+						}
+					}
+				});
 				panel.webview.postMessage({ type: "packet", requestId: message.requestId, body: {
-					data: document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements),
-					offset: request.initialOffset
+					fileSize: document.filesize,
+					data: packet,
+					offset: request.initialOffset,
+					edits: edits
+				} });
+				return;
+			case "edit":
+				document.makeEdit(message.body);
+				// We respond with the size of the file so that the webview is always in sync with the ext host
+				panel.webview.postMessage({ type: "edit", requestId: message.requestId, body: {
+					fileSize: document.filesize
 				} });
 				return;
 		}

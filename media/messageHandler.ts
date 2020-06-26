@@ -58,5 +58,6 @@ export class MessageHandler {
         // So if the message isn't being tracked by the message handler, we drop it
         if (!request) return;
         request.resolve(message.body);
+        this.requestsMap.delete(message.requestId);
     }
 }

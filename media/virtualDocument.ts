@@ -2,23 +2,11 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { withinAnyRange, generateCharacterRanges, getElementsWithGivenOffset } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad } from "./util";
 import { hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument, vscode } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
-
-
-/**
- * @description Given a string 0 pads it up unitl the string is of length width
- * @param {string} number The number you want to 0 pad (it's a string as you're 0 padding it to display it, not to do arithmetic) 
- * @param {number} width The length of the final string (if smaller than the string provided nothing happens)
- * @returns {string} The newly padded string
- */
-function pad(number: string, width: number): string {
-	number = number + "";
-	return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
-}
-
+import { EditHandler, EditMessage } from "./editHandler";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -35,6 +23,7 @@ export class VirtualDocument {
     private viewPortHeight!: number
     private hexAddrPadding: number;
     private readonly scrollBarHandler: ScrollBarHandler;
+    private readonly editHandler: EditHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -42,6 +31,7 @@ export class VirtualDocument {
      */
     constructor(fileSize: number) {
         this.fileSize = fileSize;
+        this.editHandler = new EditHandler();
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
         this.rows = [];
         for (let i = 0; i < 3; i++) {
@@ -81,7 +71,8 @@ export class VirtualDocument {
         const asciiRowWidth = asciiRow.offsetWidth;
         const hexRowWidth = spans[16].parentElement!.offsetWidth;
         // Calculate document height, we max out at 500k due to browser limitations on large div
-        this.documentHeight = Math.min(Math.ceil(this.fileSize / 16) * this.rowHeight, 500000);
+        //this.documentHeight = Math.min(Math.ceil(this.fileSize / 16) * this.rowHeight, 500000);
+        this.documentHeight = 500000;
         // Calculate the padding needed to make the offset column right aligned
         this.hexAddrPadding = hexAddrRow.parentElement!.clientWidth - hexAddrRow.clientWidth;
 
@@ -122,7 +113,10 @@ export class VirtualDocument {
         editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
         editorContainer.addEventListener("mouseover", hover);
         editorContainer.addEventListener("mouseleave", removeHover);
-        editorContainer.addEventListener("click", select);
+        editorContainer.addEventListener("click", (click: MouseEvent) => {
+            select(click);
+            this.editHandler.completePendingEdits();
+        });
         window.addEventListener("resize", this.documentResize.bind(this));
         window.addEventListener("keydown", this.keyBoardScroller.bind(this));
     }
@@ -237,18 +231,7 @@ export class VirtualDocument {
         row.className = "row";
         const rowOffset = rowData[0].offset.toString();
         for (let i = 0; i < rowData.length; i++) {
-            const ascii_element = document.createElement("span");
-            ascii_element.setAttribute("data-offset", rowData[i].offset.toString());
-            // If it's some sort of character we cannot render we just represent it as a period with the nographic class
-            if (withinAnyRange(rowData[i].data.to8bitUInt(), generateCharacterRanges())) {
-                ascii_element.classList.add("nongraphic");
-                ascii_element.innerText = ".";
-            } else {
-                const ascii_char = String.fromCharCode(rowData[i].data.to8bitUInt());
-                ascii_element.innerText = ascii_char;
-            }
-            ascii_element.addEventListener("mouseleave", removeHover);
-            ascii_element.tabIndex = -1;
+            const ascii_element = this.createAsciiElement(rowData[i]);
             row.appendChild(ascii_element);
         }
         fragment.appendChild(row);
@@ -266,16 +249,54 @@ export class VirtualDocument {
         row.className = "row";
         const rowOffset = rowData[0].offset.toString();
         for (let i = 0; i < rowData.length; i++) {
-            const hex_element = document.createElement("span");
-            hex_element.setAttribute("data-offset", rowData[i].offset.toString());
-            hex_element.innerText = pad(rowData[i].data.toHex(), 2);
-            hex_element.tabIndex = -1;
-            hex_element.addEventListener("mouseleave", removeHover);
+            const hex_element = this.createHexElement(rowData[i]);
             row.appendChild(hex_element);
         }
         fragment.appendChild(row);
         this.rows[1].set(rowOffset, row);
         this.translateRow(row, parseInt(rowOffset));
+    }
+
+    /**
+     * @description Creates a single hex span element from a packet
+     * @param {VirtualizedPacket} packet The VirtualizedPacket holding the data needed to generate the element
+     * @returns {HTMLSpanElement} The html span element ready to be added to the DOM
+     */
+    private createHexElement(packet: VirtualizedPacket): HTMLSpanElement {
+        const hex_element = document.createElement("span");
+        hex_element.classList.add("hex");
+        hex_element.setAttribute("data-offset", packet.offset.toString());
+        // If the offset is greater than or equal to fileSize that's our placeholder so it's just a + symbol to signal you can type and add bytes there
+        if (packet.offset < this.fileSize) {
+            hex_element.innerText = pad(packet.data.toHex(), 2);
+        } else {
+            hex_element.classList.add("add-cell");
+            hex_element.innerText = "+";
+        }
+        hex_element.tabIndex = -1;
+        hex_element.addEventListener("mouseleave", removeHover);
+        return hex_element;
+    }
+
+    /**
+     * @description Creates a single ascii span element from a packet
+     * @param {VirtualizedPacket} packet The VirtualizedPacket holding the data needed to generate the element
+     * @returns {HTMLSpanElement} The html span element ready to be added to the DOM
+     */
+    private createAsciiElement(packet: VirtualizedPacket): HTMLSpanElement {
+        const ascii_element = document.createElement("span");
+        ascii_element.setAttribute("data-offset", packet.offset.toString());
+        ascii_element.classList.add("ascii");
+        // If the offset is greater than or equal to fileSize that's our placeholder so it's just a + symbol to signal you can type and add bytes there
+        if (packet.offset < this.fileSize) {
+            updateAsciiValue(packet.data, ascii_element);
+        } else {
+            ascii_element.classList.add("add-cell");
+            ascii_element.innerText = "+";
+        }
+        ascii_element.addEventListener("mouseleave", removeHover);
+        ascii_element.tabIndex = -1;
+        return ascii_element;
     }
 
     /**
@@ -293,7 +314,7 @@ export class VirtualDocument {
      * @description Handles all keyboard interaction with the document
      * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
-    private keyBoardHandler(event: KeyboardEvent): void {
+    private async keyBoardHandler(event: KeyboardEvent): Promise<void> {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         if (event.keyCode >= 37 && event.keyCode <= 40) {
@@ -310,7 +331,21 @@ export class VirtualDocument {
             const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
             lastElement.focus();
             selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
+        } else if (!event.ctrlKey && !event.shiftKey && targetElement.classList.contains("hex")) {
+            await this.editHandler.editHex(targetElement, event.key, event.keyCode);
+            // If this cell has been edited
+            if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
+                targetElement.classList.remove("editing");
+                this.arrowKeyNavigate(39, targetElement);
+            }
+        } else if (!event.ctrlKey && targetElement.classList.contains("ascii")) {
+            await this.editHandler.editAscii(targetElement, event.key);
+            if (targetElement.classList.contains("editing")) {
+                targetElement.classList.remove("editing");
+                this.arrowKeyNavigate(39, targetElement);
+            }
         }
+        await this.editHandler.completePendingEdits();
     }
 
     /**
@@ -345,7 +380,7 @@ export class VirtualDocument {
         switch(keyCode) {
             // left
             case 37:
-                next = targetElement.previousElementSibling;
+                next = targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15];
                 break;
             // up
             case  38:
@@ -359,7 +394,7 @@ export class VirtualDocument {
                 break;
             // right
             case 39:
-                next = targetElement.nextElementSibling;
+                next = targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0];
                 break;
             // down
             case 40:
@@ -384,4 +419,99 @@ export class VirtualDocument {
 
         }
     }
+
+    /**
+     * @description Undoes the given edits from the document
+     * @param {EditMessage[]} edits The edits that will be undone 
+     * @param {number} fileSize The size of the file, the ext host tracks this and passes it back
+     */
+    public undo(edits: EditMessage[], fileSize: number): void {
+        this.fileSize = fileSize;
+        this.editHandler.undo(edits);
+    }
+
+    /**
+     * @description Redoes the given edits from the document
+     * @param {EditMessage[]} edits The edits that will be r
+     * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone 
+     */
+    public redo(edits: EditMessage[], fileSize: number): void {
+        this.fileSize = fileSize;
+        this.editHandler.redo(edits);
+    }
+
+    /**
+     * @description Creates an add cell (the little plus placeholder) and places it at the end of the document
+     */
+    public createAddCell(): void {
+        // Don't make more more add cells until there are none left on the DOM
+        if (document.getElementsByClassName("add-cell").length !== 0) return;
+        // This will start a new row
+        const packet: VirtualizedPacket = {
+            offset: this.fileSize,
+            data: new ByteData(0)
+        };
+        if (this.fileSize % 16 === 0) {
+            this.render([packet]);
+            // If it's a new chunk we want the chunkhandler to track it
+            if (this.fileSize % chunkHandler.chunkSize === 0) {
+                chunkHandler.addChunk(this.fileSize);
+            }
+            this.scrollBarHandler.updateScrollBar(this.fileSize / 16);
+        } else {
+            const hex_element = this.createHexElement(packet);
+            const ascii_element = this.createAsciiElement(packet);
+            const elements = getElementsWithGivenOffset(this.fileSize - 1);
+            elements[0].parentElement?.appendChild(hex_element);
+            elements[1].parentElement?.appendChild(ascii_element);
+        }
+    }
+    
+    /**
+     * @description Removes the last cell from the virtual document 
+     */
+     public removeLastCell(): void {
+         // We can use the add cell as the last cell offset since a plus cell should always be the last cell
+         const plusCellOffset = document.getElementsByClassName("add-cell")[0].getAttribute("data-offset");
+         if (!plusCellOffset) return;
+         const lastCellOffset = parseInt(plusCellOffset);
+         const lastCells = getElementsWithGivenOffset(lastCellOffset);
+         const secondToLastCells = getElementsWithGivenOffset(lastCellOffset - 1);
+         // If the last cell was on its own row we remove the new row
+         if (lastCellOffset % 16 === 0) {
+            this.rows[0].get(lastCellOffset.toString())?.remove();
+            this.rows[0].delete(lastCellOffset.toString());
+            this.rows[1].get(lastCellOffset.toString())?.remove();
+            this.rows[1].delete(lastCellOffset.toString());
+            this.rows[2].get(lastCellOffset.toString())?.remove();
+            this.rows[2].delete(lastCellOffset.toString());
+            this.scrollBarHandler.updateScrollBar((lastCellOffset - 1) / 16);
+         } else {
+             lastCells[0].remove();
+             lastCells[1].remove();
+         }
+         secondToLastCells[0].innerText = "+";
+         secondToLastCells[0].classList.add("add-cell");
+         secondToLastCells[0].classList.remove("nongraphic");
+         secondToLastCells[0].classList.remove("edited");
+         secondToLastCells[1].innerText = "+";
+         secondToLastCells[1].classList.remove("nongraphic");
+         secondToLastCells[1].classList.add("add-cell");
+         secondToLastCells[1].classList.remove("edited");
+     }
+
+    /**
+     * @description Simple getter for the fileSize
+     * @returns {number} The fileSize
+     */
+    public get documentSize(): number { return this.fileSize;}
+
+    /**
+     * @description Updates the file size so its in sync with ext host
+     * @param {number} newSize The new filesize
+     */
+    public updateDocumentSize(newSize: number): void {
+        this.fileSize = newSize;
+    }
+
 }
