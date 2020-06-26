@@ -154,10 +154,26 @@ span:focus {
     background-color: var(--vscode-scrollbarSlider-activeBackground) !important;
 }
 
-.editing {
+.vscode-dark > #editor-container > .column > .rowwrapper > .row > .editing {
     background-color: rgba(201, 165, 8, 0.2);
 }
 
-.edited {
+.vscode-dark > #editor-container > .column > .rowwrapper > .row > .edited {
     background-color: rgba(248, 203, 0, 0.5);
+}
+
+.vscode-light > #editor-container > .column > .rowwrapper > .row > .edited {
+    background-color: rgba(247, 150, 6, 0.5);
+}
+
+.vscode-light > #editor-container > .column > .rowwrapper > .row > .editing {
+    background-color: rgba(145, 102, 9, 0.2);
+}
+
+.vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .editing {
+    background-color: rgba(255, 238, 0, 0.4);
+}
+
+.vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .edited {
+    background-color: rgba(255, 208, 0, 0.8);
 }
