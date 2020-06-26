@@ -326,7 +326,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					if (edit.offset >= request.initialOffset && edit.offset < request.initialOffset + request.numElements) {
 						edits.push(edit);
 						// If it wasn't in the document before we will add it to the disk contents
-						if (!edit.oldValue && edit.newValue) {
+						if (edit.oldValue === undefined && edit.newValue !== undefined) {
 							packet.push(edit.newValue);
 						}
 					}

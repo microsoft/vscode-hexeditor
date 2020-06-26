@@ -492,8 +492,10 @@ export class VirtualDocument {
          }
          secondToLastCells[0].innerText = "+";
          secondToLastCells[0].classList.add("add-cell");
+         secondToLastCells[0].classList.remove("nongraphic");
          secondToLastCells[0].classList.remove("edited");
          secondToLastCells[1].innerText = "+";
+         secondToLastCells[1].classList.remove("nongraphic");
          secondToLastCells[1].classList.add("add-cell");
          secondToLastCells[1].classList.remove("edited");
      }
