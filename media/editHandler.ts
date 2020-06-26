@@ -28,8 +28,8 @@ export class EditHandler {
     }
 
     public async editHex(element: HTMLSpanElement, keyPressed: string, keyCode: number): Promise<void> {
-        // If it's not a valid hex input we ignore it
-        if (!((keyCode >= 65 && keyCode <= 70) || (keyCode >= 48 && keyCode <= 57))) return;
+        // If it's not a valid hex input or delete we ignore it
+        if (!((keyCode >= 65 && keyCode <= 70) || (keyCode >= 48 && keyCode <= 57) || keyCode === 8)) return;
 
         const offset: number = parseInt(element.getAttribute("data-offset")!);
         if (!this.pendingEdit || this.pendingEdit.offset != offset) {
@@ -42,8 +42,14 @@ export class EditHandler {
         }
         element.classList.add("editing");
         element.innerText = element.innerText.trimRight();
-        // This handles when the user presses the first character erasing the old value vs adding to the currently edited value
-        element.innerText = element.innerText.length == 2 || element.innerText === "+" ?`${keyPressed.toUpperCase()} ` : element.innerText + keyPressed.toUpperCase();
+        // When the user hits delete
+        if (keyCode === 8) {
+            element.innerText = "  ";
+        } else {
+            // This handles when the user presses the first character erasing the old value vs adding to the currently edited value
+            element.innerText = element.innerText.length !== 1 || element.innerText === "+" ?`${keyPressed.toUpperCase()} ` : element.innerText + keyPressed.toUpperCase();
+        }
+
         this.pendingEdit.newValue = element.innerText;
         if(element.innerText.trimRight().length == 2) {
             element.classList.remove("add-cell");
@@ -113,12 +119,17 @@ export class EditHandler {
             // We don't want to stop the edit if it is selected as that can mean the user will be making further edits
             if (this.pendingEdit.element.classList.contains("selected")) return;
             // Ensure the hex value has 2 characters, if not we add a 0 in front
-            this.pendingEdit.newValue = this.pendingEdit.newValue.trimRight().length == 1 ? "0" + this.pendingEdit.newValue.trimRight() : this.pendingEdit.newValue;
+            this.pendingEdit.newValue = "00" + this.pendingEdit.newValue.trimRight();
+            this.pendingEdit.newValue = this.pendingEdit.newValue.slice(this.pendingEdit.newValue.length - 2);
             this.pendingEdit.element.classList.remove("editing");
+            this.pendingEdit.element.innerText = this.pendingEdit.newValue;
+            // No edit really happened so we don't want it to update the ext host
+            if (this.pendingEdit.newValue === this.pendingEdit.previousValue) {
+                return;
+            }
+            this.updateAscii(this.pendingEdit.newValue, this.pendingEdit.offset);
             this.pendingEdit.element.classList.add("edited");
             this.pendingEdit.element.classList.remove("add-cell");
-            this.pendingEdit.element.innerText = this.pendingEdit.newValue;
-            this.updateAscii(this.pendingEdit.newValue, this.pendingEdit.offset);
             await this.sendEditToExtHost(this.pendingEdit);
             if (!this.pendingEdit.previousValue) {
                 virtualHexDocument.createAddCell();
@@ -151,7 +162,7 @@ export class EditHandler {
     public undo(edits: EditMessage[]): void {
         for (const edit of edits) {
             // This would be the delete case, but for now we will leave it alone
-            if (!edit.oldValue) {
+            if (edit.oldValue === undefined) {
                 virtualHexDocument.removeLastCell();
                 return;
             }
@@ -173,7 +184,7 @@ export class EditHandler {
 
     public redo(edits: EditMessage[]): void {
         for (const edit of edits) {
-            if (!edit.newValue) return;
+            if (edit.newValue === undefined) return;
             const elements = getElementsWithGivenOffset(edit.offset);
             // We're executing an redo and the elements aren't on the DOM so there's no point in doing anything
             if (elements.length != 2) return;

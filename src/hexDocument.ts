@@ -76,9 +76,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		let numAdditions = 0;
 		// We add the extra unsaved cells to the size of the file
 		this.unsavedEdits.forEach(edit => {
-			if (edit.newValue && !edit.oldValue) {
+			if (edit.newValue !== undefined && edit.oldValue === undefined) {
 				numAdditions++;
-			} else if (edit.oldValue && !edit.newValue) {
+			} else if (edit.oldValue !== undefined && edit.newValue === undefined) {
 				numAdditions--;
 			}
 		});
@@ -149,7 +149,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				if (!undoneEdit) return;
 				if (this._unsavedEdits[this._unsavedEdits.length - 1] === undoneEdit) {
 					this._unsavedEdits.pop();
-				} else if (!undoneEdit.oldValue) {
+				} else if (undoneEdit.oldValue === undefined) {
 					this.unsavedEdits.push({
 						newValue: undefined,
 						oldValue: undoneEdit.newValue,
@@ -158,7 +158,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 					});
 				}
 				// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
-				undoneEdit.sameOnDisk = undoneEdit.oldValue && undoneEdit.oldValue === this.documentData[undoneEdit.offset] || false;
+				undoneEdit.sameOnDisk = undoneEdit.oldValue !== undefined && undoneEdit.oldValue === this.documentData[undoneEdit.offset] || false;
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "undo",
@@ -186,9 +186,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// Map the edits into the document before saving
 		const documentArray = Array.from(this.documentData);
 		this._unsavedEdits.map((edit) => {
-			if (edit.oldValue && edit.newValue) {
+			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
 				documentArray[edit.offset] = edit.newValue;
-			} else if (!edit.oldValue && edit.newValue){
+			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
 				documentArray.push(edit.newValue);
 			} else {
 				// If it was in the document and has since been removed we must remove it from the document data like so
