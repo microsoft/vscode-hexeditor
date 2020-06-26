@@ -341,9 +341,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case "edit":
 				document.makeEdit(message.body);
 				// We respond with the size of the file so that the webview is always in sync with the ext host
-				panel.webview.postMessage({type: "edit", requestId: message.requestId, body: {
+				panel.webview.postMessage({ type: "edit", requestId: message.requestId, body: {
 					fileSize: document.filesize
-				}});
+				} });
 				return;
 		}
 	}

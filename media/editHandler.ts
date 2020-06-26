@@ -142,7 +142,9 @@ export class EditHandler {
             virtualHexDocument.updateDocumentSize(syncedFileSize);
         // Empty catch because we just don't do anything if for some reason the exthost doesn't respond with the new fileSize,
         // we just sync at the next available opportunity
-        } catch {}
+        } catch {
+            return;
+        }
 
     }
 
