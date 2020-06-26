@@ -345,7 +345,7 @@ export class VirtualDocument {
                 this.arrowKeyNavigate(39, targetElement);
             }
         }
-        this.editHandler.completePendingEdits();
+        await this.editHandler.completePendingEdits();
     }
 
     /**
@@ -364,7 +364,6 @@ export class VirtualDocument {
         } else if (event.keyCode == 34) {
             this.scrollBarHandler.page(this.viewPortHeight, "down");
         }
-        this.editHandler.completePendingEdits();
     }
 
     /**
