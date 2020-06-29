@@ -89,7 +89,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			if (e.type === "ready") {
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
-					html: document.documentData.length !== 0 ? this.getBodyHTML() : undefined
+					html: document.documentData.length === document.filesize ? this.getBodyHTML() : undefined
 				});
 			}
 		});
