@@ -340,10 +340,8 @@ export class VirtualDocument {
             }
         } else if (!event.ctrlKey && targetElement.classList.contains("ascii")) {
             await this.editHandler.editAscii(targetElement, event.key);
-            if (targetElement.classList.contains("editing")) {
-                targetElement.classList.remove("editing");
-                this.arrowKeyNavigate(39, targetElement);
-            }
+            targetElement.classList.remove("editing");
+            this.arrowKeyNavigate(39, targetElement);
         }
         await this.editHandler.completePendingEdits();
     }
