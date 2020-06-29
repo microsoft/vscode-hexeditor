@@ -65,11 +65,20 @@ body {
 .header {
     position: sticky;
     top: 0px;
-    border: 1px solid;
     font-weight: bold;
-    background-color: var(--vscode-editor-background);
-    color: var(--vscode-editorLineNumber-foreground);
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-editorLineNumber-activeForeground);
     z-index: 10;
+}
+
+.vscode-high-contrast > .column > .header {
+    border: 1px solid;
+    border-color: var(--vsocde-contrastActiveBorder);
+}
+
+.vscode-high-contrast > #editor-container > .column > .header {
+    border: 1px solid;
+    border-color: var(--vsocde-contrastActiveBorder);
 }
 
 .header > span {
