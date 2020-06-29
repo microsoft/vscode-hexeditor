@@ -131,6 +131,13 @@ export class ChunkHandler {
                 });
             }
         }
+        // If it's an empty file we just send over the dummy packet for the plus cell
+        if (data.length === 0 && fileSize === 0) {
+            packets.push({
+                offset: 0,
+                data: new ByteData(0)
+            });
+        }
         virtualHexDocument.render(packets);
         virtualHexDocument.redo(edits, fileSize);
     }
