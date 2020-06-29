@@ -1,7 +1,5 @@
 # VS Code Hexeditor
 
-**Note: This editor currently only supports reading, and not writing.**
-
 This an extension for Visual Studio Code 1.46+ which utilizes the custom editor API to allow viewing files as hex within VS Code.
 
 ## Features
@@ -9,6 +7,7 @@ This an extension for Visual Studio Code 1.46+ which utilizes the custom editor 
 - Opening files as HEX
 - Navigating and scrolling through them
 - Viewing the hex values in various different formats
+- Simple editing with undo + redo support
 
 ![Navigating a file](hex-editor.gif)
 
@@ -46,19 +45,22 @@ This extension contributes the following settings:
 
 ## Known Issues
 
-- Currently No major issues
+- Revert file command doesn't work ([#55](https://github.com/microsoft/vscode-hexeditor/issues/55))
 
 To track all issues / file a new issue please go to the Github repo https://github.com/microsoft/vscode-hexeditor/issues
 
 ## Release Notes
 
-### 1.0.0
-
-- Hex Editor initial release
+### 1.1.0
+- Added simple editing support for hex and decoded text
+- Fixed a bug with empty files not rendering correctly
 
 ### 1.0.1
 - Add instructions to the README on how to use the extension
 - Add an Open with HexEditor command
+
+### 1.0.0
+- Hex Editor initial release
 
 -----------------------------------------------------------------------------------------------------------
 
