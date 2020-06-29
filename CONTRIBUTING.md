@@ -1,12 +1,12 @@
-# Contributing to Visual Studio Code
-There are many ways to contribute to the Visual Studio Code project: logging bugs, submitting pull requests, reporting issues, and creating suggestions.
+# Contributing to Visual Studio Code Hex Editor
+There are many ways to contribute to the Visual Studio Code Hex Editor project: logging bugs, submitting pull requests, reporting issues, and creating suggestions.
 
 After cloning and building the repo, check out the [issues list](https://github.com/microsoft/vscode-hexeditor/issues?q=is%3Aissue+is%3Aopen+).
 
 
 ### Getting the sources
 
-First, fork the VS Code repository so that you can make a pull request. Then, clone your fork locally:
+First, fork the VS Code Hex Editor repository so that you can make a pull request. Then, clone your fork locally:
 
 ```
 git clone https://github.com/<<<your-github-account>>>/vscode-hexeditor.git
@@ -38,7 +38,7 @@ npm install
 
 ## Build and Run
 
-After cloning the extension and running `npm install` you should execute `npm run webpack-watch` to initiate webpack's file watcher and then use the debugger in VS Code to execute "Run Extension"
+After cloning the extension and running `npm install` execute `npm run webpack-watch` to initiate webpack's file watcher and then use the debugger in VS Code to execute "Run Extension".
 
 ### Linting
 We use [eslint](https://eslint.org/) for linting our sources. You can run eslint across the sources by calling `npm run lint` from a terminal or command prompt.
