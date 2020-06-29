@@ -164,25 +164,28 @@ span:focus {
 }
 
 .vscode-dark > #editor-container > .column > .rowwrapper > .row > .editing {
-    background-color: rgba(201, 165, 8, 0.2);
+    background-color: rgb(201, 165, 8);
 }
 
 .vscode-dark > #editor-container > .column > .rowwrapper > .row > .edited {
-    background-color: rgba(248, 203, 0, 0.5);
+    background-color: rgb(248, 203, 0);
+    color: rgb(0, 0, 0);
 }
 
 .vscode-light > #editor-container > .column > .rowwrapper > .row > .edited {
-    background-color: rgba(247, 150, 6, 0.5);
+    background-color: rgb(247, 150, 6);
+    color: rgb(0, 0, 0);
 }
 
 .vscode-light > #editor-container > .column > .rowwrapper > .row > .editing {
-    background-color: rgba(145, 102, 9, 0.2);
+    background-color: rgb(145, 102, 9);
 }
 
 .vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .editing {
-    background-color: rgba(255, 238, 0, 0.4);
+    background-color: rgb(255, 238, 0);
 }
 
 .vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .edited {
-    background-color: rgba(255, 208, 0, 0.8);
+    background-color: rgb(255, 208, 0);
+    color: rgb(0, 0, 0);
 }

@@ -52,7 +52,7 @@
 		"commands": [
 			{
 				"command": "hexEditor.openFile",
-				"title": "Open file using Hex Editor"
+				"title": "HexEditor: Open file"
 			}
 		]
 	},
