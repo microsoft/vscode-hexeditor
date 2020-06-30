@@ -53,6 +53,8 @@ To track all issues / file a new issue please go to the Github repo https://gith
 
 ### 1.1.0
 - Added simple editing support for hex and decoded text
+- Fixed a bug preventing files over 18MB from being opened
+- Added more keyboard navigation support via Pgup, Pgdown, Ctrl + End/Home, and End/Home.
 - Fixed a bug with empty files not rendering correctly
 
 ### 1.0.1
