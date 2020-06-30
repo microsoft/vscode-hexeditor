@@ -30,7 +30,6 @@
 					"hexeditor.maxFileSize": {
 						"type": "number",
 						"minimum": 0,
-						"maximum": 18,
 						"default": 10,
 						"description": "The max file size (in MB) that the editor will try to open before warning you."
 					}
