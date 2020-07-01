@@ -37,6 +37,12 @@ export class EditHandler {
      * @param {number} keyCode The keycode for that key 
      */
     public async editHex(element: HTMLSpanElement, keyPressed: string, keyCode: number): Promise<void> {
+        // If the user presses escape and there is a current edit then we just revert the cell as if no edit has happened
+        if (keyCode === 27 && this.pendingEdit && this.pendingEdit.previousValue) {
+            element.innerText = this.pendingEdit.previousValue;
+            element.classList.remove("editing");
+            this.pendingEdit = undefined;
+        }
         // If it's not a valid hex input or delete we ignore it
         if (!((keyCode >= 65 && keyCode <= 70) || (keyCode >= 48 && keyCode <= 57) || keyCode === 8)) return;
 
