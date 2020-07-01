@@ -71,7 +71,7 @@ export class ScrollBarHandler {
             return;
         }
         event.preventDefault();
-        this.updateVirtualScrollTop(event.clientY);
+        this.updateVirtualScrollTop(event.clientY * this.scrollJump);
         this.updateScrolledPosition();
     }
 
