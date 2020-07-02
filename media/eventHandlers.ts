@@ -2,11 +2,9 @@
 // Licensed under the MIT license.
 
 import { clearDataInspector, populateDataInspector } from "./dataInspector";
-import { vscode } from "./hexEdit";
 import { ByteData } from "./byteData";
 import { getElementsGivenMouseEvent, getElementsWithGivenOffset } from "./util";
-
-
+import { WebViewStateManager } from "./webviewStateManager";
 
 /**
  * @description Handles what should be done when an element is hovered over
@@ -69,7 +67,7 @@ export function selectByOffset(offset: number): void {
 	if (!byte_obj) return;
 	const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
 	populateDataInspector(byte_obj, littleEndian);
-	vscode.setState({ selected_offset: offset });
+	WebViewStateManager.setProperty("selected_offset", offset);
 	elements[0].classList.add("selected");
 	elements[1].classList.add("selected");
 }
@@ -86,16 +84,15 @@ export function select(event: MouseEvent): void  {
 	if (elements[0].classList.contains("selected")) {
         if (document.activeElement) {
             (document.activeElement as HTMLElement).blur();
-        }
-        
-		vscode.setState({ selected_offset: undefined });
+		}
+		WebViewStateManager.setProperty("selected_offset", undefined);
 		clearDataInspector();
 		elements[0].classList.remove("selected");
 		elements[1].classList.remove("selected");
 	} else {
 		clearSelected();
 		(event.target as HTMLElement).focus();
-		vscode.setState({ selected_offset: (event.target as HTMLElement).getAttribute("data-offset") });
+		WebViewStateManager.setProperty("selected_offset", (event.target as HTMLElement).getAttribute("data-offset"));
         const byte_obj = retrieveSelectedByteObject(elements);
         // This will only be undefined if we pass in bad elements which in theory shouldn't happen
 		if (!byte_obj) return;
@@ -111,10 +108,10 @@ export function select(event: MouseEvent): void  {
  * @description Handles when the user changes the dropdown for whether they want little or big endianness 
  */
 export function changeEndianness(): void {
-	if (document.activeElement && vscode.getState() && vscode.getState().selected_offset) {
+	if (document.activeElement && WebViewStateManager.getState() && WebViewStateManager.getState().selected_offset) {
 		// Since the inspector has no sense of state, it doesn't know what byte it is currently rendering
 		// We must retrieve it based on the dom
-		const elements = getElementsWithGivenOffset(vscode.getState().selected_offset);
+		const elements = getElementsWithGivenOffset(WebViewStateManager.getState().selected_offset);
 		const byte_obj = retrieveSelectedByteObject(elements);
 		if (!byte_obj) return;
 		const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";

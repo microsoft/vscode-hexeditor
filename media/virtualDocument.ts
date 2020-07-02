@@ -4,9 +4,10 @@
 import { ByteData } from "./byteData";
 import { getElementsWithGivenOffset, updateAsciiValue, pad } from "./util";
 import { hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";
-import { chunkHandler, virtualHexDocument, vscode } from "./hexEdit";
+import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
+import { WebViewStateManager } from "./webviewStateManager";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -148,8 +149,16 @@ export class VirtualDocument {
         document.getElementById("hexbody")?.appendChild(hexFragment);
         document.getElementById("ascii")?.appendChild(asciiFragment);
 
-        if (vscode.getState() && vscode.getState().selected_offset) {
-            selectByOffset(vscode.getState().selected_offset);
+        if (WebViewStateManager.getState()) {
+            if (WebViewStateManager.getState().selected_offset) {
+                selectByOffset(WebViewStateManager.getState().selected_offset);
+            }
+            // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
+            // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load
+            const savedScrollTop = WebViewStateManager.getState().scroll_top;
+            if (savedScrollTop && savedScrollTop !== this.scrollBarHandler.virtualScrollTop) {
+                this.scrollBarHandler.resyncScrollPosition();
+            }
         }
     }
 

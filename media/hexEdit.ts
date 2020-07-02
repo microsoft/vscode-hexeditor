@@ -36,7 +36,7 @@ function openAnyway(): void {
 						virtualHexDocument = new VirtualDocument(body.fileSize);
 						(window as any).virtualHexDocument = virtualHexDocument;
 						// We initially load 4 chunks below the viewport (normally we buffer 2 above as well, but there is no above at the start)
-						chunkHandler.ensureBuffer(0, {
+						chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
 							topBufferSize: 0,
 							bottomBufferSize: 5
 						});
