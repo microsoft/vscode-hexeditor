@@ -340,14 +340,14 @@ export class VirtualDocument {
             const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
             lastElement.focus();
             selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
-        } else if (!event.ctrlKey && !event.shiftKey && targetElement.classList.contains("hex")) {
+        } else if (event.key.length === 1 && targetElement.classList.contains("hex")) {
             await this.editHandler.editHex(targetElement, event.key, event.keyCode);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");
                 this.arrowKeyNavigate(39, targetElement);
             }
-        } else if (!event.ctrlKey && targetElement.classList.contains("ascii")) {
+        } else if (event.key.length === 1 && targetElement.classList.contains("ascii")) {
             await this.editHandler.editAscii(targetElement, event.key);
             targetElement.classList.remove("editing");
             this.arrowKeyNavigate(39, targetElement);
