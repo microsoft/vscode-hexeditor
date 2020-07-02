@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 import { ByteData } from "./byteData";
+import { selectByOffset } from "./eventHandlers";
 
 // Assorted helper functions
 
@@ -85,6 +86,22 @@ export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Elemen
     const data_offset = hovered.getAttribute("data-offset");
     if (!data_offset) return;
     return getElementsWithGivenOffset(parseInt(data_offset));
+}
+
+/***
+ * @description Given an offset, selects the elements and focuses the element in the same column as previous focus. Defaults to hex.
+ * @param {number} offset The offset of the elements you want to select and focus
+ */
+export function focusElementWithGivenOffset(offset: number): void {
+    const elements = getElementsWithGivenOffset(offset);
+    if (elements.length != 2) return;
+    selectByOffset(offset);
+    // If an ascii element is currently focused then we focus that, else we focus hex
+    if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
+        elements[1].focus();
+    } else {
+        elements[0].focus();
+    }
 }
 
 /**

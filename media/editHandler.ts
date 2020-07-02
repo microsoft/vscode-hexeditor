@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { getElementsWithGivenOffset, updateAsciiValue } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, focusElementWithGivenOffset } from "./util";
 import { ByteData } from "./byteData";
 import { messageHandler, virtualHexDocument } from "./hexEdit";
 
@@ -204,8 +204,9 @@ export class EditHandler {
         for (const edit of edits) {
             // This would be the delete case, but for now we will leave it alone
             if (edit.oldValue === undefined) {
+                focusElementWithGivenOffset(virtualHexDocument.documentSize);
                 virtualHexDocument.removeLastCell();
-                return;
+                continue;
             }
             const elements = getElementsWithGivenOffset(edit.offset);
             // We're executing an undo and the elements aren't on the DOM so there's no point in doing anything
@@ -220,6 +221,7 @@ export class EditHandler {
             elements[0].innerText = edit.oldValue.toString(16).toUpperCase();
             elements[0].innerText = elements[0].innerText.length == 2 ? elements[0].innerText : `0${elements[0].innerText}`;
             updateAsciiValue(new ByteData(edit.oldValue), elements[1]);
+            focusElementWithGivenOffset(edit.offset);
         }
     }
 
@@ -229,10 +231,10 @@ export class EditHandler {
      */
     public redo(edits: EditMessage[]): void {
         for (const edit of edits) {
-            if (edit.newValue === undefined) return;
+            if (edit.newValue === undefined) continue;
             const elements = getElementsWithGivenOffset(edit.offset);
             // We're executing an redo and the elements aren't on the DOM so there's no point in doing anything
-            if (elements.length != 2) return;
+            if (elements.length != 2) continue;
             elements[0].classList.remove("add-cell");
             elements[1].classList.remove("add-cell");
             if (edit.sameOnDisk) {
@@ -249,6 +251,7 @@ export class EditHandler {
             if (edit.offset === virtualHexDocument.documentSize - 1) {
                 virtualHexDocument.createAddCell();
             }
+            focusElementWithGivenOffset(edit.offset);
         }
     }
 }
