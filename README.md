@@ -11,6 +11,8 @@ This an extension for Visual Studio Code 1.46+ which utilizes the custom editor 
 
 ![Navigating a file](hex-editor.gif)
 
+![Editing a file](hex-editor-editing.gif)
+
 ## Requirements
 
 - Visual Studio Code 1.46+
@@ -56,6 +58,7 @@ To track all issues / file a new issue please go to the Github repo https://gith
 - Fixed a bug preventing files over 18MB from being opened
 - Added more keyboard navigation support via Pgup, Pgdown, Ctrl + End/Home, and End/Home.
 - Fixed a bug with empty files not rendering correctly
+- Scroll position is now retained upon switching tabs
 
 ### 1.0.1
 - Add instructions to the README on how to use the extension
