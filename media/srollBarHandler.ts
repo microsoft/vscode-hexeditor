@@ -95,6 +95,7 @@ export class ScrollBarHandler {
      * @param {MouseWheelEvent} event The event containing information about the scroll passed to the event handler
      */
     private onMouseWheel(event: MouseWheelEvent): void {
+        if (Math.abs(event.deltaX) !== 0 || event.shiftKey) return;
         if (event.deltaY > 0) {
             this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
         } else {
