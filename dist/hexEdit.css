@@ -189,3 +189,7 @@ span:focus {
     background-color: rgb(255, 208, 0);
     color: rgb(0, 0, 0);
 }
+
+#data-inspector {
+    transform: translate3d(0px, 0px, 0px);
+}
