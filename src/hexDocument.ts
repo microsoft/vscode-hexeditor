@@ -78,6 +78,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this.unsavedEdits.flat().forEach(edit => {
 			if (edit.newValue !== undefined && edit.oldValue === undefined) {
 				numAdditions++;
+			} else if(edit.oldValue !== undefined && edit.newValue === undefined && edit.offset < this._bytesize) {
+				numAdditions--;
 			}
 		});
 		return this._bytesize + numAdditions;
