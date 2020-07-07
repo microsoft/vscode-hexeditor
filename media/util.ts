@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import { ByteData } from "./byteData";
-import { selectByOffset } from "./eventHandlers";
+import { SelectHandler } from "./selectHandler";
 
 // Assorted helper functions
 
@@ -95,7 +95,7 @@ export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Elemen
 export function focusElementWithGivenOffset(offset: number): void {
     const elements = getElementsWithGivenOffset(offset);
     if (elements.length != 2) return;
-    selectByOffset(offset);
+    SelectHandler.singleSelect(offset);
     // If an ascii element is currently focused then we focus that, else we focus hex
     if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
         elements[1].focus();
@@ -131,4 +131,26 @@ export function updateAsciiValue(byteData: ByteData, asciiElement: HTMLSpanEleme
 export function pad(number: string, width: number): string {
 	number = number + "";
 	return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
+}
+
+
+/**
+ * @description Given two elements (the hex and ascii elements), returns a ByteData object representing both of them
+ * @param {NodeListOf<Element>} elements The elements representing the hex and associated ascii on the DOM
+ * @returns {ByteData | undefined} The ByteData object or undefined if elements was malformed or empty
+ */
+export function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteData | undefined {
+	for (const element of Array.from(elements)) {
+		if (element.parentElement && element.classList.contains("hex")) {
+			const byte_object = new ByteData(parseInt(element.innerHTML, 16));
+			let current_element = element.nextElementSibling || element.parentElement.nextElementSibling?.children[0];
+			for (let i = 0; i < 7; i++) {
+				if (!current_element) break;
+				byte_object.addAdjacentByte(new ByteData(parseInt(current_element.innerHTML, 16)));
+				current_element = current_element.nextElementSibling || current_element.parentElement?.nextElementSibling?.children[0];
+			}
+			return byte_object;
+		}
+    }
+    return;
 }

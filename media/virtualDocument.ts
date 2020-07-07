@@ -3,11 +3,12 @@
 
 import { ByteData } from "./byteData";
 import { getElementsWithGivenOffset, updateAsciiValue, pad } from "./util";
-import { hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";
+import { hover, removeHover, changeEndianness } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
 import { WebViewStateManager } from "./webviewStateManager";
+import { SelectHandler } from "./selectHandler";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -115,9 +116,11 @@ export class VirtualDocument {
         editorContainer.addEventListener("mouseover", hover);
         editorContainer.addEventListener("mouseleave", removeHover);
         editorContainer.addEventListener("click", (click: MouseEvent) => {
-            select(click);
+            SelectHandler.selectMouseHandler(click, click.ctrlKey);
             this.editHandler.completePendingEdits();
         });
+        editorContainer.addEventListener("copy", this.editHandler.copy);
+        editorContainer.addEventListener("paste", this.editHandler.paste.bind(this.editHandler));
         window.addEventListener("resize", this.documentResize.bind(this));
         window.addEventListener("keydown", this.keyBoardScroller.bind(this));
     }
@@ -151,7 +154,7 @@ export class VirtualDocument {
 
         if (WebViewStateManager.getState()) {
             if (WebViewStateManager.getState().selected_offset) {
-                selectByOffset(WebViewStateManager.getState().selected_offset);
+                SelectHandler.singleSelect(WebViewStateManager.getState().selected_offset);
             }
             // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
             // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load
@@ -334,13 +337,13 @@ export class VirtualDocument {
         } else if (event.keyCode == 36 && !event.ctrlKey) {
             const firstElement = targetElement.parentElement!.children[0] as HTMLElement;
             firstElement.focus();
-            selectByOffset(parseInt(firstElement.getAttribute("data-offset")!));
+            SelectHandler.singleSelect(parseInt(firstElement.getAttribute("data-offset")!));
         // If the user presses end we go to the end of the line
         } else if (event.keyCode == 35 && !event.ctrlKey) {
             const parentChildren = targetElement.parentElement!.children;
             const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
             lastElement.focus();
-            selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
+            SelectHandler.singleSelect(parseInt(lastElement.getAttribute("data-offset")!));
         } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("hex")) {
             await this.editHandler.editHex(targetElement, event.key, event.keyCode);
             // If this cell has been edited
@@ -423,8 +426,7 @@ export class VirtualDocument {
                 this.scrollBarHandler.scrollDocument(1, "up");
             }
             (next as HTMLInputElement).focus();
-            selectByOffset(parseInt(next.getAttribute("data-offset")!));
-
+            SelectHandler.singleSelect(parseInt(next.getAttribute("data-offset")!));
         }
     }
 

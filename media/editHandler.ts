@@ -4,12 +4,14 @@
 import { getElementsWithGivenOffset, updateAsciiValue, focusElementWithGivenOffset } from "./util";
 import { ByteData } from "./byteData";
 import { messageHandler, virtualHexDocument } from "./hexEdit";
+import { SelectHandler } from "./selectHandler";
 
 interface DocumentEdit {
     offset: number;
     previousValue: string | undefined;
     newValue: string | undefined;
     element: HTMLSpanElement | undefined;
+    editID: number;
 }
 
 // This is what an edit to/from the extension host looks like
@@ -18,6 +20,7 @@ export interface EditMessage {
 	readonly newValue: number | undefined;
     readonly offset: number;
     readonly sameOnDisk: boolean;
+    readonly editID: number;
 }
 
 /**
@@ -25,6 +28,7 @@ export interface EditMessage {
  */
 export class EditHandler {
     private pendingEdit: DocumentEdit | undefined;
+    private currentEditID = 0;
 
     constructor() {
         this.pendingEdit = undefined;
@@ -52,7 +56,8 @@ export class EditHandler {
                 offset: offset,
                 previousValue: element.innerText === "+" ? undefined : element.innerText,
                 newValue: "",
-                element: element
+                element: element,
+                editID: this.currentEditID++
             };
         }
         element.classList.add("editing");
@@ -101,7 +106,8 @@ export class EditHandler {
             offset: offset,
             previousValue: hexElement.innerText === "+" ? undefined : hexElement.innerText,
             newValue: keyPressed.charCodeAt(0).toString(16).toUpperCase(),
-            element: element
+            element: element,
+            editID: this.currentEditID++
         };
         element.classList.remove("add-cell");
         element.classList.add("editing");
@@ -184,6 +190,7 @@ export class EditHandler {
             oldValue,
             newValue,
             sameOnDisk: false,
+            editID: edit.editID
         };
         try {
             const syncedFileSize = (await messageHandler.postMessageWithResponse("edit", extHostMessage)).fileSize;
@@ -253,5 +260,57 @@ export class EditHandler {
             }
             focusElementWithGivenOffset(edit.offset);
         }
+    }
+
+    /**
+     * @description Handles when a user copies
+     * @param {ClipboardEvent} event The clibpoard event passed to a copy event handler 
+     */
+    public copy(event: ClipboardEvent): void {
+        event.clipboardData?.setData("text/json", JSON.stringify(SelectHandler.getSelectedHex()));
+        console.log("copy that!");
+        event.preventDefault();
+    }
+
+    /**
+     * @description Handles when a user pastes
+     * @param {ClipboardEvent} event The clibpoard event passed to a paste event handler 
+     */
+    public async paste(event: ClipboardEvent): Promise<void> {
+        // If what's on the clipboard isn't json we won't try to past it in
+        if (!event.clipboardData || event.clipboardData.types.indexOf("text/json") < 0) return;
+        const hexData = JSON.parse(event.clipboardData.getData("text/json"));
+        const selected = document.getElementsByClassName("selected hex") as HTMLCollectionOf<HTMLSpanElement>;
+        // We apply as much of the hex data as we can based on the selection
+        for (let i = 0; i < selected.length && i < hexData.length; i++) {
+            const element = selected[i];
+            const offset: number = parseInt(element.getAttribute("data-offset")!);
+            this.pendingEdit = {
+                offset: offset,
+                previousValue: element.innerText === "+" ? undefined : element.innerText,
+                newValue: hexData[i],
+                element: element,
+                editID: this.currentEditID
+            };
+            element.classList.remove("add-cell");
+            // Not really an edit if nothing changed
+            if (this.pendingEdit.newValue == this.pendingEdit.previousValue) {
+                this.pendingEdit = undefined;
+                continue;
+            }
+            element.innerText = hexData[i];
+            await this.sendEditToExtHost(this.pendingEdit);
+            this.updateAscii(element.innerText, offset);
+            element.classList.add("edited");
+            // Means the last cell of the document was filled in so we add another placeholder afterwards
+            if (!this.pendingEdit.previousValue) {
+                virtualHexDocument.createAddCell();
+                SelectHandler.multiSelect([virtualHexDocument.documentSize], true);
+            }
+            this.pendingEdit = undefined;
+        }
+        console.log(hexData);
+        this.currentEditID++;
+        event.preventDefault();
     }
 }

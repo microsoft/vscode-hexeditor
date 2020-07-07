@@ -9,7 +9,7 @@ body {
 }
 
 /* Disable selection color because select is different in the custom editor */
-::selection {
+:not(input)::selection {
     color: none;
     background: none;
 }

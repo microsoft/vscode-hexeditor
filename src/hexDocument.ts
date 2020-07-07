@@ -11,6 +11,7 @@ export interface HexDocumentEdits {
 	readonly offset: number;
 	// Indicates if the cell will be dirty after an undo
 	sameOnDisk: boolean;
+	readonly editID: number;
 }
 
 export class HexDocument extends Disposable implements vscode.CustomDocument {
@@ -144,25 +145,32 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 		this._onDidChange.fire({
 			undo: async () => {
-				const undoneEdit = this._edits.pop();
+				let undoneEdit = this._edits.pop();
 				// If undone edit is undefined then we didn't undo anything
 				if (!undoneEdit) return;
-				if (this._unsavedEdits[this._unsavedEdits.length - 1] === undoneEdit) {
-					this._unsavedEdits.pop();
-				} else if (undoneEdit.oldValue === undefined) {
-					this.unsavedEdits.push({
-						newValue: undefined,
-						oldValue: undoneEdit.newValue,
-						offset: undoneEdit.offset,
-						sameOnDisk: undoneEdit.sameOnDisk
-					});
+				const editID = undoneEdit.editID;
+				const undoneEdits: HexDocumentEdits[] = [];
+				while (undoneEdit !== undefined && undoneEdit.editID === editID) {
+					undoneEdits.push(undoneEdit);
+					if (this._unsavedEdits[this._unsavedEdits.length - 1] === undoneEdit) {
+						this._unsavedEdits.pop();
+					} else if (undoneEdit.oldValue === undefined) {
+						this.unsavedEdits.push({
+							newValue: undefined,
+							oldValue: undoneEdit.newValue,
+							offset: undoneEdit.offset,
+							sameOnDisk: undoneEdit.sameOnDisk,
+							editID: undoneEdit.editID
+						});
+					}
+					// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
+					undoneEdit.sameOnDisk = undoneEdit.oldValue !== undefined && undoneEdit.oldValue === this.documentData[undoneEdit.offset] || false;
+					undoneEdit = this._edits.pop();
 				}
-				// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
-				undoneEdit.sameOnDisk = undoneEdit.oldValue !== undefined && undoneEdit.oldValue === this.documentData[undoneEdit.offset] || false;
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "undo",
-					edits: [undoneEdit],
+					edits: undoneEdits,
 				});
 			},
 			redo: async () => {
