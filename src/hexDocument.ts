@@ -11,7 +11,6 @@ export interface HexDocumentEdits {
 	readonly offset: number;
 	// Indicates if the cell will be dirty after an undo
 	sameOnDisk: boolean;
-	readonly editID: number;
 }
 
 export class HexDocument extends Disposable implements vscode.CustomDocument {
@@ -32,7 +31,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
 		let fileData: Uint8Array;
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number ) * 1000000;
-		let unsavedEdits: HexDocumentEdits[] = [];
+		let unsavedEdits: HexDocumentEdits[][] = [];
 		// If there's a backup the user already hit open anyways so we will open it even if above max file size
 		if (fileSize > maxFileSize && !backupId) {
 			fileData = new Uint8Array();
@@ -52,15 +51,15 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	private _documentData: Uint8Array;
 
-	private _edits: HexDocumentEdits[] = [];
-	private _unsavedEdits: HexDocumentEdits[] = [];
+	private _edits: HexDocumentEdits[][] = [];
+	private _unsavedEdits: HexDocumentEdits[][] = [];
 
 
 	private constructor(
 		uri: vscode.Uri,
 		initialContent: Uint8Array,
 		fileSize: number,
-		unsavedEdits: HexDocumentEdits[]
+		unsavedEdits: HexDocumentEdits[][]
 	) {
 		super();
 		this._uri = uri;
@@ -76,11 +75,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public get filesize(): number  {
 		let numAdditions = 0;
 		// We add the extra unsaved cells to the size of the file
-		this.unsavedEdits.forEach(edit => {
+		this.unsavedEdits.flat().forEach(edit => {
 			if (edit.newValue !== undefined && edit.oldValue === undefined) {
 				numAdditions++;
-			} else if (edit.oldValue !== undefined && edit.newValue === undefined) {
-				numAdditions--;
 			}
 		});
 		return this._bytesize + numAdditions;
@@ -107,7 +104,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._documentData = await vscode.workspace.fs.readFile(this.uri);
 	}
 
-	public get unsavedEdits(): HexDocumentEdits[] { return this._unsavedEdits; }
+	public get unsavedEdits(): HexDocumentEdits[][] { return this._unsavedEdits; }
 
 	private readonly _onDidChangeDocument = this._register(new vscode.EventEmitter<{
 		readonly fileSize: number;
@@ -138,35 +135,33 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * 
 	 * This fires an event to notify VS Code that the document has been edited.
 	 */
-	makeEdit(edit: HexDocumentEdits): void {
-		this._edits.push(edit);
-		this._unsavedEdits.push(edit);
-		edit.sameOnDisk = false;
+	makeEdit(edits: HexDocumentEdits[]): void {
+		edits.forEach(e => e.sameOnDisk = false);
+		this._edits.push(edits);
+		this._unsavedEdits.push(edits);
 
 		this._onDidChange.fire({
 			undo: async () => {
-				let undoneEdit = this._edits.pop();
+				const undoneEdits = this._edits.pop();
 				// If undone edit is undefined then we didn't undo anything
-				if (!undoneEdit) return;
-				const editID = undoneEdit.editID;
-				const undoneEdits: HexDocumentEdits[] = [];
-				while (undoneEdit !== undefined && undoneEdit.editID === editID) {
-					undoneEdits.push(undoneEdit);
-					if (this._unsavedEdits[this._unsavedEdits.length - 1] === undoneEdit) {
-						this._unsavedEdits.pop();
-					} else if (undoneEdit.oldValue === undefined) {
-						this.unsavedEdits.push({
+				if (!undoneEdits) return;
+				if (this._unsavedEdits[this._unsavedEdits.length - 1] === undoneEdits) {
+					this._unsavedEdits.pop();
+				}
+				const unsavedEdits: HexDocumentEdits[] = [];
+				for (const edit of undoneEdits) {
+					// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
+					edit.sameOnDisk = edit.oldValue !== undefined && edit.oldValue === this.documentData[edit.offset] || false;
+					if (edit.oldValue === undefined) {
+						unsavedEdits.push({
 							newValue: undefined,
-							oldValue: undoneEdit.newValue,
-							offset: undoneEdit.offset,
-							sameOnDisk: undoneEdit.sameOnDisk,
-							editID: undoneEdit.editID
+							oldValue: edit.newValue,
+							offset: edit.offset,
+							sameOnDisk: edit.sameOnDisk
 						});
 					}
-					// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
-					undoneEdit.sameOnDisk = undoneEdit.oldValue !== undefined && undoneEdit.oldValue === this.documentData[undoneEdit.offset] || false;
-					undoneEdit = this._edits.pop();
 				}
+				this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "undo",
@@ -174,14 +169,14 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				});
 			},
 			redo: async () => {
-				this._edits.push(edit);
-				this._unsavedEdits.push(edit);
-				const redoneEdit = edit;
-				redoneEdit.sameOnDisk = redoneEdit.offset < this._bytesize && redoneEdit.newValue === this.documentData[redoneEdit.offset] || false;
+				this._edits.push(edits);
+				this._unsavedEdits.push(edits);
+				const redoneEdits = edits;
+				redoneEdits.forEach(e => e.sameOnDisk = e.offset < this._bytesize && e.newValue === this.documentData[e.offset] || false);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "redo",
-					edits: [redoneEdit],
+					edits: redoneEdits,
 				});
 			}
 		});
@@ -193,7 +188,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	async save(cancellation: vscode.CancellationToken): Promise<void> {
 		// Map the edits into the document before saving
 		const documentArray = Array.from(this.documentData);
-		this._unsavedEdits.map((edit) => {
+		const unsavedEdits = this._unsavedEdits.flat();
+		unsavedEdits.forEach((edit) => {
 			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
 				documentArray[edit.offset] = edit.newValue;
 			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
@@ -231,12 +227,12 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._documentData = diskContent;
 		this._unsavedEdits = [];
 		// If we revert then the edits are exactly what's on the disk
-		this._edits.map(e => e.sameOnDisk = true);
+		this._edits.flat().forEach(e => e.sameOnDisk = true);
 		this._onDidChangeDocument.fire({
 			fileSize: this.filesize,
 			type: "revert",
 			content: diskContent,
-			edits: this._edits,
+			edits: this._edits.flat(),
 		});
 	}
 

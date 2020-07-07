@@ -87,6 +87,7 @@ export class SelectHandler {
         const hex: string[] = [];
         const selected = document.getElementsByClassName("selected hex") as HTMLCollectionOf<HTMLSpanElement>;
         for (let i = 0; i < selected.length; i++) {
+            if (selected[i].innerText === "+") continue;
             hex.push(selected[i].innerText);
         }
         return hex;
