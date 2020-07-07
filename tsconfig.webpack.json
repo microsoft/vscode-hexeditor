@@ -1,9 +1,0 @@
-{
-    "extends": "./tsconfig.json",
-    "lib": [
-        "DOM"
-    ],
-    "exclude": [
-        "src"
-    ]
-}
