@@ -168,7 +168,7 @@ span:focus {
 }
 
 .vscode-dark > #editor-container > .column > .rowwrapper > .row > .edited {
-    background-color: rgb(248, 203, 0);
+    background-color: hsl(calc(var(--edit-offset) + var(--edit-rgb-rotation)), 100%, 50%);
     color: rgb(0, 0, 0);
 }
 

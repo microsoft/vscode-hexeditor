@@ -25,6 +25,8 @@ export interface EditMessage {
  */
 export class EditHandler {
     private pendingEdit: DocumentEdit | undefined;
+    private rgbRotation = 0;
+    private editorContainer = document.getElementById("editor-container")!;
 
     constructor() {
         this.pendingEdit = undefined;
@@ -76,6 +78,7 @@ export class EditHandler {
             await this.sendEditToExtHost(this.pendingEdit);
             this.updateAscii(element.innerText, offset);
             element.classList.add("edited");
+            this.editorContainer.style.setProperty("--edit-rgb-rotation", String(this.rgbRotation++));
             // Means the last cell of the document was filled in so we add another placeholder afterwards
             if (!this.pendingEdit.previousValue) {
                 virtualHexDocument.createAddCell();

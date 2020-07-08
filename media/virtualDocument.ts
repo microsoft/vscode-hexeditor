@@ -275,6 +275,7 @@ export class VirtualDocument {
         const hex_element = document.createElement("span");
         hex_element.classList.add("hex");
         hex_element.setAttribute("data-offset", packet.offset.toString());
+        hex_element.style.setProperty("--edit-offset", packet.offset.toString());
         // If the offset is greater than or equal to fileSize that's our placeholder so it's just a + symbol to signal you can type and add bytes there
         if (packet.offset < this.fileSize) {
             hex_element.innerText = pad(packet.data.toHex(), 2);
