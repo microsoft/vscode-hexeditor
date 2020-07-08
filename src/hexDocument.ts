@@ -141,7 +141,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		edits.forEach(e => e.sameOnDisk = false);
 		this._edits.push(edits);
 		this._unsavedEdits.push(edits);
-
+		console.log(this._unsavedEdits);
 		this._onDidChange.fire({
 			undo: async () => {
 				const undoneEdits = this._edits.pop();
@@ -154,16 +154,17 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				for (const edit of undoneEdits) {
 					// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
 					edit.sameOnDisk = edit.oldValue !== undefined && edit.oldValue === this.documentData[edit.offset] || false;
-					if (edit.oldValue === undefined) {
+					if (!edit.sameOnDisk) {
 						unsavedEdits.push({
-							newValue: undefined,
+							newValue: edit.oldValue,
 							oldValue: edit.newValue,
 							offset: edit.offset,
 							sameOnDisk: edit.sameOnDisk
 						});
 					}
 				}
-				this._unsavedEdits.push(unsavedEdits);
+				if (this.unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
+				console.log(this._unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "undo",
@@ -172,13 +173,18 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			},
 			redo: async () => {
 				this._edits.push(edits);
-				this._unsavedEdits.push(edits);
+				const unsavedEdits: HexDocumentEdits[] = [];
 				const redoneEdits = edits;
-				redoneEdits.forEach(e => e.sameOnDisk = e.offset < this._bytesize && e.newValue === this.documentData[e.offset] || false);
+				for (const edit of redoneEdits) {
+					edit.sameOnDisk = edit.offset < this._bytesize && edit.newValue === this.documentData[edit.offset] || false;
+					if (!edit.sameOnDisk) unsavedEdits.push(edit);
+				}
+				if (this.unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
+				console.log(this._unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "redo",
-					edits: redoneEdits,
+					edits: redoneEdits
 				});
 			}
 		});
@@ -191,7 +197,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// Map the edits into the document before saving
 		const documentArray = Array.from(this.documentData);
 		const unsavedEdits = this._unsavedEdits.flat();
-		unsavedEdits.forEach((edit) => {
+		for (const edit of unsavedEdits) {
 			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
 				documentArray[edit.offset] = edit.newValue;
 			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
@@ -202,11 +208,12 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			}
 			
 			edit.sameOnDisk = true;
-		});
+		}
 		this._documentData = new Uint8Array(documentArray);
 		this._bytesize = this.documentData.length;
 		await this.saveAs(this.uri, cancellation);
 		this._unsavedEdits = [];
+		console.log(this._unsavedEdits);
 	}
 
 	/**

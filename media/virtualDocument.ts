@@ -119,8 +119,18 @@ export class VirtualDocument {
             SelectHandler.selectMouseHandler(click, click.ctrlKey);
             this.editHandler.completePendingEdits();
         });
-        editorContainer.addEventListener("copy", this.editHandler.copy);
-        editorContainer.addEventListener("paste", this.editHandler.paste.bind(this.editHandler));
+        window.addEventListener("copy", (event: Event) => {
+            if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
+                this.editHandler.copy(event as ClipboardEvent);
+            }
+        });
+        window.addEventListener("paste", (event: Event) => {
+            if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
+                this.editHandler.paste(event as ClipboardEvent);
+            }
+        });
+        // editorContainer.addEventListener("copy", this.editHandler.copy);
+        // editorContainer.addEventListener("paste", this.editHandler.paste.bind(this.editHandler));
         window.addEventListener("resize", this.documentResize.bind(this));
         window.addEventListener("keydown", this.keyBoardScroller.bind(this));
     }
