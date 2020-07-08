@@ -5,6 +5,22 @@ import * as vscode from "vscode";
 import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
 
+/**
+ * @description Helper function to compare two arrays
+ * @param arr1 First array to compare
+ * @param arr2 Second array to compare
+ * @returns Whether or not they're equal
+ */
+function arrayCompare(arr1: any[], arr2: any[]): boolean {
+	if (arr1.length !== arr2.length) return false;
+	for (let i = 0; i < arr1.length; i++) {
+		if (arr1[i] !== arr2[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
 export interface HexDocumentEdits {
 	readonly oldValue: number | undefined;
 	readonly newValue: number | undefined;
@@ -147,14 +163,16 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				const undoneEdits = this._edits.pop();
 				// If undone edit is undefined then we didn't undo anything
 				if (!undoneEdits) return;
-				if (this._unsavedEdits[this._unsavedEdits.length - 1] === undoneEdits) {
+				let removedFromUnsaved = false;
+				if (arrayCompare(this._unsavedEdits[this._unsavedEdits.length - 1], undoneEdits)) {
 					this._unsavedEdits.pop();
+					removedFromUnsaved = true;
 				}
 				const unsavedEdits: HexDocumentEdits[] = [];
 				for (const edit of undoneEdits) {
 					// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
 					edit.sameOnDisk = edit.oldValue !== undefined && edit.oldValue === this.documentData[edit.offset] || false;
-					if (!edit.sameOnDisk) {
+					if (!edit.sameOnDisk && !removedFromUnsaved) {
 						unsavedEdits.push({
 							newValue: edit.oldValue,
 							oldValue: edit.newValue,
@@ -163,8 +181,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 						});
 					}
 				}
-				if (this.unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
-				console.log(this._unsavedEdits);
+				if (unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "undo",
@@ -179,8 +196,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 					edit.sameOnDisk = edit.offset < this._bytesize && edit.newValue === this.documentData[edit.offset] || false;
 					if (!edit.sameOnDisk) unsavedEdits.push(edit);
 				}
-				if (this.unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
-				console.log(this._unsavedEdits);
+				if (unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "redo",
@@ -213,7 +229,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._bytesize = this.documentData.length;
 		await this.saveAs(this.uri, cancellation);
 		this._unsavedEdits = [];
-		console.log(this._unsavedEdits);
 	}
 
 	/**
