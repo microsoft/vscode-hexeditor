@@ -12,6 +12,7 @@ import TelemetryReporter from "vscode-extension-telemetry";
  * @returns Whether or not they're equal
  */
 function arrayCompare(arr1: any[], arr2: any[]): boolean {
+	if (arr1 === undefined || arr2 === undefined) return arr1 === arr2;
 	if (arr1.length !== arr2.length) return false;
 	for (let i = 0; i < arr1.length; i++) {
 		if (arr1[i] !== arr2[i]) {
@@ -157,7 +158,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		edits.forEach(e => e.sameOnDisk = false);
 		this._edits.push(edits);
 		this._unsavedEdits.push(edits);
-		console.log(this._unsavedEdits);
+		
 		this._onDidChange.fire({
 			undo: async () => {
 				const undoneEdits = this._edits.pop();
@@ -172,6 +173,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				for (const edit of undoneEdits) {
 					// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
 					edit.sameOnDisk = edit.oldValue !== undefined && edit.oldValue === this.documentData[edit.offset] || false;
+					// If it's changed on disk and we didn't just remove it from unsaved then its an unsaved edit that needs to be tracked
 					if (!edit.sameOnDisk && !removedFromUnsaved) {
 						unsavedEdits.push({
 							newValue: edit.oldValue,
@@ -190,13 +192,14 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			},
 			redo: async () => {
 				this._edits.push(edits);
-				const unsavedEdits: HexDocumentEdits[] = [];
+				this._unsavedEdits.push(edits);
+				// if (arrayCompare(this._unsavedEdits[this._unsavedEdits.length - 1], edits)) this._unsavedEdits.pop();
+				// const unsavedEdits: HexDocumentEdits[] = [];
 				const redoneEdits = edits;
 				for (const edit of redoneEdits) {
 					edit.sameOnDisk = edit.offset < this._bytesize && edit.newValue === this.documentData[edit.offset] || false;
-					if (!edit.sameOnDisk) unsavedEdits.push(edit);
 				}
-				if (unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
+				// if (unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "redo",

@@ -120,11 +120,13 @@ export class VirtualDocument {
             this.editHandler.completePendingEdits();
         });
         window.addEventListener("copy", (event: Event) => {
+            console.log("COPY");
             if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
                 this.editHandler.copy(event as ClipboardEvent);
             }
         });
         window.addEventListener("paste", (event: Event) => {
+            console.log("PASTE");
             if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
                 this.editHandler.paste(event as ClipboardEvent);
             }
