@@ -256,8 +256,12 @@ export class EditHandler {
             elements[0].innerText = edit.newValue.toString(16).toUpperCase();
             elements[0].innerText = elements[0].innerText.length == 2 ? elements[0].innerText : `0${elements[0].innerText}`;
             updateAsciiValue(new ByteData(edit.newValue), elements[1]);
-            // We want to make sure the last cell is always an add cell, the function takes care of preventing duplicates
-            if (edit.offset === virtualHexDocument.documentSize - 1) {
+            // If no add cells are left we need to add more as this means we just replaced the end
+            if (document.getElementsByClassName("add-cell").length === 0) {
+                // We are going to estimate the filesize and it will be resynced at the end if wrong
+                // This is because we add 1 cell at a time therefore if we paste the filesize is larger than whats rendered breaking the plus cell logic
+                // This causes issues so this is a quick fix, another fix would be to apply all cells at once 
+                virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
                 virtualHexDocument.createAddCell();
             }
             focusElementWithGivenOffset(edit.offset);

@@ -456,8 +456,8 @@ export class VirtualDocument {
      * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone 
      */
     public redo(edits: EditMessage[], fileSize: number): void {
-        this.fileSize = fileSize;
         this.editHandler.redo(edits);
+        this.fileSize = fileSize;
     }
 
     /**
