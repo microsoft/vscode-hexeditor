@@ -116,7 +116,7 @@ export class VirtualDocument {
         editorContainer.addEventListener("mouseover", hover);
         editorContainer.addEventListener("mouseleave", removeHover);
         editorContainer.addEventListener("click", (click: MouseEvent) => {
-            SelectHandler.selectMouseHandler(click, click.ctrlKey);
+            SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
             this.editHandler.completePendingEdits();
         });
         window.addEventListener("copy", (event: Event) => {
