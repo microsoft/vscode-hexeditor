@@ -165,6 +165,7 @@ span:focus {
 
 .vscode-dark > #editor-container > .column > .rowwrapper > .row > .editing {
     background-color: rgb(201, 165, 8);
+    color: rgb(0, 0, 0);
 }
 
 .vscode-dark > #editor-container > .column > .rowwrapper > .row > .edited {
@@ -179,10 +180,12 @@ span:focus {
 
 .vscode-light > #editor-container > .column > .rowwrapper > .row > .editing {
     background-color: rgb(145, 102, 9);
+    color: rgb(0, 0, 0);
 }
 
 .vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .editing {
     background-color: rgb(255, 238, 0);
+    color: rgb(0, 0, 0);
 }
 
 .vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .edited {
