@@ -124,6 +124,7 @@ export class VirtualDocument {
             this.selectHandler.isDragging = true;
             SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
             this.editHandler.completePendingEdits();
+            click.preventDefault();
         });
         editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
             if (event.buttons == 0) this.selectHandler.isDragging = false;
