@@ -2,7 +2,7 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange } from "./util";
 import { hover, removeHover, changeEndianness } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
@@ -128,14 +128,15 @@ export class VirtualDocument {
         editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
             if (event.buttons == 0) this.selectHandler.isDragging = false;
             if (this.selectHandler.isDragging) {
-                const offset = (event.target as HTMLSpanElement).getAttribute("data-offset");
-                if (offset !== null) SelectHandler.multiSelect([parseInt(offset)], true);
+                const selected = document.getElementsByClassName("selected") as HTMLCollectionOf<HTMLSpanElement>;
+                let startOffset = selected[selected.length - 1]?.getAttribute("data-offset");
+                const endOffset = (event.target as HTMLSpanElement).getAttribute("data-offset");
+                if (endOffset !== null) {
+                    startOffset = startOffset === null ? endOffset : startOffset;
+                    SelectHandler.multiSelect(createOffsetRange(parseInt(startOffset), parseInt(endOffset)), true);
+                }
             }
         });
-        // editorContainer.addEventListener("click", (click: MouseEvent) => {
-        //     SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
-        //     this.editHandler.completePendingEdits();
-        // });
         editorContainer.addEventListener("mouseup", () => this.selectHandler.isDragging = false);
 
         window.addEventListener("copy", (event: Event) => {

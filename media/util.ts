@@ -154,3 +154,23 @@ export function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteD
     }
     return;
 }
+/**
+ * @description Given a start and end offset creates an array containing all the offsets in between, inclusive of start and end
+ * @param {number} startOffset The offset which defines the start of the range
+ * @param {number} endOffset The offset which defines the end of the range
+ * @returns {number[]} The range [startOffset, endOffset] 
+ */
+export function createOffsetRange(startOffset: number, endOffset: number): number[] {
+    const offsetsToSelect = [];
+    // We flip them so that the for loop creates the range correctly
+    if (endOffset < startOffset) {
+        const temp = endOffset;
+        endOffset = startOffset;
+        startOffset = temp;
+    }
+    // Create an array of offsets with everything between the last selected element and what the user hit shift
+    for (let i = startOffset; i <= endOffset; i++) {
+        offsetsToSelect.push(i);
+    }
+    return offsetsToSelect;
+}

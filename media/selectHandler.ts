@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { getElementsGivenMouseEvent, retrieveSelectedByteObject, getElementsWithGivenOffset } from "./util";
+import { getElementsGivenMouseEvent, retrieveSelectedByteObject, getElementsWithGivenOffset, createOffsetRange } from "./util";
 import { WebViewStateManager } from "./webviewStateManager";
 import { clearDataInspector, populateDataInspector } from "./dataInspector";
 
@@ -42,21 +42,10 @@ export class SelectHandler {
         } else {
             if (rangeSelect) {
                 const selected = document.getElementsByClassName("selected");
-                let endOffset = parseInt((event.target as HTMLSpanElement).getAttribute("data-offset")!);
+                const endOffset = parseInt((event.target as HTMLSpanElement).getAttribute("data-offset")!);
                 let startOffset = endOffset;
                 if (selected.length !== 0) startOffset = parseInt((selected[selected.length - 1 ]as HTMLSpanElement).getAttribute("data-offset")!);
-                const offsetsToSelect = [];
-                // We flip them so that the user can select backwards as well if they want
-                if (endOffset < startOffset) {
-                    const temp = endOffset;
-                    endOffset = startOffset;
-                    startOffset = temp;
-                }
-                // Create an array of offsets with everything between the last selected element and what the user hit shift
-                for (let i = startOffset; i <= endOffset; i++) {
-                    offsetsToSelect.push(i);
-                }
-                this.multiSelect(offsetsToSelect, true);
+                this.multiSelect(createOffsetRange(startOffset, endOffset), true);
             } else if (multiSelect) {
                 this.multiSelect([parseInt((event.target as HTMLElement).getAttribute("data-offset")!)], true);
             } else {
