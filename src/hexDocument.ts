@@ -275,13 +275,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._bytesize = diskContent.length;
 		this._documentData = diskContent;
 		this._unsavedEdits = [];
-		// If we revert then the edits are exactly what's on the disk
-		this._edits.flat().forEach(e => e.sameOnDisk = true);
+		this._edits = [];
+		// // If we revert then the edits are exactly what's on the disk
+		// this._edits.flat().forEach(e => e.sameOnDisk = true);
 		this._onDidChangeDocument.fire({
 			fileSize: this.filesize,
 			type: "revert",
-			content: diskContent,
-			edits: this._edits.flat(),
+			edits: []
 		});
 	}
 

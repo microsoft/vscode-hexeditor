@@ -63,6 +63,25 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			}
 		}));
 
+		const watcher = vscode.workspace.createFileSystemWatcher(uri.fsPath); 
+		listeners.push(watcher);
+		listeners.push(watcher.onDidChange(e => {
+			if (e.toString() === uri.toString()) {
+				console.log(e);
+				if (document.unsavedEdits.length > 0) {
+					vscode.window.showWarningMessage("This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.", { modal: true });
+				} else {
+					const webviews = Array.from(this.webviews.get(e));
+					console.log(webviews);
+				}
+			}
+		}));
+		listeners.push(watcher.onDidDelete(e => {
+			if (e.toString() === uri.toString()) {
+				vscode.window.showWarningMessage("This file has been deleted! Saving now will create a new file on disk.", { modal: true });
+			}
+		}));
+
         document.onDidDispose(() => disposeAll(listeners));
 
         return document;

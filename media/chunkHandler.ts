@@ -50,9 +50,9 @@ export class ChunkHandler {
      * @description Sends a request to the extension for the packets which would make up the requested chunks
      * @param {number} chunkStart The start of the chunk which you're requesting
      */
-    private async requestMoreChunks(chunkStart: number): Promise<void> {
+    public async requestMoreChunks(chunkStart: number): Promise<void> {
         // If the chunk start is above the document size we know it will not give us anything back so we don't do anything
-        // if (chunkStart >= virtualHexDocument.documentSize) return;
+        if (chunkStart >= virtualHexDocument.documentSize) return;
         // Requests the chunks from the extension
         try {
             const request = await messageHandler.postMessageWithResponse("packet", {
@@ -156,5 +156,13 @@ export class ChunkHandler {
      */
     public removeChunk(offset: number): void {
         this.chunks.delete(offset);
+    }
+
+    /**
+     * @description Getter for all the chunks in the chunk handler
+     * @returns {Set<numer>} the starting offsets of all the chunks being tracked
+     */
+    public get allChunks(): Set<number> {
+        return this.chunks;
     }
 }
