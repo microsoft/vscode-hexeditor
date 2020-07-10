@@ -1,9 +1,0 @@
-{
-    "extends": "./tsconfig.json",
-    "lib": [
-        "es6"
-    ],
-    "exclude": [
-        "media"
-    ]
-}

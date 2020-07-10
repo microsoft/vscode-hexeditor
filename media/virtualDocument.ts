@@ -2,12 +2,13 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad } from "./util";
-import { hover, removeHover, select, changeEndianness, selectByOffset } from "./eventHandlers";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange } from "./util";
+import { hover, removeHover, changeEndianness } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
 import { WebViewStateManager } from "./webviewStateManager";
+import { SelectHandler } from "./selectHandler";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -25,6 +26,7 @@ export class VirtualDocument {
     private hexAddrPadding: number;
     private readonly scrollBarHandler: ScrollBarHandler;
     private readonly editHandler: EditHandler;
+    private readonly selectHandler: SelectHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -33,6 +35,7 @@ export class VirtualDocument {
     constructor(fileSize: number) {
         this.fileSize = fileSize;
         this.editHandler = new EditHandler();
+        this.selectHandler = new SelectHandler();
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
         this.rows = [];
         for (let i = 0; i < 3; i++) {
@@ -110,13 +113,41 @@ export class VirtualDocument {
 
         const editorContainer = document.getElementById("editor-container")!;
         // Bind the event listeners
+        // Will need to refactor this section soon as its getting pretty messy
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
         editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
         editorContainer.addEventListener("mouseover", hover);
         editorContainer.addEventListener("mouseleave", removeHover);
-        editorContainer.addEventListener("click", (click: MouseEvent) => {
-            select(click);
+
+        // Event handles to handle when the user drags to create a selection
+        editorContainer.addEventListener("mousedown", (click: MouseEvent) => {
+            this.selectHandler.isDragging = true;
+            SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
             this.editHandler.completePendingEdits();
+        });
+        editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
+            if (event.buttons == 0) this.selectHandler.isDragging = false;
+            if (this.selectHandler.isDragging) {
+                const selected = document.getElementsByClassName("selected") as HTMLCollectionOf<HTMLSpanElement>;
+                let startOffset = selected[selected.length - 1]?.getAttribute("data-offset");
+                const endOffset = (event.target as HTMLSpanElement).getAttribute("data-offset");
+                if (endOffset !== null) {
+                    startOffset = startOffset === null ? endOffset : startOffset;
+                    SelectHandler.multiSelect(createOffsetRange(parseInt(startOffset), parseInt(endOffset)), true);
+                }
+            }
+        });
+        editorContainer.addEventListener("mouseup", () => this.selectHandler.isDragging = false);
+
+        window.addEventListener("copy", (event: Event) => {
+            if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
+                this.editHandler.copy(event as ClipboardEvent);
+            }
+        });
+        window.addEventListener("paste", (event: Event) => {
+            if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
+                this.editHandler.paste(event as ClipboardEvent);
+            }
         });
         window.addEventListener("resize", this.documentResize.bind(this));
         window.addEventListener("keydown", this.keyBoardScroller.bind(this));
@@ -151,7 +182,7 @@ export class VirtualDocument {
 
         if (WebViewStateManager.getState()) {
             if (WebViewStateManager.getState().selected_offset) {
-                selectByOffset(WebViewStateManager.getState().selected_offset);
+                SelectHandler.singleSelect(WebViewStateManager.getState().selected_offset);
             }
             // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
             // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load
@@ -334,13 +365,13 @@ export class VirtualDocument {
         } else if (event.keyCode == 36 && !event.ctrlKey) {
             const firstElement = targetElement.parentElement!.children[0] as HTMLElement;
             firstElement.focus();
-            selectByOffset(parseInt(firstElement.getAttribute("data-offset")!));
+            SelectHandler.singleSelect(parseInt(firstElement.getAttribute("data-offset")!));
         // If the user presses end we go to the end of the line
         } else if (event.keyCode == 35 && !event.ctrlKey) {
             const parentChildren = targetElement.parentElement!.children;
             const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
             lastElement.focus();
-            selectByOffset(parseInt(lastElement.getAttribute("data-offset")!));
+            SelectHandler.singleSelect(parseInt(lastElement.getAttribute("data-offset")!));
         } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("hex")) {
             await this.editHandler.editHex(targetElement, event.key, event.keyCode);
             // If this cell has been edited
@@ -423,8 +454,7 @@ export class VirtualDocument {
                 this.scrollBarHandler.scrollDocument(1, "up");
             }
             (next as HTMLInputElement).focus();
-            selectByOffset(parseInt(next.getAttribute("data-offset")!));
-
+            SelectHandler.singleSelect(parseInt(next.getAttribute("data-offset")!));
         }
     }
 
@@ -444,8 +474,8 @@ export class VirtualDocument {
      * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone 
      */
     public redo(edits: EditMessage[], fileSize: number): void {
-        this.fileSize = fileSize;
         this.editHandler.redo(edits);
+        this.fileSize = fileSize;
     }
 
     /**

@@ -40,8 +40,6 @@ function openAnyway(): void {
 							topBufferSize: 0,
 							bottomBufferSize: 5
 						});
-						// We debounce the scroll so it isn't called excessively
-						window.addEventListener("scroll", virtualHexDocument.scrollHandler.bind(virtualHexDocument));
 					}
 					if (body.fileSize != 0 && body.html === undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = 

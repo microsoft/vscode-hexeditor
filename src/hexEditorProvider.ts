@@ -322,7 +322,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				// Return the data requested and the offset it was requested for
 				const packet = Array.from(document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements));
 				const edits: HexDocumentEdits[] = [];
-				document.unsavedEdits.forEach((edit) => {
+				document.unsavedEdits.flat().forEach((edit) => {
 					if (edit.offset >= request.initialOffset && edit.offset < request.initialOffset + request.numElements) {
 						edits.push(edit);
 						// If it wasn't in the document before we will add it to the disk contents
