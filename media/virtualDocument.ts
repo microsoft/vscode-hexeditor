@@ -26,6 +26,7 @@ export class VirtualDocument {
     private hexAddrPadding: number;
     private readonly scrollBarHandler: ScrollBarHandler;
     private readonly editHandler: EditHandler;
+    private readonly selectHandler: SelectHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -34,6 +35,7 @@ export class VirtualDocument {
     constructor(fileSize: number) {
         this.fileSize = fileSize;
         this.editHandler = new EditHandler();
+        this.selectHandler = new SelectHandler();
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
         this.rows = [];
         for (let i = 0; i < 3; i++) {
@@ -111,14 +113,31 @@ export class VirtualDocument {
 
         const editorContainer = document.getElementById("editor-container")!;
         // Bind the event listeners
+        // Will need to refactor this section soon as its getting pretty messy
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
         editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
         editorContainer.addEventListener("mouseover", hover);
         editorContainer.addEventListener("mouseleave", removeHover);
-        editorContainer.addEventListener("click", (click: MouseEvent) => {
+
+        // Event handles to handle when the user drags to create a selection
+        editorContainer.addEventListener("mousedown", (click: MouseEvent) => {
+            this.selectHandler.isDragging = true;
             SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
             this.editHandler.completePendingEdits();
         });
+        editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
+            if (event.buttons == 0) this.selectHandler.isDragging = false;
+            if (this.selectHandler.isDragging) {
+                const offset = (event.target as HTMLSpanElement).getAttribute("data-offset");
+                if (offset !== null) SelectHandler.multiSelect([parseInt(offset)], true);
+            }
+        });
+        // editorContainer.addEventListener("click", (click: MouseEvent) => {
+        //     SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
+        //     this.editHandler.completePendingEdits();
+        // });
+        editorContainer.addEventListener("mouseup", () => this.selectHandler.isDragging = false);
+
         window.addEventListener("copy", (event: Event) => {
             if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
                 this.editHandler.copy(event as ClipboardEvent);
@@ -129,8 +148,6 @@ export class VirtualDocument {
                 this.editHandler.paste(event as ClipboardEvent);
             }
         });
-        // editorContainer.addEventListener("copy", this.editHandler.copy);
-        // editorContainer.addEventListener("paste", this.editHandler.paste.bind(this.editHandler));
         window.addEventListener("resize", this.documentResize.bind(this));
         window.addEventListener("keydown", this.keyBoardScroller.bind(this));
     }

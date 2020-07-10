@@ -7,6 +7,12 @@ import { clearDataInspector, populateDataInspector } from "./dataInspector";
 
 export class SelectHandler {
 
+    public isDragging: boolean;
+
+    constructor() {
+        this.isDragging = false;
+    }
+    
     /**
      * @description Removes the selected class from all elements, this is helpful when ensuring only one byte and its associated decoded text is selected
      */

@@ -15,7 +15,7 @@ export class WebViewStateManager {
      * @param {any} propertyValue The value to store for the property
      */
     static setProperty(propertyName: string, propertyValue: any): void {
-        let currentState = vscode.getState();
+        let currentState = typeof vscode.getState() === "string" ? JSON.parse(vscode.getState()) : vscode.getState();
         if (currentState === undefined) {
             currentState = { };
         }
