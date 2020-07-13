@@ -61,7 +61,6 @@ function openAnyway(): void {
 					} else if (body.type === "redo") {
 						virtualHexDocument.redo(body.edits, body.fileSize);
 					} else {
-						console.log("TODO");
 						virtualHexDocument.revert(body.fileSize);
 					}
 					return;

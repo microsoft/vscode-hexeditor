@@ -73,6 +73,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	private _edits: HexDocumentEdits[][] = [];
 	private _unsavedEdits: HexDocumentEdits[][] = [];
 
+	// Last save time
+	public lastSave = Date.now();
+
 
 	private constructor(
 		uri: vscode.Uri,
@@ -227,7 +230,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	/**
 	 * Called by VS Code when the user saves the document.
 	 */
-	async save(cancellation: vscode.CancellationToken): Promise<void> {
+	async save(cancellation?: vscode.CancellationToken): Promise<void> {
 		// Map the edits into the document before saving
 		const documentArray = Array.from(this.documentData);
 		const unsavedEdits = this._unsavedEdits.flat();
@@ -238,9 +241,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
 				documentArray.push(edit.newValue);
 			} else {
-				// If it was in the document and has since been removed we must remove it from the document data like so
-				// documentArray.splice(edit.offset, 1);
-				// documentArray[edit.offset] = -1;
 				removals.push(edit.offset);
 			}
 			
@@ -253,15 +253,16 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._documentData = new Uint8Array(documentArray);
 		this._bytesize = this.documentData.length;
 		await this.saveAs(this.uri, cancellation);
+		this.lastSave = Date.now();
 		this._unsavedEdits = [];
 	}
 
 	/**
 	 * Called by VS Code when the user saves the document to a new location.
 	 */
-	async saveAs(targetResource: vscode.Uri, cancellation: vscode.CancellationToken): Promise<void> {
+	async saveAs(targetResource: vscode.Uri, cancellation?: vscode.CancellationToken): Promise<void> {
 		const fileData = this.documentData;
-		if (cancellation.isCancellationRequested) {
+		if (cancellation && cancellation.isCancellationRequested) {
 			return;
 		}
 		await vscode.workspace.fs.writeFile(targetResource, fileData);
@@ -270,7 +271,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	/**
 	 * Called by VS Code when the user calls `revert` on a document.
 	 */
-	async revert(_cancellation: vscode.CancellationToken): Promise<void> {
+	async revert(_cancellation?: vscode.CancellationToken): Promise<void> {
 		const diskContent = await vscode.workspace.fs.readFile(this.uri);
 		this._bytesize = diskContent.length;
 		this._documentData = diskContent;

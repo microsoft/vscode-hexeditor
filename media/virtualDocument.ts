@@ -564,7 +564,8 @@ export class VirtualDocument {
      * @description Re-requests all the chunks on the DOM for rendering. This is needed for revert
      */
     public async reRequestChunks(): Promise<void> {
-        const allChunks = chunkHandler.allChunks;
+        // If we don't do Array.from it will still reference the original set causing it to infinitely request and delete the chunks
+        const allChunks = Array.from(chunkHandler.allChunks);
         for (const chunk of allChunks) {
             // Remove all the chunks from the DOM
             for (let i = chunk; i < chunk + chunkHandler.chunkSize; i += 16) {
