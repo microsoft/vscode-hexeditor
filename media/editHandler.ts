@@ -257,7 +257,7 @@ export class EditHandler {
             elements[0].innerText = elements[0].innerText.length == 2 ? elements[0].innerText : `0${elements[0].innerText}`;
             updateAsciiValue(new ByteData(edit.newValue), elements[1]);
             // If no add cells are left we need to add more as this means we just replaced the end
-            if (document.getElementsByClassName("add-cell").length === 0) {
+            if (document.getElementsByClassName("add-cell").length === 0 && edit.oldValue === undefined) {
                 // We are going to estimate the filesize and it will be resynced at the end if wrong
                 // This is because we add 1 cell at a time therefore if we paste the filesize is larger than whats rendered breaking the plus cell logic
                 // This causes issues so this is a quick fix, another fix would be to apply all cells at once 
@@ -307,7 +307,7 @@ export class EditHandler {
             this.updateAscii(element.innerText, offset);
             element.classList.add("edited");
             // Means the last cell of the document was filled in so we add another placeholder afterwards
-            if (!currentEdit.previousValue) {
+            if (currentEdit.previousValue === undefined) {
                 // Since we don't send all the edits until the end we need to estimate what the current file size is during this operation or the last cells won't be added correctly
                 virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
                 virtualHexDocument.createAddCell();
