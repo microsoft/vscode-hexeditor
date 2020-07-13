@@ -63,6 +63,41 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			}
 		}));
 
+		const watcher = vscode.workspace.createFileSystemWatcher(uri.fsPath); 
+		listeners.push(watcher);
+		listeners.push(watcher.onDidChange(e => {
+			if (e.toString() === uri.toString()) {
+				if (document.unsavedEdits.length > 0) {
+					const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
+					vscode.window.showWarningMessage(message, "Overwrite", "Revert").then((selected) => {
+						if (selected === "Overwrite") {
+							vscode.commands.executeCommand("workbench.action.files.save");
+						} else if (selected === "Revert") {
+							vscode.commands.executeCommand("workbench.action.files.revert");
+						}
+					});
+				} else {
+					// If we executed a save recently the change was probably caused by us
+					// we shouldn't trigger a revert to resync the document as it is already sync
+					const recentlySaved = Date.now() - document.lastSave < 500;
+					if (!recentlySaved) {
+						document.revert();
+					}
+				}
+			}
+		}));
+		listeners.push(watcher.onDidDelete(e => {
+			if (e.toString() === uri.toString()) { 
+				vscode.window.showWarningMessage("This file has been deleted! Saving now will create a new file on disk.", "Overwrite", "Close Editor").then((response) => {
+					if (response === "Overwrite") {
+						vscode.commands.executeCommand("workbench.action.files.save");
+					} else if (response === "Close Editor") {
+						vscode.commands.executeCommand("workbench.action.closeActiveEditor");
+					}
+				});
+			}
+		}));
+
         document.onDidDispose(() => disposeAll(listeners));
 
         return document;
