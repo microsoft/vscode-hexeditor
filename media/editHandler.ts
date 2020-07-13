@@ -318,4 +318,11 @@ export class EditHandler {
         await this.sendEditToExtHost(edits);
         event.preventDefault();
     }
+
+    /**
+     * @description Called when the user executes the revert command or when the document changes on disk and there are no unsaved edits
+     */
+    public revert(): void {
+        virtualHexDocument.reRequestChunks();
+    }
 }

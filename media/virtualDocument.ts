@@ -124,6 +124,7 @@ export class VirtualDocument {
             this.selectHandler.isDragging = true;
             SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
             this.editHandler.completePendingEdits();
+            click.preventDefault();
         });
         editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
             if (event.buttons == 0) this.selectHandler.isDragging = false;
@@ -479,6 +480,14 @@ export class VirtualDocument {
     }
 
     /**
+     * @description Called when the user executes revert
+     */
+    public revert(fileSize: number): void {
+        this.fileSize = fileSize;
+        this.editHandler.revert();
+    }
+
+    /**
      * @description Creates an add cell (the little plus placeholder) and places it at the end of the document
      */
     public createAddCell(): void {
@@ -550,6 +559,26 @@ export class VirtualDocument {
      */
     public updateDocumentSize(newSize: number): void {
         this.fileSize = newSize;
+    }
+    /**
+     * @description Re-requests all the chunks on the DOM for rendering. This is needed for revert
+     */
+    public async reRequestChunks(): Promise<void> {
+        // If we don't do Array.from it will still reference the original set causing it to infinitely request and delete the chunks
+        const allChunks = Array.from(chunkHandler.allChunks);
+        for (const chunk of allChunks) {
+            // Remove all the chunks from the DOM
+            for (let i = chunk; i < chunk + chunkHandler.chunkSize; i += 16) {
+                this.rows[0].get(i.toString())?.remove();
+                this.rows[0].delete(i.toString());
+                this.rows[1].get(i.toString())?.remove();
+                this.rows[1].delete(i.toString());
+                this.rows[2].get(i.toString())?.remove();
+                this.rows[2].delete(i.toString());
+            }
+            chunkHandler.removeChunk(chunk);
+            await chunkHandler.requestMoreChunks(chunk);
+        }
     }
 
 }

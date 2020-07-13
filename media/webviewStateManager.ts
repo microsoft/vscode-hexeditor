@@ -34,6 +34,6 @@ export class WebViewStateManager {
      * @description Retrieves the state object
      */
     static getState(): any {
-        return vscode.getState();
+        return typeof vscode.getState() === "string" ? JSON.parse(vscode.getState()) : vscode.getState();
     }
 }
