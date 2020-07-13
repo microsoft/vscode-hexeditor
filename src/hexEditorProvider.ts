@@ -205,6 +205,29 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 	private getBodyHTML(): string {
 		return `
+		<div class="column left">
+			<div class="header">Memory Offset </div>
+			<div class="rowwrapper" id="hexaddr">
+			</div>
+		</div>
+		<div id="editor-container">
+			<div class="column middle">
+				<div class="header">
+					<span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0A</span><span>0B</span><span>0C</span><span>0D</span><span>0E</span><span>0F</span>
+				</div>
+				<div class="rowwrapper" id="hexbody">
+				</div>
+			</div>
+			<div class="column right">
+				<div class="header">Decoded Text</div>
+				<div class="rowwrapper" id="ascii">
+				</div>
+			</div>
+			<div id="scrollbar">
+				<div role="scrollbar" id="scroll-thumb">
+				</div>
+			</div>
+		</div>
 		<div class="column" id="data-inspector">
 			<div class="header">Data Inspector</div>
 			<div class="grid-container">
@@ -306,29 +329,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 						<option value="little">Little Endian</option>
 						<option value="big">Big Endian</option>
 					</select>
-				</div>
-			</div>
-		</div>
-		<div class="column left">
-			<div class="header">Memory Offset </div>
-			<div class="rowwrapper" id="hexaddr">
-			</div>
-		</div>
-		<div id="editor-container">
-			<div class="column middle">
-				<div class="header">
-					<span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0A</span><span>0B</span><span>0C</span><span>0D</span><span>0E</span><span>0F</span>
-				</div>
-				<div class="rowwrapper" id="hexbody">
-				</div>
-			</div>
-			<div class="column right">
-				<div class="header">Decoded Text</div>
-				<div class="rowwrapper" id="ascii">
-				</div>
-			</div>
-			<div id="scrollbar">
-				<div role="scrollbar" id="scroll-thumb">
 				</div>
 			</div>
 		</div>

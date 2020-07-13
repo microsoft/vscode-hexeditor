@@ -95,14 +95,14 @@ export class VirtualDocument {
         // Due to absolute positioning on the editor position we have to set a lot of sizes ourselves as the elements are not part of the document flow
         const rowWrappers = document.getElementsByClassName("rowwrapper") as HTMLCollectionOf<HTMLDivElement>;
         // Sets the hexaddr column to the same width as its header ( the + 1 is needed to )
-        rowWrappers[0].style.width = `${(document.getElementsByClassName("header")[1] as HTMLElement).offsetWidth}px`;
+        rowWrappers[0].style.width = `${(document.getElementsByClassName("header")[0] as HTMLElement).offsetWidth}px`;
         rowWrappers[0].style.height = `${this.documentHeight}px`;
         // This is the hex section
-        (document.getElementsByClassName("header")[2] as HTMLElement).style.width = `${hexRowWidth}px`;
+        (document.getElementsByClassName("header")[1] as HTMLElement).style.width = `${hexRowWidth}px`;
         rowWrappers[1].style.width = `${hexRowWidth}px`;
         rowWrappers[1].style.height = `${this.documentHeight}px`;
         // This is the ascii  section
-        (document.getElementsByClassName("header")[3] as HTMLElement).style.width = `${asciiRowWidth}px`;
+        (document.getElementsByClassName("header")[2] as HTMLElement).style.width = `${asciiRowWidth}px`;
         rowWrappers[2].style.width = `${asciiRowWidth}px`;
         rowWrappers[2].style.height = `${this.documentHeight}px`;
 
