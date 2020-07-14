@@ -47,6 +47,45 @@ export class ByteData {
 	}
 
 	/**
+	 * @description Converts the byte data to a utf-8 character
+	 * @param {boolean} littleEndian Whether or not it's represented in little endian
+	 * @returns {string} The utf-8 character
+	 */
+	toUTF8(littleEndian: boolean): string {
+		let uint8Data = [this.to8bitUInt()];
+		for (let i = 0; i < 3 && i < this.adjacentBytes.length; i++) {
+			uint8Data.push(this.adjacentBytes[i].to8bitUInt());
+		}
+		if (!littleEndian) {
+			uint8Data = uint8Data.reverse();
+		}
+		const utf8 = new TextDecoder("utf-8").decode(new Uint8Array(uint8Data));
+		// We iterate through the string and immediately reutrn the first character
+		for (const char of utf8) return char;
+		return utf8;
+	}
+
+	/**
+	 * @description Converts the byte data to a utf-16 character
+	 * @param {boolean} littleEndian Whether or not it's represented in little endian
+	 * @returns {string} The utf-16 character
+	 */
+	toUTF16(littleEndian: boolean): string {
+		let uint8Data = [this.to8bitUInt()];
+		if (this.adjacentBytes.length === 0) return "End of File";
+		for (let i = 0; i < 3 && i < this.adjacentBytes.length; i++) {
+			uint8Data.push(this.adjacentBytes[i].to8bitUInt());
+		}
+		if (!littleEndian) {
+			uint8Data = uint8Data.reverse();
+		}
+		const utf16 = new TextDecoder("utf-16").decode(new Uint8Array(uint8Data));
+		// We iterate through the string and immediately reutrn the first character
+		for (const char of utf16) return char;
+		return utf16;
+	}
+
+	/**
 	 * @description Handles converting the ByteData object into many of the unsigned and signed integer formats
 	 * @param {number} numBits The numbers of bits you want represented, must be a multiple of 8 and <= 64
 	 * @param {boolean} signed Whether you want the returned representation to be signed or unsigned
