@@ -228,107 +228,138 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				</div>
 			</div>
 		</div>
-		<div class="column" id="data-inspector">
-			<div class="header">Data Inspector</div>
-			<div class="grid-container">
-				<div class="grid-item">
-					<label for="binary8">8 bit Binary</label>
+		<div class="column">
+			<div id="data-inspector">
+				<div class="header">Data Inspector</div>
+				<div class="grid-container">
+					<div class="grid-item">
+						<label for="binary8">8 bit Binary</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="binary8" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="int8">Int8</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="int8" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="uint8">UInt8</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="uint8" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="int16">Int16</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="int16" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="uint16">UInt16</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="uint16" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="int24">Int24</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="int24" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="uint24">UInt24</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="uint24" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="int32">Int32</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="int32" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="uint32">UInt32</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="uint32" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="int64">Int64</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="int64" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="uint64">UInt64</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="uint64" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="utf8">UTF-8</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="utf8" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="utf16">UTF-16</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="utf16" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="float32">Float 32</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="float32" readonly/>
+					</div>
+					<div class="grid-item">
+						<label for="float64">Float 64</label>
+					</div>
+					<div class="grid-item">
+						<input type="text" autocomplete="off" spellcheck="off" id="float64" readonly/>
+					</div>
+					<div class="grid-item endian-select">
+						<label for="endianness">Endianness</label>
+					</div>
+					<div class="grid-item endian-select">
+						<select id="endianness">
+							<option value="little">Little Endian</option>
+							<option value="big">Big Endian</option>
+						</select>
+					</div>
 				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="binary8" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="int8">Int8</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="int8" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="uint8">UInt8</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="uint8" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="int16">Int16</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="int16" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="uint16">UInt16</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="uint16" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="int24">Int24</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="int24" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="uint24">UInt24</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="uint24" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="int32">Int32</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="int32" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="uint32">UInt32</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="uint32" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="int64">Int64</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="int64" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="uint64">UInt64</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="uint64" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="utf8">UTF-8</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="utf8" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="utf16">UTF-16</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="utf16" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="float32">Float 32</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="float32" readonly/>
-				</div>
-				<div class="grid-item">
-					<label for="float64">Float 64</label>
-				</div>
-				<div class="grid-item">
-					<input type="text" autocomplete="off" spellcheck="off" id="float64" readonly/>
-				</div>
-				<div class="grid-item endian-select">
-					<label for="endianness">Endianness</label>
-				</div>
-				<div class="grid-item endian-select">
-					<select id="endianness">
-						<option value="little">Little Endian</option>
-						<option value="big">Big Endian</option>
-					</select>
+			</div>
+			<div id="search-container">
+				<div class="header">Search</div>
+				<div class="grid-container">
+					<div class="grid-item">
+						<label for="find">Find</label>
+					</div>
+					<div class="grid-item">
+						<form>
+							<input type="text" autocomplete="off" spellcheck="off" name="find" id="find"/>
+							<button type="button" id="find-button">Go</button>
+						</form>
+					</div>
+					<div class="grid-item">
+						<label for="data-type">Data Type</label>
+					</div>
+					<div class="grid-item data-type-select">
+						<select id="data-type">
+							<option value="hex">Hex</option>
+							<option value="text">Text</option>
+						</select>
+					</div>
+					<div class="grid-item">
+						<button type="button" id="find-previous" disabled>Find Previous</button>
+					</div>
+					<div class="grid-item">
+						<button type="button" id="find-next" disabled>Find Next</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -378,6 +409,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				// We respond with the size of the file so that the webview is always in sync with the ext host
 				panel.webview.postMessage({ type: "edit", requestId: message.requestId, body: {
 					fileSize: document.filesize
+				} });
+				return;
+			case "search":
+				panel.webview.postMessage({ type: "search", requestId: message.requestId, body: {
+					results: document.searchProvider.textSearch(message.body.query)
 				} });
 				return;
 		}

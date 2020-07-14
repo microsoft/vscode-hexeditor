@@ -4,6 +4,7 @@
 import * as vscode from "vscode";
 import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
+import { SearchProvider } from "./searchProvider";
 
 /**
  * @description Helper function to compare two arrays
@@ -76,6 +77,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	// Last save time
 	public lastSave = Date.now();
 
+	public readonly searchProvider: SearchProvider;
 
 	private constructor(
 		uri: vscode.Uri,
@@ -90,6 +92,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._unsavedEdits = unsavedEdits;
 		// If we don't do this Array.from casting then both will reference the same array causing bad behavior
 		this._edits = Array.from(unsavedEdits);
+		this.searchProvider = new SearchProvider(this);
     }
     
 	public get uri(): vscode.Uri { return this._uri; }
