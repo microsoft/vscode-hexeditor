@@ -20,9 +20,15 @@ body {
     padding-right: 10px;
     font-weight: var(--vsocde-editor-font-weight);
     font-size: var(--vscode-editor-font-size);
+}
+
+#editor-container {
     font-family: var(--vscode-editor-font-family);
 }
 
+body:not(#editor-container) {
+    font-family: var(--vscode-workbench-font-family);
+}
 
 .grid-container {
     position: sticky;
@@ -42,6 +48,7 @@ body {
 }
   
 .left {
+    font-family: var(--vscode-editor-font-family);
     text-align: right;
 }
 .left > .rowwrapper {
@@ -226,6 +233,21 @@ button:disabled {
 form {
     display: flex;
 }
-input[type=text] { 
+.find-bar { 
     flex-grow: 1;
+    position: relative;
+}
+#find {
+    padding-right: 20px;
+}
+#regex-icon {
+    position: absolute;
+    right: 0px;
+    top: 50%;
+    transform: translateY(-60%);
+}
+
+.toggled {
+    background-color: var(--vscode-editor-selectionBackground);
+    color: var(--vscode-editor-selectionForeground);
 }

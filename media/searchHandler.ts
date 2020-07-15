@@ -4,6 +4,7 @@ import { SelectHandler } from "./selectHandler";
 export class SearchHandler {
     private searchResults: number[][];
     private searchType: "hex" | "ascii" = "hex";
+    private regex = false;
     private resultIndex = 0;
     private findTextBox: HTMLInputElement;
     private findButton: HTMLButtonElement;
@@ -18,6 +19,10 @@ export class SearchHandler {
         this.findButton.addEventListener("click", this.search.bind(this));
         this.findNextButton.addEventListener("click", this.findNext.bind(this));
         this.findPreviousButton.addEventListener("click", this.findPrevious.bind(this));
+        document.getElementById("regex-icon")?.addEventListener("click", () => {
+            this.regex = !this.regex;
+            this.toggleRegex();
+        });
     }
 
     private async search(): Promise<void> {
@@ -30,7 +35,8 @@ export class SearchHandler {
         this.searchType = (document.getElementById("data-type") as HTMLSelectElement).value as "hex" | "ascii";
         const results = (await messageHandler.postMessageWithResponse("search", {
             query: query,
-            type: this.searchType
+            type: this.searchType,
+            regex: this.regex
         })).results;
         this.resultIndex = 0;
         this.findButton.disabled = false;
@@ -74,6 +80,16 @@ export class SearchHandler {
         // We lock the find previous if there isn't a previous anymore
         if (this.resultIndex == 0) {
             this.findPreviousButton.disabled = true;
+        }
+    }
+
+    private toggleRegex(): void {
+        // Due to not binding the this, 
+        const regexIcon = document.getElementById("regex-icon") as HTMLSpanElement;
+        if (regexIcon.classList.contains("toggled")) {
+            regexIcon.classList.remove("toggled");
+        } else {
+            regexIcon.classList.add("toggled");
         }
     }
 }

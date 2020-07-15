@@ -8,24 +8,12 @@ export class SearchProvider {
         this._document = document;
     }
 
-    public textSearch(query: string): number[][] {
-        const transformed = String.fromCharCode.apply(null, Array.from(this._document.documentData));
-        const regex = new RegExp(query, "g");
-        const results = [];
-        try {
-            const matches = transformed.matchAll(regex);
-            for (const match of matches) {
-                if (match.index === undefined) continue;
-                const matchOffsets = [];
-                for (let i = match.index; i < match.index + match[0].length; i++) {
-                    matchOffsets.push(i);
-                }
-                results.push(matchOffsets);
-            }
-        } catch (err) {
-            console.error(err);
+    public textSearch(query: string, regex: boolean): number[][] {
+        if (regex) {
+            return this.regexTextSearch(query);
+        } else {
+            return this.normalTextSearch(query);
         }
-        return results;
     }
 
     public hexSearch(query: string): number[][] {
@@ -51,6 +39,53 @@ export class SearchProvider {
             }
             // If We got a complete match then it is valid
             if (matchOffsets.length === queryArr.length) {
+                results.push(matchOffsets);
+            }
+        }
+        return results;
+    }
+
+    private regexTextSearch(query: string): number[][] {
+        const transformed = String.fromCharCode.apply(null, Array.from(this._document.documentData));
+        const regex = new RegExp(query, "g");
+        const results = [];
+        try {
+            const matches = transformed.matchAll(regex);
+            for (const match of matches) {
+                if (match.index === undefined) continue;
+                const matchOffsets = [];
+                for (let i = match.index; i < match.index + match[0].length; i++) {
+                    matchOffsets.push(i);
+                }
+                results.push(matchOffsets);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+        return results;
+    }
+    
+    private normalTextSearch(query: string): number[][] {
+        const results: number[][] = [];
+        // We compare the query to every spot in the file finding matches
+        for (let i = 0; i < this._document.documentData.length; i++) {
+            const matchOffsets = [];
+            for (let j = 0; j < query.length; j++) {
+                // Once there isn't enough room in the file for the query we return
+                if (i + j >= this._document.documentData.length) {
+                    return results;
+                }
+                const ascii = String.fromCharCode(this._document.documentData[i+j]);
+                const currentComparison = query[j];
+                // If it's a match we add the offset to the results
+                if (currentComparison === ascii) {
+                    matchOffsets.push(i+j);
+                } else {
+                    break;
+                }
+            }
+            // If we got a complete match then it is valid
+            if (matchOffsets.length === query.length) {
                 results.push(matchOffsets);
             }
         }

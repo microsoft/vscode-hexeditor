@@ -176,6 +176,14 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			path.join(this._context.extensionPath, "dist", "hexEdit.css")
 		));
 
+		const codiconsUri = webview.asWebviewUri(vscode.Uri.file(
+			path.join(this._context.extensionPath, "node_modules", "vscode-codicons", "dist", "codicon.css")
+		));
+		
+		const codiconsFontUri = webview.asWebviewUri(vscode.Uri.file(
+			path.join(this._context.extensionPath, "node_modules", "vscode-codicons", "dist", "codicon.ttf")
+		));
+
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
 
@@ -189,11 +197,12 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				Use a content security policy to only allow loading images from https or from our extension directory,
 				and only allow scripts that have a specific nonce.
 				-->
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; font-src ${codiconsFontUri}; style-src ${webview.cspSource} ${codiconsUri}; script-src 'nonce-${nonce}';">
 
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 				<link href="${styleUri}" rel="stylesheet" />
+				<link href="${codiconsUri}" rel="stylesheet" />
 				<script nonce="${nonce}" src="${scriptUri}" defer></script>
 
 				<title>Hex Editor</title>
@@ -341,7 +350,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					</div>
 					<div class="grid-item">
 						<form>
-							<input type="text" autocomplete="off" spellcheck="off" name="find" id="find"/>
+							<div class="find-bar">
+								<input type="text" autocomplete="off" spellcheck="off" name="find" id="find"/><span class="codicon codicon-regex" id="regex-icon"></span>
+							</div>
 							<button type="button" id="find-button">Go</button>
 						</form>
 					</div>
@@ -414,7 +425,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case "search":
 				let results: number[][];
 				if (message.body.type === "ascii") {
-					results = document.searchProvider.textSearch(message.body.query);
+					results = document.searchProvider.textSearch(message.body.query, message.body.regex);
 				} else {
 					results = document.searchProvider.hexSearch(message.body.query);
 				}
