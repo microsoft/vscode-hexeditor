@@ -344,32 +344,35 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			</div>
 			<div id="search-container">
 				<div class="header">Search</div>
-				<div class="grid-container">
-					<div class="grid-item">
-						<label for="find">Find</label>
+				<div class="search-widget">
+					<div class="bar find-bar">
+						<input type="text" autocomplete="off" spellcheck="off" name="find" id="find" placeholder="Find"/>
+						<span class="bar-glyphs">
+							<span class="codicon codicon-case-sensitive" id="case-sensitive"></span>
+							<span class="codicon codicon-regex" id="regex-icon"></span>
+						</span>
+						<span class="icon-group">
+							<span class="codicon codicon-search-stop" id="search-stop"></span>
+							<span class="codicon codicon-arrow-up" id="find-previous"></span>
+							<span class="codicon codicon-arrow-down" id="find-next"></span>
+						</span>
 					</div>
-					<div class="grid-item">
-						<form>
-							<div class="find-bar">
-								<input type="text" autocomplete="off" spellcheck="off" name="find" id="find"/><span class="codicon codicon-regex" id="regex-icon"></span>
-							</div>
-							<button type="button" id="find-button">Go</button>
-						</form>
+					<div class="bar replace-bar">
+						<input type="text" autocomplete="off" spellcheck="off" name="replace" id="replace" placeholder="Replace"/>
+						<span class="bar-glyphs">
+							<span class="codicon codicon-preserve-case" id="preserve-case"></span>
+						</span>
+						<span class="icon-group">
+							<span class="codicon codicon-replace" id="replace"></span>
+							<span class="codicon codicon-replace-all" id="replace-all"></span>
+						</span>
 					</div>
-					<div class="grid-item">
-						<label for="data-type">Data Type</label>
-					</div>
-					<div class="grid-item data-type-select">
+					<div class="data-type-select">
+						<p>Data Type</p>
 						<select id="data-type">
 							<option value="hex">Hex</option>
 							<option value="ascii">Text</option>
 						</select>
-					</div>
-					<div class="grid-item">
-						<button type="button" id="find-previous" disabled>Find Previous</button>
-					</div>
-					<div class="grid-item">
-						<button type="button" id="find-next" disabled>Find Next</button>
 					</div>
 				</div>
 			</div>

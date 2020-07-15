@@ -142,11 +142,6 @@ select {
     padding-top: 10px;
 }
 
-.data-type-select {
-    padding-top: 10px;
-    padding-bottom: 10px;
-}
-
 .rowwrapper {
     position: relative;
 }
@@ -230,24 +225,50 @@ button:disabled {
     border-color: var(--vscode-button-secondaryBackground);
 }
 
-form {
-    display: flex;
-}
-.find-bar { 
-    flex-grow: 1;
-    position: relative;
-}
-#find {
-    padding-right: 20px;
-}
-#regex-icon {
-    position: absolute;
-    right: 0px;
-    top: 50%;
-    transform: translateY(-60%);
-}
-
 .toggled {
     background-color: var(--vscode-editor-selectionBackground);
     color: var(--vscode-editor-selectionForeground);
+}
+
+.bar {
+    position: relative;
+}
+
+.bar > input {
+    height: 24px;
+}
+
+input[type="text"] {
+    padding-right: 100px;
+    height: 24px;
+}
+
+.bar-glyphs {
+    position: absolute;
+    right: 23%;
+    top: 12%;
+}
+
+#case-sensitive {
+    position: relative;
+    top: 2px;
+}
+
+#preserve-case {
+    position: relative;
+    top: 2px;
+    right: 2px;
+}
+
+.icon-group {
+    position: absolute;
+    top: 6px;
+    transform: translateX(10px);
+}
+.search-widget {
+    margin-top: 10px;
+}
+
+.find-bar {
+    padding-bottom: 10px;
 }

@@ -9,7 +9,6 @@ import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
 import { WebViewStateManager } from "./webviewStateManager";
 import { SelectHandler } from "./selectHandler";
-import { SearchHandler } from "./searchHandler";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -28,7 +27,7 @@ export class VirtualDocument {
     private readonly scrollBarHandler: ScrollBarHandler;
     private readonly editHandler: EditHandler;
     private readonly selectHandler: SelectHandler;
-    private readonly searchHandler: SearchHandler;
+    // private readonly searchHandler: SearchHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -38,7 +37,7 @@ export class VirtualDocument {
         this.fileSize = fileSize;
         this.editHandler = new EditHandler();
         this.selectHandler = new SelectHandler();
-        this.searchHandler = new SearchHandler();
+        // this.searchHandler = new SearchHandler();
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
         this.rows = [];
         for (let i = 0; i < 3; i++) {
