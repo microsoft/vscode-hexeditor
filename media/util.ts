@@ -6,25 +6,34 @@ import { SelectHandler } from "./selectHandler";
 
 // Assorted helper functions
 
+export interface IRange {
+    start: number;
+    end: number;
+}
 
 /**
  * @description Class which represents a range of numbers
  */
 export class Range {
-    private start: number;
-    private end?: number;
+    public readonly start: number;
+    public readonly end: number;
     // Construct a range object representing [start, end] inclusive of both
     /**
      * @description Constructs a range object represneting [start, end] inclusive of both
-     * @param {number} start Represents the start of the range 
+     * @param {number} start Represents the start of the range
      * @param {number} end Represents the end of the range
      */
-    constructor (start: number, end?: number) {
-        this.start = start;
-        this.end = end;
+    constructor(start: number, end: number = Number.MAX_SAFE_INTEGER) {
+        if (start > end) {
+            this.start = end;
+            this.end = start;
+        } else {
+            this.start = start;
+            this.end = end;
+        }
     }
     /**
-     * @desciption Tests if the given number if within the range 
+     * @desciption Tests if the given number if within the range
      * @param {number} num The number to test
      * @returns {boolean } True if the number is in the range, false otherwise
      */
@@ -60,7 +69,7 @@ export function generateCharacterRanges(): Range[] {
     const ranges: Range[] = [];
     ranges.push(new Range(0, 31));
     ranges.push(new Range(127, 160));
-    ranges.push(new Range(173,173));
+    ranges.push(new Range(173, 173));
     ranges.push(new Range(256));
     return ranges;
 }
@@ -72,12 +81,12 @@ export function generateCharacterRanges(): Range[] {
  * @returns {NodeListOf<HTMLElement>} returns a list of HTMLElements which have the given offset
  */
 export function getElementsWithGivenOffset(offset: number): NodeListOf<HTMLElement> {
-	return document.querySelectorAll(`span[data-offset='${offset}'`);
+    return document.querySelectorAll(`span[data-offset='${offset}'`);
 }
 
 /**
  * @description Returns the elements with the same offset as the one clicked
- * @param {MouseEvent} event The event which is handed to a mouse event listener 
+ * @param {MouseEvent} event The event which is handed to a mouse event listener
  * @returns {NodeListOf<Element> | undefined} The elements with the same offset as the clicked element, or undefined if none could be retrieved
  */
 export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Element> | undefined {
@@ -124,13 +133,13 @@ export function updateAsciiValue(byteData: ByteData, asciiElement: HTMLSpanEleme
 
 /**
  * @description Given a string 0 pads it up unitl the string is of length width
- * @param {string} number The number you want to 0 pad (it's a string as you're 0 padding it to display it, not to do arithmetic) 
+ * @param {string} number The number you want to 0 pad (it's a string as you're 0 padding it to display it, not to do arithmetic)
  * @param {number} width The length of the final string (if smaller than the string provided nothing happens)
  * @returns {string} The newly padded string
  */
 export function pad(number: string, width: number): string {
-	number = number + "";
-	return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
+    number = number + "";
+    return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
 }
 
 
@@ -140,17 +149,17 @@ export function pad(number: string, width: number): string {
  * @returns {ByteData | undefined} The ByteData object or undefined if elements was malformed or empty
  */
 export function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteData | undefined {
-	for (const element of Array.from(elements)) {
-		if (element.parentElement && element.classList.contains("hex")) {
-			const byte_object = new ByteData(parseInt(element.innerHTML, 16));
-			let current_element = element.nextElementSibling || element.parentElement.nextElementSibling?.children[0];
-			for (let i = 0; i < 7; i++) {
-				if (!current_element) break;
-				byte_object.addAdjacentByte(new ByteData(parseInt(current_element.innerHTML, 16)));
-				current_element = current_element.nextElementSibling || current_element.parentElement?.nextElementSibling?.children[0];
-			}
-			return byte_object;
-		}
+    for (const element of Array.from(elements)) {
+        if (element.parentElement && element.classList.contains("hex")) {
+            const byte_object = new ByteData(parseInt(element.innerHTML, 16));
+            let current_element = element.nextElementSibling || element.parentElement.nextElementSibling?.children[0];
+            for (let i = 0; i < 7; i++) {
+                if (!current_element) break;
+                byte_object.addAdjacentByte(new ByteData(parseInt(current_element.innerHTML, 16)));
+                current_element = current_element.nextElementSibling || current_element.parentElement?.nextElementSibling?.children[0];
+            }
+            return byte_object;
+        }
     }
     return;
 }
@@ -158,7 +167,7 @@ export function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteD
  * @description Given a start and end offset creates an array containing all the offsets in between, inclusive of start and end
  * @param {number} startOffset The offset which defines the start of the range
  * @param {number} endOffset The offset which defines the end of the range
- * @returns {number[]} The range [startOffset, endOffset] 
+ * @returns {number[]} The range [startOffset, endOffset]
  */
 export function createOffsetRange(startOffset: number, endOffset: number): number[] {
     const offsetsToSelect = [];

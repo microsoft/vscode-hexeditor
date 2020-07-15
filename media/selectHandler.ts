@@ -1,18 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { getElementsGivenMouseEvent, retrieveSelectedByteObject, getElementsWithGivenOffset, createOffsetRange } from "./util";
+import { retrieveSelectedByteObject, getElementsWithGivenOffset, IRange } from "./util";
 import { WebViewStateManager } from "./webviewStateManager";
 import { clearDataInspector, populateDataInspector } from "./dataInspector";
 
 export class SelectHandler {
 
-    public isDragging: boolean;
+    public isDragging = false;
+    public clearSelectionClick: boolean = false;
+    public clearSelectionDrag: boolean = false;
+    public rangeSelectionElementStart: HTMLElement | undefined;
+    public oldRangeSelectionElementEnd: HTMLElement | undefined;
 
-    constructor() {
-        this.isDragging = false;
-    }
-    
+    constructor() { }
+
     /**
      * @description Removes the selected class from all elements, this is helpful when ensuring only one byte and its associated decoded text is selected
      */
@@ -21,74 +23,131 @@ export class SelectHandler {
     }
 
     /**
-     * @description Selects the clicked element and its associated hex/ascii
-     * @param {MouseEvent} event MouseEvent handed to a click listener
-     * @param {boolean} multiSelect whether or not the user is clicking ctrl to add to the selection
-     * @param {boolean} rangeSelect whether or not the user is click shift to select a range of values
-     */
-    public static selectMouseHandler(event: MouseEvent, multiSelect: boolean, rangeSelect: boolean): void  {
-        if (!event || !event.target) return;
-        const elements = getElementsGivenMouseEvent(event);
-        if (!elements) return;
-        // We toggle the select off if they clicked the same element
-        if (elements[0].classList.contains("selected")) {
-            if (document.activeElement) {
-                (document.activeElement as HTMLElement).blur();
-            }
-            WebViewStateManager.setProperty("selected_offset", undefined);
-            clearDataInspector();
-            elements[0].classList.remove("selected");
-            elements[1].classList.remove("selected");
-        } else {
-            if (rangeSelect) {
-                const selected = document.getElementsByClassName("selected");
-                const endOffset = parseInt((event.target as HTMLSpanElement).getAttribute("data-offset")!);
-                let startOffset = endOffset;
-                if (selected.length !== 0) startOffset = parseInt((selected[selected.length - 1 ]as HTMLSpanElement).getAttribute("data-offset")!);
-                this.multiSelect(createOffsetRange(startOffset, endOffset), true);
-            } else if (multiSelect) {
-                this.multiSelect([parseInt((event.target as HTMLElement).getAttribute("data-offset")!)], true);
-            } else {
-                this.singleSelect(parseInt((event.target as HTMLElement).getAttribute("data-offset")!));
-            }
-            (event.target as HTMLElement).focus();
-        }
-    }
-
-    /**
      * @description Given an offset selects the elements. This does not clear the previously selected elements.
      * @param {number} offset Offset to select
      */
-    private static selectOffset(offset: number): void {
+    private static toggleSelectOffset(offset: number, force?: boolean): boolean {
         const elements = getElementsWithGivenOffset(offset);
-        WebViewStateManager.setProperty("selected_offset", offset);
-        elements[0].classList.add("selected");
-        elements[1].classList.add("selected");
+        const isSelected = elements[0].classList.toggle("selected", force);
+        elements[1].classList.toggle("selected", force);
+        return isSelected;
     }
 
     /**
      * @description Given an offset, selects the hex and ascii element
      * @param {number} offset  The offset of the element you want to select
      */
-    public static singleSelect(offset: number): void {
-        this.clearSelected();
-        this.selectOffset(offset);
-        const elements = getElementsWithGivenOffset(offset);
-        const byte_obj = retrieveSelectedByteObject(elements);
-        if (!byte_obj) return;
-        const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
-        populateDataInspector(byte_obj, littleEndian);
+    public static singleSelect(offset: number): boolean {
+        // SelectHandler.clearSelected();
+        const isSelected = SelectHandler.toggleSelectOffset(offset);
+        if (isSelected) {
+            WebViewStateManager.setProperty("selected_offset", offset);
+            const elements = getElementsWithGivenOffset(offset);
+            const byte_obj = retrieveSelectedByteObject(elements)!;
+            const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
+            populateDataInspector(byte_obj, littleEndian);
+        } else {
+            WebViewStateManager.setProperty("selected_offset", undefined);
+            clearDataInspector();
+            // (document.activeElement as HTMLElement)?.blur();
+        }
+        return isSelected;
     }
 
-    /**
-     * @description Selects the hex and ascii elements with the given offsets
-     * @param {number[]} offsets The list of offsets to select 
-     * @param {boolean} append Whether it should 
-     */
-    public static multiSelect(offsets: number[], append: boolean): void {
-        if (!append) this.clearSelected();
-        for (const offset of offsets) {
-            this.selectOffset(offset);
+    public static rangeSelect(newRange: IRange, oldRange?: IRange): void {
+        if (newRange.start !== oldRange?.start && newRange.start !== oldRange?.end && newRange.end !== oldRange?.start && newRange.end !== oldRange?.end) {
+            oldRange = undefined;
+        }
+
+        let selectStart: number | undefined = newRange.start;
+        let selectEnd: number | undefined = newRange.end;
+        if (oldRange) {
+            let deselectStart: number | undefined;
+            let deselectEnd: number | undefined;
+
+            if (newRange.start === oldRange.start) {
+                /**
+                 * N: new cell | S: pivot cell | O: old cell
+                 * New range : S->N | Old range : S->O
+                 *
+                 * *S*****
+                 * ***O**N
+                 */
+                if (newRange.end < oldRange.end) {
+                    deselectStart = newRange.end + 1;
+                    deselectEnd = oldRange.end;
+
+                    selectStart = undefined;
+                    selectEnd = undefined;
+                } else if (newRange.end > oldRange.end) {
+                    selectStart = oldRange.end + 1;
+                    selectEnd = newRange.end;
+                } else {
+                    selectStart = undefined;
+                    selectEnd = undefined;
+                }
+            } else if (newRange.end === oldRange.start) {
+                /**
+                 * N: new cell | S: pivot cell | O: old cell
+                 * New range : N->S | Old range : S->O
+                 *
+                 * ***N*S*
+                 * ***O***
+                 */
+                deselectStart = newRange.end + 1;
+                deselectEnd = oldRange.end;
+
+                selectStart = newRange.start;
+                selectEnd = newRange.end - 1;
+            } else if (newRange.start === oldRange.end) {
+                /**
+                 * N: new cell | S: pivot cell | O: old cell
+                 * New range : S->N | Old range : O->S
+                 *
+                 * ***O***
+                 * *S*N***
+                 */
+                deselectStart = oldRange.start;
+                deselectEnd = oldRange.end - 1;
+
+                selectStart = newRange.start + 1;
+                selectEnd = newRange.end;
+            } else if (newRange.end === oldRange.end) {
+                /**
+                 * N: new cell | S: pivot cell | O: old cell
+                 * New range : N->S | Old range : O->S
+                 *
+                 * N**O***
+                 * *****S*
+                 */
+                if (newRange.start > oldRange.start) {
+                    deselectStart = oldRange.start;
+                    deselectEnd = newRange.start - 1;
+
+                    selectStart = undefined;
+                    selectEnd = undefined;
+                } else if (newRange.start < oldRange.start) {
+                    selectStart = newRange.start;
+                    selectEnd = oldRange.start - 1;
+                } else {
+                    selectStart = undefined;
+                    selectEnd = undefined;
+                }
+            }
+
+            if (deselectStart !== undefined && deselectEnd !== undefined) {
+                while (deselectStart <= deselectEnd) {
+                    SelectHandler.toggleSelectOffset(deselectStart, false);
+                    deselectStart++;
+                }
+            }
+        }
+
+        if (selectStart !== undefined && selectEnd !== undefined) {
+            while (selectStart <= selectEnd) {
+                SelectHandler.toggleSelectOffset(selectStart, true);
+                selectStart++;
+            }
         }
     }
 

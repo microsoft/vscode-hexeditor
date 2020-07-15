@@ -2,7 +2,7 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, Range } from "./util";
 import { hover, removeHover, changeEndianness } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
@@ -68,7 +68,7 @@ export class VirtualDocument {
         hex.appendChild(row);
         hexaddr.appendChild(hexAddrRow);
         ascii.appendChild(asciiRow);
-        
+
         const spans = document.getElementsByTagName("span");
         this.rowHeight = spans[16].offsetHeight;
         // Utilize the fake rows to get the widths of them and alter the widths of the headers etc to fit
@@ -120,25 +120,108 @@ export class VirtualDocument {
         editorContainer.addEventListener("mouseleave", removeHover);
 
         // Event handles to handle when the user drags to create a selection
-        editorContainer.addEventListener("mousedown", (click: MouseEvent) => {
-            this.selectHandler.isDragging = true;
-            SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
+        editorContainer.addEventListener("click", (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (!target || !target.hasAttribute("data-offset")) {
+                return;
+            }
+
+            event.preventDefault();
+
             this.editHandler.completePendingEdits();
-            click.preventDefault();
-        });
-        editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
-            if (event.buttons == 0) this.selectHandler.isDragging = false;
-            if (this.selectHandler.isDragging) {
-                const selected = document.getElementsByClassName("selected") as HTMLCollectionOf<HTMLSpanElement>;
-                let startOffset = selected[selected.length - 1]?.getAttribute("data-offset");
-                const endOffset = (event.target as HTMLSpanElement).getAttribute("data-offset");
-                if (endOffset !== null) {
-                    startOffset = startOffset === null ? endOffset : startOffset;
-                    SelectHandler.multiSelect(createOffsetRange(parseInt(startOffset), parseInt(endOffset)), true);
+
+            if (event.shiftKey) {
+                if (this.selectHandler.clearSelectionClick) {
+                    this.selectHandler.clearSelectionClick = false;
+                    SelectHandler.clearSelected();
+                }
+                if (this.selectHandler.rangeSelectionElementStart) {
+                    const startOffsetAttr = this.selectHandler.rangeSelectionElementStart.getAttribute("data-offset")!;
+                    const endOffsetAttr = target.getAttribute("data-offset")!;
+                    const oldEndOffsetAttr = this.selectHandler.oldRangeSelectionElementEnd?.getAttribute("data-offset");
+
+                    const startOffset = parseInt(startOffsetAttr);
+                    const endOffset = parseInt(endOffsetAttr);
+                    const oldRange = oldEndOffsetAttr ? new Range(startOffset, parseInt(oldEndOffsetAttr!)) : undefined;
+
+                    SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
+                    this.selectHandler.oldRangeSelectionElementEnd = target;
+                    target.focus();
+                }
+            } else {
+                if (event.ctrlKey) {
+                    this.selectHandler.clearSelectionClick = true;
+                } else {
+                    SelectHandler.clearSelected();
+                }
+                const isSelected = SelectHandler.singleSelect(parseInt(target.getAttribute("data-offset")!));
+                this.selectHandler.rangeSelectionElementStart = target;
+                if (isSelected) {
+                    target.focus();
+                } else {
+                    target.blur();
                 }
             }
         });
-        editorContainer.addEventListener("mouseup", () => this.selectHandler.isDragging = false);
+        editorContainer.addEventListener("mousedown", (event: MouseEvent) => {
+            if (event.buttons !== 1) {
+                return;
+            }
+
+            const target = event.target as HTMLElement;
+            if (!target || !target.hasAttribute("data-offset")) {
+                return;
+            }
+
+            event.preventDefault();
+
+            this.editHandler.completePendingEdits();
+
+            this.selectHandler.isDragging = true;
+            this.selectHandler.clearSelectionDrag = true;
+            if (!event.shiftKey) {
+                // Start new range selection
+                this.selectHandler.rangeSelectionElementStart = target;
+                this.selectHandler.oldRangeSelectionElementEnd = target;
+            }
+
+            target.focus();
+        });
+        editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
+            if (event.buttons !== 1) {
+                return;
+            }
+
+            const target = event.target as HTMLElement;
+            if (!target || !target.hasAttribute("data-offset") || this.selectHandler.oldRangeSelectionElementEnd === target) {
+                return;
+            }
+
+            if (this.selectHandler.isDragging && this.selectHandler.rangeSelectionElementStart && this.selectHandler.oldRangeSelectionElementEnd) {
+                const startOffsetAttr = this.selectHandler.rangeSelectionElementStart.getAttribute("data-offset")!;
+                const endOffsetAttr = target.getAttribute("data-offset")!;
+                const oldEndOffsetAttr = this.selectHandler.oldRangeSelectionElementEnd.getAttribute("data-offset")!;
+
+                const startOffset = parseInt(startOffsetAttr);
+                const endOffset = parseInt(endOffsetAttr);
+                let oldRange: Range | undefined = new Range(startOffset, parseInt(oldEndOffsetAttr!));
+
+                if (this.selectHandler.clearSelectionDrag) {
+                    this.selectHandler.clearSelectionDrag = false;
+                    oldRange = undefined;
+                    SelectHandler.clearSelected();
+                }
+
+                SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
+                this.selectHandler.oldRangeSelectionElementEnd = target;
+
+                target.focus();
+            }
+        });
+        editorContainer.addEventListener("mouseup", () => {
+            this.selectHandler.isDragging = false;
+            this.selectHandler.clearSelectionDrag = false;
+        });
 
         window.addEventListener("copy", (event: Event) => {
             if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
@@ -359,71 +442,67 @@ export class VirtualDocument {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         const modifierKeyPressed = event.metaKey || event.altKey || event.ctrlKey;
-        if (event.keyCode >= 37 && event.keyCode <= 40) {
-            this.arrowKeyNavigate(event.keyCode, targetElement);
+        if ((event.keyCode >= 37 && event.keyCode <= 40 /*Arrows*/)
+            || ((event.keyCode == 35 /*End*/ || event.keyCode == 36 /*Home*/) && !event.ctrlKey)) {
+            this.arrowKeyNavigate(event.keyCode, targetElement, event.shiftKey);
             event.preventDefault();
-        // If the user presses Home we go to the front of the line
-        } else if (event.keyCode == 36 && !event.ctrlKey) {
-            const firstElement = targetElement.parentElement!.children[0] as HTMLElement;
-            firstElement.focus();
-            SelectHandler.singleSelect(parseInt(firstElement.getAttribute("data-offset")!));
-        // If the user presses end we go to the end of the line
-        } else if (event.keyCode == 35 && !event.ctrlKey) {
-            const parentChildren = targetElement.parentElement!.children;
-            const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
-            lastElement.focus();
-            SelectHandler.singleSelect(parseInt(lastElement.getAttribute("data-offset")!));
         } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("hex")) {
             await this.editHandler.editHex(targetElement, event.key, event.keyCode);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");
-                this.arrowKeyNavigate(39, targetElement);
+                this.arrowKeyNavigate(39, targetElement, false);
             }
         } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("ascii")) {
             await this.editHandler.editAscii(targetElement, event.key);
             targetElement.classList.remove("editing");
-            this.arrowKeyNavigate(39, targetElement);
+            this.arrowKeyNavigate(39, targetElement, false);
         }
         await this.editHandler.completePendingEdits();
     }
 
     /**
      * @description Handles scrolling using ctrl + home and ctrl + end
-     * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler. 
+     * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
     private keyBoardScroller(event: KeyboardEvent): void {
         if (!event || !event.target) return;
-        // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
-        if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey)
+        if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey) {
+            // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
             event.keyCode == 36 ? this.scrollBarHandler.scrollToTop() : this.scrollBarHandler.scrollToBottom();
-        // PG Up
-        else if (event.keyCode == 33) {
+        } else if (event.keyCode == 33) {
+            // PG Up
             this.scrollBarHandler.page(this.viewPortHeight, "up");
-        // PG Down
         } else if (event.keyCode == 34) {
+            // PG Down
             this.scrollBarHandler.page(this.viewPortHeight, "down");
         }
     }
 
     /**
-     * @description Handles when the user uses the arrow keys to navigate the editor
+     * @description Handles when the user uses the arrow keys, Home or End to navigate the editor
      * @param {number} keyCode The keyCode of the key pressed
      * @param {HTMLElement} targetElement The element
+     * @param {boolean} isRangeSelection If we are selecting a range (shift key pressed)
      */
-    private arrowKeyNavigate(keyCode: number, targetElement: HTMLElement): void {
-        if (!event || !event.target) return;
-        let next;
-        if (keyCode < 37 || keyCode > 40) {
-            return;
-        }
-        switch(keyCode) {
-            // left
-            case 37:
-                next = targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15];
+    private arrowKeyNavigate(keyCode: number, targetElement: HTMLElement, isRangeSelection: boolean): void {
+        let next: HTMLElement | undefined;
+        switch (keyCode) {
+            case 35:
+                // If the user presses End we go to the end of the line
+                const parentChildren = targetElement.parentElement!.children;
+                next = parentChildren[parentChildren.length - 1] as HTMLElement;
                 break;
-            // up
-            case  38:
+            case 36:
+                // If the user presses Home we go to the front of the line
+                next = targetElement.parentElement!.children[0] as HTMLElement;
+                break;
+            case 37:
+                // left
+                next = (targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
+                break;
+            case 38:
+                // up
                 const elements_above = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) - 16);
                 if (elements_above.length === 0) break;
                 if (elements_above[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
@@ -432,12 +511,12 @@ export class VirtualDocument {
                     next = elements_above[1];
                 }
                 break;
-            // right
             case 39:
-                next = targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0];
+                // right
+                next = (targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
                 break;
-            // down
             case 40:
+                // down
                 const elements_below = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) + 16);
                 if (elements_below.length === 0) break;
                 if (elements_below[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
@@ -454,14 +533,30 @@ export class VirtualDocument {
             } else if (nextRect.top <= 0) {
                 this.scrollBarHandler.scrollDocument(1, "up");
             }
-            (next as HTMLInputElement).focus();
-            SelectHandler.singleSelect(parseInt(next.getAttribute("data-offset")!));
+            if (isRangeSelection && this.selectHandler.rangeSelectionElementStart && this.selectHandler.oldRangeSelectionElementEnd) {
+                const startOffsetAttr = this.selectHandler.rangeSelectionElementStart.getAttribute("data-offset")!;
+                const endOffsetAttr = next.getAttribute("data-offset")!;
+                const oldEndOffsetAttr = this.selectHandler.oldRangeSelectionElementEnd.getAttribute("data-offset")!;
+
+                const startOffset = parseInt(startOffsetAttr);
+                const endOffset = parseInt(endOffsetAttr);
+                const oldRange = new Range(startOffset, parseInt(oldEndOffsetAttr!));
+
+                SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
+                this.selectHandler.oldRangeSelectionElementEnd = next;
+            } else {
+                SelectHandler.clearSelected();
+                SelectHandler.singleSelect(parseInt(next.getAttribute("data-offset")!));
+                this.selectHandler.rangeSelectionElementStart = next;
+                this.selectHandler.oldRangeSelectionElementEnd = next;
+            }
+            next.focus();
         }
     }
 
     /**
      * @description Undoes the given edits from the document
-     * @param {EditMessage[]} edits The edits that will be undone 
+     * @param {EditMessage[]} edits The edits that will be undone
      * @param {number} fileSize The size of the file, the ext host tracks this and passes it back
      */
     public undo(edits: EditMessage[], fileSize: number): void {
@@ -472,7 +567,7 @@ export class VirtualDocument {
     /**
      * @description Redoes the given edits from the document
      * @param {EditMessage[]} edits The edits that will be r
-     * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone 
+     * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone
      */
     public redo(edits: EditMessage[], fileSize: number): void {
         this.editHandler.redo(edits);
@@ -513,19 +608,19 @@ export class VirtualDocument {
             elements[1].parentElement?.appendChild(ascii_element);
         }
     }
-    
+
     /**
-     * @description Removes the last cell from the virtual document 
+     * @description Removes the last cell from the virtual document
      */
-     public removeLastCell(): void {
-         // We can use the add cell as the last cell offset since a plus cell should always be the last cell
-         const plusCellOffset = document.getElementsByClassName("add-cell")[0].getAttribute("data-offset");
-         if (!plusCellOffset) return;
-         const lastCellOffset = parseInt(plusCellOffset);
-         const lastCells = getElementsWithGivenOffset(lastCellOffset);
-         const secondToLastCells = getElementsWithGivenOffset(lastCellOffset - 1);
-         // If the last cell was on its own row we remove the new row
-         if (lastCellOffset % 16 === 0) {
+    public removeLastCell(): void {
+        // We can use the add cell as the last cell offset since a plus cell should always be the last cell
+        const plusCellOffset = document.getElementsByClassName("add-cell")[0].getAttribute("data-offset");
+        if (!plusCellOffset) return;
+        const lastCellOffset = parseInt(plusCellOffset);
+        const lastCells = getElementsWithGivenOffset(lastCellOffset);
+        const secondToLastCells = getElementsWithGivenOffset(lastCellOffset - 1);
+        // If the last cell was on its own row we remove the new row
+        if (lastCellOffset % 16 === 0) {
             this.rows[0].get(lastCellOffset.toString())?.remove();
             this.rows[0].delete(lastCellOffset.toString());
             this.rows[1].get(lastCellOffset.toString())?.remove();
@@ -533,25 +628,25 @@ export class VirtualDocument {
             this.rows[2].get(lastCellOffset.toString())?.remove();
             this.rows[2].delete(lastCellOffset.toString());
             this.scrollBarHandler.updateScrollBar((lastCellOffset - 1) / 16);
-         } else {
-             lastCells[0].remove();
-             lastCells[1].remove();
-         }
-         secondToLastCells[0].innerText = "+";
-         secondToLastCells[0].classList.add("add-cell");
-         secondToLastCells[0].classList.remove("nongraphic");
-         secondToLastCells[0].classList.remove("edited");
-         secondToLastCells[1].innerText = "+";
-         secondToLastCells[1].classList.remove("nongraphic");
-         secondToLastCells[1].classList.add("add-cell");
-         secondToLastCells[1].classList.remove("edited");
-     }
+        } else {
+            lastCells[0].remove();
+            lastCells[1].remove();
+        }
+        secondToLastCells[0].innerText = "+";
+        secondToLastCells[0].classList.add("add-cell");
+        secondToLastCells[0].classList.remove("nongraphic");
+        secondToLastCells[0].classList.remove("edited");
+        secondToLastCells[1].innerText = "+";
+        secondToLastCells[1].classList.remove("nongraphic");
+        secondToLastCells[1].classList.add("add-cell");
+        secondToLastCells[1].classList.remove("edited");
+    }
 
     /**
      * @description Simple getter for the fileSize
      * @returns {number} The fileSize
      */
-    public get documentSize(): number { return this.fileSize;}
+    public get documentSize(): number { return this.fileSize; }
 
     /**
      * @description Updates the file size so its in sync with ext host
