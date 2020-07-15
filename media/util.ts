@@ -145,7 +145,7 @@ export function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteD
 			const byte_object = new ByteData(parseInt(element.innerHTML, 16));
 			let current_element = element.nextElementSibling || element.parentElement.nextElementSibling?.children[0];
 			for (let i = 0; i < 7; i++) {
-				if (!current_element) break;
+				if (!current_element || current_element.innerHTML === "+") break;
 				byte_object.addAdjacentByte(new ByteData(parseInt(current_element.innerHTML, 16)));
 				current_element = current_element.nextElementSibling || current_element.parentElement?.nextElementSibling?.children[0];
 			}

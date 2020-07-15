@@ -376,8 +376,8 @@ export class VirtualDocument {
             const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
             lastElement.focus();
             SelectHandler.singleSelect(parseInt(lastElement.getAttribute("data-offset")!));
-        } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("hex")) {
-            await this.editHandler.editHex(targetElement, event.key, event.keyCode);
+        } else if (!modifierKeyPressed && targetElement.classList.contains("hex")) {
+            await this.editHandler.editHex(targetElement, event.key);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");
