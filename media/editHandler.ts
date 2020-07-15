@@ -35,17 +35,19 @@ export class EditHandler {
      * @description Handles when a user starts typing on a hex element
      * @param {HTMLSpanElement} element The element which the keypress was fired on
      * @param {string} keyPressed The key which was pressed
-     * @param {number} keyCode The keycode for that key 
      */
-    public async editHex(element: HTMLSpanElement, keyPressed: string, keyCode: number): Promise<void> {
+    public async editHex(element: HTMLSpanElement, keyPressed: string): Promise<void> {
         // If the user presses escape and there is a current edit then we just revert the cell as if no edit has happened
-        if (keyCode === 27 && this.pendingEdit && this.pendingEdit.previousValue) {
+        if (keyPressed === "Escape" && this.pendingEdit && this.pendingEdit.previousValue) {
             element.innerText = this.pendingEdit.previousValue;
             element.classList.remove("editing");
             this.pendingEdit = undefined;
         }
         // If it's not a valid hex input or delete we ignore it
-        if (!((keyCode >= 65 && keyCode <= 70) || (keyCode >= 48 && keyCode <= 57) || keyCode === 8)) return;
+        const regex = new RegExp(/^[a-fA-F0-9]$/gm);
+        if (keyPressed.match(regex) === null && keyPressed !== "Delete") {
+            return;
+        }
 
         const offset: number = parseInt(element.getAttribute("data-offset")!);
         if (!this.pendingEdit || this.pendingEdit.offset != offset) {
@@ -59,7 +61,7 @@ export class EditHandler {
         element.classList.add("editing");
         element.innerText = element.innerText.trimRight();
         // When the user hits delete
-        if (keyCode === 8) {
+        if (keyPressed === "Delete") {
             element.innerText = "  ";
         } else {
             // This handles when the user presses the first character erasing the old value vs adding to the currently edited value
