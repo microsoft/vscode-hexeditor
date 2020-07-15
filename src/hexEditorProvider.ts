@@ -412,8 +412,14 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				} });
 				return;
 			case "search":
+				let results: number[][];
+				if (message.body.type === "text") {
+					results = document.searchProvider.textSearch(message.body.query);
+				} else {
+					results = document.searchProvider.hexSearch(message.body.query);
+				}
 				panel.webview.postMessage({ type: "search", requestId: message.requestId, body: {
-					results: document.searchProvider.textSearch(message.body.query)
+					results: results
 				} });
 				return;
 		}

@@ -28,4 +28,32 @@ export class SearchProvider {
         return results;
     }
 
+    public hexSearch(query: string): number[][] {
+        const results: number[][] = [];
+        const queryArr = query.split(" ");
+        // We compare the query to every spot in the file finding matches
+        for (let i = 0; i < this._document.documentData.length; i++) {
+            const matchOffsets = [];
+            for (let j = 0; j < queryArr.length; j++) {
+                // Once there isn't enough room in the file for the query we return
+                if (i + j >= this._document.documentData.length) {
+                    return results;
+                }
+                const hex = this._document.documentData[i+j].toString(16).toUpperCase();
+                const currentComparison = queryArr[j].toUpperCase();
+                // ?? is wild card and matches anything, else they must match exactly
+                // If they don't we don't check things after in the query as that's wasted computation
+                if (currentComparison === "??" || currentComparison === hex) {
+                    matchOffsets.push(i+j);
+                } else {
+                    break;
+                }
+            }
+            // If We got a complete match then it is valid
+            if (matchOffsets.length === queryArr.length) {
+                results.push(matchOffsets);
+            }
+        }
+        return results;
+    }
 }

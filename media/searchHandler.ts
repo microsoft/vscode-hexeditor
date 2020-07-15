@@ -22,16 +22,20 @@ export class SearchHandler {
     private async search(): Promise<void> {
         const query = this.findTextBox.value;
         if (query.length === 0) return;
+        SelectHandler.clearSelected();
         this.findButton.disabled = true;
+        this.findNextButton.disabled = true;
+        this.findPreviousButton.disabled = true;
         const results = (await messageHandler.postMessageWithResponse("search", {
-            query: query
+            query: query,
+            type: (document.getElementById("data-type") as HTMLSelectElement).value
         })).results;
         this.resultIndex = 0;
         this.findButton.disabled = false;
         console.log(results);
-        // If we got results then wew set them as the returned results for this search handler
+        this.searchResults = results;
+        // If we got results then we select the first result and unlock the buttons
         if (results.length > 0) {
-            this.searchResults = results;
             SelectHandler.multiSelect(this.searchResults[this.resultIndex], false);
             // If there's more than one search result we unlock the find next button
             if (this.resultIndex < this.searchResults.length) {
