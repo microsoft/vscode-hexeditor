@@ -3,6 +3,7 @@ import { SelectHandler } from "./selectHandler";
 
 export class SearchHandler {
     private searchResults: number[][];
+    private searchType: "hex" | "ascii" = "hex";
     private resultIndex = 0;
     private findTextBox: HTMLInputElement;
     private findButton: HTMLButtonElement;
@@ -26,9 +27,10 @@ export class SearchHandler {
         this.findButton.disabled = true;
         this.findNextButton.disabled = true;
         this.findPreviousButton.disabled = true;
+        this.searchType = (document.getElementById("data-type") as HTMLSelectElement).value as "hex" | "ascii";
         const results = (await messageHandler.postMessageWithResponse("search", {
             query: query,
-            type: (document.getElementById("data-type") as HTMLSelectElement).value
+            type: this.searchType
         })).results;
         this.resultIndex = 0;
         this.findButton.disabled = false;
@@ -37,6 +39,7 @@ export class SearchHandler {
         // If we got results then we select the first result and unlock the buttons
         if (results.length > 0) {
             SelectHandler.multiSelect(this.searchResults[this.resultIndex], false);
+            SelectHandler.focusSelection(this.searchType);
             // If there's more than one search result we unlock the find next button
             if (this.resultIndex < this.searchResults.length) {
                 this.findNextButton.disabled = false;
@@ -48,6 +51,7 @@ export class SearchHandler {
         // If the button is disabled then this function shouldn't work
         if (this.findNextButton.disabled) return;
         SelectHandler.multiSelect(this.searchResults[++this.resultIndex], false);
+        SelectHandler.focusSelection(this.searchType);
         // If there's more than one search result we unlock the find next button
         if (this.resultIndex < this.searchResults.length - 1) {
             this.findNextButton.disabled = false;
@@ -64,6 +68,7 @@ export class SearchHandler {
         // If the button is disabled then this function shouldn't work
         if (this.findPreviousButton.disabled) return;
         SelectHandler.multiSelect(this.searchResults[--this.resultIndex], false);
+        SelectHandler.focusSelection(this.searchType);
         // If they pressed previous, they can always go next therefore we always unlock the next button
         this.findNextButton.disabled = false;
         // We lock the find previous if there isn't a previous anymore

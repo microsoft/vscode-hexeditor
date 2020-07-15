@@ -351,7 +351,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					<div class="grid-item data-type-select">
 						<select id="data-type">
 							<option value="hex">Hex</option>
-							<option value="text">Text</option>
+							<option value="ascii">Text</option>
 						</select>
 					</div>
 					<div class="grid-item">
@@ -413,7 +413,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				return;
 			case "search":
 				let results: number[][];
-				if (message.body.type === "text") {
+				if (message.body.type === "ascii") {
 					results = document.searchProvider.textSearch(message.body.query);
 				} else {
 					results = document.searchProvider.hexSearch(message.body.query);

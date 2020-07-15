@@ -105,4 +105,13 @@ export class SelectHandler {
         }
         return hex;
     }
+
+    /**
+     * @description Focuses the first element in the current selection based on the section passed in
+     * @param section {"hex" | "ascii"} The section to place the focus
+     */
+    public static focusSelection(section: "hex" | "ascii"): void {
+        const selection = document.getElementsByClassName(`selected ${section}`);
+        if (selection.length !== 0) (selection[0] as HTMLSpanElement).focus();
+    }
 }
