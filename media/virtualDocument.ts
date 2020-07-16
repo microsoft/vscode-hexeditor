@@ -446,8 +446,8 @@ export class VirtualDocument {
             || ((event.keyCode == 35 /*End*/ || event.keyCode == 36 /*Home*/) && !event.ctrlKey)) {
             this.arrowKeyNavigate(event.keyCode, targetElement, event.shiftKey);
             event.preventDefault();
-        } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("hex")) {
-            await this.editHandler.editHex(targetElement, event.key, event.keyCode);
+        } else if (!modifierKeyPressed && targetElement.classList.contains("hex")) {
+            await this.editHandler.editHex(targetElement, event.key);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");

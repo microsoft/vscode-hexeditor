@@ -23,7 +23,7 @@ There are three ways to open a file as hex
 2. Right click a file -> Open With -> Hex Editor
 3. Trigger the command palette (Ctrl / Cmd + Shift + P) -> Open File using Hex Editor
 
-If you would like to use the hex editor as the default hex editor for certain file types you can add the `workbench.editorAssocations` setting to your `settings.json`.
+If you would like to use the hex editor as the default hex editor for certain file types you can add the `workbench.editorAssociations` setting to your `settings.json`.
 
 For example, this would associate all files with .hex or .ini to open by default in the hex editor
 ```json
