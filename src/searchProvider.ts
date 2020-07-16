@@ -1,5 +1,12 @@
 import { HexDocument } from "./hexDocument";
 
+
+// This is the same interface in the webviews search handler, we just currently do not share interfaces across the exthost and webview
+interface SearchOptions {
+    regex: boolean;
+    caseSensitive: boolean;
+}
+
 export class SearchProvider {
 
     private _document: HexDocument;
@@ -8,11 +15,11 @@ export class SearchProvider {
         this._document = document;
     }
 
-    public textSearch(query: string, regex: boolean): number[][] {
-        if (regex) {
-            return this.regexTextSearch(query);
+    public textSearch(query: string, options: SearchOptions): number[][] {
+        if (options.regex) {
+            return this.regexTextSearch(query, options.caseSensitive);
         } else {
-            return this.normalTextSearch(query);
+            return this.normalTextSearch(query, options.caseSensitive);
         }
     }
 
@@ -45,9 +52,10 @@ export class SearchProvider {
         return results;
     }
 
-    private regexTextSearch(query: string): number[][] {
+    private regexTextSearch(query: string, caseSensitive: boolean): number[][] {
         const transformed = String.fromCharCode.apply(null, Array.from(this._document.documentData));
-        const regex = new RegExp(query, "g");
+        const flags = caseSensitive  ? "g" : "gi";
+        const regex = new RegExp(query, flags);
         const results = [];
         try {
             const matches = transformed.matchAll(regex);
@@ -65,7 +73,7 @@ export class SearchProvider {
         return results;
     }
     
-    private normalTextSearch(query: string): number[][] {
+    private normalTextSearch(query: string, caseSensitive: boolean): number[][] {
         const results: number[][] = [];
         // We compare the query to every spot in the file finding matches
         for (let i = 0; i < this._document.documentData.length; i++) {
@@ -75,8 +83,13 @@ export class SearchProvider {
                 if (i + j >= this._document.documentData.length) {
                     return results;
                 }
-                const ascii = String.fromCharCode(this._document.documentData[i+j]);
-                const currentComparison = query[j];
+                let ascii = String.fromCharCode(this._document.documentData[i+j]);
+                let currentComparison = query[j];
+                // Ignoring case we make them uppercase                
+                if (!caseSensitive) {
+                    ascii = ascii.toUpperCase();
+                    currentComparison = currentComparison.toUpperCase();
+                }
                 // If it's a match we add the offset to the results
                 if (currentComparison === ascii) {
                     matchOffsets.push(i+j);

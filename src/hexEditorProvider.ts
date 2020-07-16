@@ -239,7 +239,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		</div>
 		<div class="column">
 			<div id="data-inspector">
-				<div class="header">Data Inspector</div>
+				<div class="header">DATA INSPECTOR</div>
 				<div class="grid-container">
 					<div class="grid-item">
 						<label for="binary8">8 bit Binary</label>
@@ -343,36 +343,37 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				</div>
 			</div>
 			<div id="search-container">
-				<div class="header">Search</div>
+				<div class="header">
+					SEARCH IN
+					<span>
+						<select id="data-type" class="inline-select">
+							<option value="hex">Hex</option>
+							<option value="ascii">Text</option>
+						</select>
+					</span>
+				</div>
 				<div class="search-widget">
 					<div class="bar find-bar">
 						<input type="text" autocomplete="off" spellcheck="off" name="find" id="find" placeholder="Find"/>
 						<span class="bar-glyphs">
-							<span class="codicon codicon-case-sensitive" id="case-sensitive"></span>
-							<span class="codicon codicon-regex" id="regex-icon"></span>
+							<span class="codicon codicon-case-sensitive" id="case-sensitive" title="Match Case"></span>
+							<span class="codicon codicon-regex" id="regex-icon" title="Use Regular Expression"></span>
 						</span>
 						<span class="icon-group">
-							<span class="codicon codicon-search-stop" id="search-stop"></span>
-							<span class="codicon codicon-arrow-up" id="find-previous"></span>
-							<span class="codicon codicon-arrow-down" id="find-next"></span>
+							<span class="codicon codicon-search-stop disabled" id="search-stop" title="Cancel Search"></span>
+							<span class="codicon codicon-arrow-up disabled" id="find-previous" title="Previous Match"></span>
+							<span class="codicon codicon-arrow-down disabled" id="find-next" title="Next Match"></span>
 						</span>
 					</div>
 					<div class="bar replace-bar">
 						<input type="text" autocomplete="off" spellcheck="off" name="replace" id="replace" placeholder="Replace"/>
 						<span class="bar-glyphs">
-							<span class="codicon codicon-preserve-case" id="preserve-case"></span>
+							<span class="codicon codicon-preserve-case" id="preserve-case" title="Preserve Case"></span>
 						</span>
 						<span class="icon-group">
-							<span class="codicon codicon-replace" id="replace"></span>
-							<span class="codicon codicon-replace-all" id="replace-all"></span>
+							<span class="codicon codicon-replace" id="replace" title="Replace"></span>
+							<span class="codicon codicon-replace-all" id="replace-all" title="Replace All"></span>
 						</span>
-					</div>
-					<div class="data-type-select">
-						<p>Data Type</p>
-						<select id="data-type">
-							<option value="hex">Hex</option>
-							<option value="ascii">Text</option>
-						</select>
 					</div>
 				</div>
 			</div>
@@ -428,7 +429,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case "search":
 				let results: number[][];
 				if (message.body.type === "ascii") {
-					results = document.searchProvider.textSearch(message.body.query, message.body.regex);
+					results = document.searchProvider.textSearch(message.body.query, message.body.options);
 				} else {
 					results = document.searchProvider.hexSearch(message.body.query);
 				}

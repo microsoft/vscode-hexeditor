@@ -18,16 +18,18 @@ body {
     cursor: default;
     float: left;
     padding-right: 10px;
-    font-weight: var(--vsocde-editor-font-weight);
-    font-size: var(--vscode-editor-font-size);
 }
 
 #editor-container {
     font-family: var(--vscode-editor-font-family);
+    font-weight: var(--vsocde-editor-font-weight);
+    font-size: var(--vscode-editor-font-size);
 }
 
 body:not(#editor-container) {
-    font-family: var(--vscode-workbench-font-family);
+    font-family: var(--vscode-font-family);
+    font-weight: var(--vsocde-font-weight);
+    font-size: var(--vscode-font-size);
 }
 
 .grid-container {
@@ -49,6 +51,8 @@ body:not(#editor-container) {
   
 .left {
     font-family: var(--vscode-editor-font-family);
+    font-weight: var(--vsocde-editor-font-weight);
+    font-size: var(--vscode-editor-font-size);
     text-align: right;
 }
 .left > .rowwrapper {
@@ -73,9 +77,10 @@ body:not(#editor-container) {
     position: sticky;
     top: 0px;
     font-weight: bold;
-    background-color: var(--vscode-input-background);
+    background-color: var(--vscode-editor-background);
     color: var(--vscode-editorLineNumber-activeForeground);
     z-index: 10;
+    border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
 }
 
 .vscode-high-contrast > .column > .header {
@@ -128,10 +133,13 @@ span:focus {
 }
 
 select {
-    width: 100%;
     background-color: var(--vscode-dropdown-background);
     border: var(--vscode-dropdown-border);
     color: var(--vscode-dropdown-foreground)
+}
+
+select:not(.inline-select) {
+    width: 100%;
 }
 
 #search-container {
@@ -238,20 +246,14 @@ button:disabled {
     height: 24px;
 }
 
-input[type="text"] {
-    padding-right: 100px;
-    height: 24px;
-}
-
 .bar-glyphs {
     position: absolute;
-    right: 23%;
+    right: 85px;
     top: 12%;
 }
 
 #case-sensitive {
     position: relative;
-    top: 2px;
 }
 
 #preserve-case {
@@ -271,4 +273,16 @@ input[type="text"] {
 
 .find-bar {
     padding-bottom: 10px;
+}
+
+#search-container > .header, #data-inspector > .header {
+    font-weight: inherit;
+}
+
+.codicon {
+    cursor: pointer;
+}
+
+.disabled {
+    background-color: hotpink;
 }

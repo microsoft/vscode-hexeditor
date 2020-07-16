@@ -9,6 +9,7 @@ import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
 import { WebViewStateManager } from "./webviewStateManager";
 import { SelectHandler } from "./selectHandler";
+import { SearchHandler } from "./searchHandler";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -27,7 +28,7 @@ export class VirtualDocument {
     private readonly scrollBarHandler: ScrollBarHandler;
     private readonly editHandler: EditHandler;
     private readonly selectHandler: SelectHandler;
-    // private readonly searchHandler: SearchHandler;
+    private readonly searchHandler: SearchHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -37,7 +38,7 @@ export class VirtualDocument {
         this.fileSize = fileSize;
         this.editHandler = new EditHandler();
         this.selectHandler = new SelectHandler();
-        // this.searchHandler = new SearchHandler();
+        this.searchHandler = new SearchHandler();
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
         this.rows = [];
         for (let i = 0; i < 3; i++) {
@@ -98,6 +99,12 @@ export class VirtualDocument {
         const rowWrappers = document.getElementsByClassName("rowwrapper") as HTMLCollectionOf<HTMLDivElement>;
         // Sets the hexaddr column to the same width as its header ( the + 1 is needed to )
         rowWrappers[0].style.width = `${(document.getElementsByClassName("header")[0] as HTMLElement).offsetWidth}px`;
+        // We remove the text from the header to make it look like it's not there
+        const headerHeight = (document.getElementsByClassName("header")[0] as HTMLElement).offsetHeight;
+        (document.getElementsByClassName("header")[0] as HTMLElement).innerText= "";
+        (document.getElementsByClassName("header")[0] as HTMLElement).style.width = `${rowWrappers[0].style.width}px`;
+        // Minus 1 accounts for the border
+        (document.getElementsByClassName("header")[0] as HTMLElement).style.height = `${headerHeight - 1}px`;
         rowWrappers[0].style.height = `${this.documentHeight}px`;
         // This is the hex section
         (document.getElementsByClassName("header")[1] as HTMLElement).style.width = `${hexRowWidth}px`;
@@ -226,13 +233,14 @@ export class VirtualDocument {
     /**
      * @description Gets executed everytime the document is scrolled, this talks to the data layer to request more packets
      */
-    scrollHandler(): void {
+    public async scrollHandler(): Promise<void[]> {
         // We want to ensure there are at least 2 chunks above us and 4 chunks below us
         // These numbers were chosen arbitrarily under the assumption that scrolling down is more common
-        const removedChunks: number[] = chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
+        const chunkHandlerResponse = await chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
             topBufferSize: 2,
             bottomBufferSize: 4
         });
+        const removedChunks: number[] = chunkHandlerResponse.removed;
         // We remove the chunks from the DOM as the chunk handler is no longer tracking them
         for (const chunk of removedChunks) {
             for (let i = chunk; i < chunk + chunkHandler.chunkSize; i += 16) {
@@ -244,6 +252,7 @@ export class VirtualDocument {
                 this.rows[2].delete(i.toString());
             }
         }
+        return chunkHandlerResponse.requested;
     }
 
     /**
@@ -583,4 +592,7 @@ export class VirtualDocument {
         }
     }
 
+    public async scrollDocumentToOffset(offset: number): Promise<void[]> {
+        return this.scrollBarHandler.scrollToOffset(offset);
+    }
 }

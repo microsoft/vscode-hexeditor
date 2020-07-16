@@ -53,10 +53,11 @@ export class ScrollBarHandler {
         // Credit to https://stackoverflow.com/questions/16366795/how-to-calculate-the-size-of-scroll-bar-thumb for these calculations
         const contentHeight = (numRows + 1) * this.rowHeight;
         this.scrollBarHeight = this.scrollBar.clientHeight;
-        this.scrollThumbHeight = Math.max(this.scrollBarHeight * (this.scrollBarHeight / contentHeight), 30);
+        // We don't want the scroll thumb larger than the scrollbar
+        this.scrollThumbHeight = Math.min(this.scrollBarHeight, Math.max(this.scrollBarHeight * (this.scrollBarHeight / contentHeight), 30));
         this.scrollThumb.style.height = `${this.scrollThumbHeight}px`;
         // If you move the scrollbar 1px how much should the document move
-        this.scrollJump = (contentHeight - this.scrollBarHeight) / (this.scrollBarHeight - this.scrollThumbHeight);
+        this.scrollJump = Math.max(0, (contentHeight - this.scrollBarHeight) / (this.scrollBarHeight - this.scrollThumbHeight));
         this.updateScrolledPosition();
     }
 
@@ -79,15 +80,15 @@ export class ScrollBarHandler {
     /**
      * @description Updaes the position of the document and the scrollbar thumb based on the scrollTop
      */
-    private updateScrolledPosition(): void {
+    private async updateScrolledPosition(): Promise<void[]> {
         // The virtual document upon first load is undefined so we want to prevent any errors and just not do anything in that case
-        if (!virtualHexDocument || !virtualHexDocument.documentHeight) return;
+        if (!virtualHexDocument || !virtualHexDocument.documentHeight) return [];
         this.scrollThumb.style.transform = `translateY(${this.scrollTop / this.scrollJump}px)`;
         // This makes sure it doesn't scroll past the bottom of the viewport
         (document.getElementsByClassName("rowwrapper")[0] as HTMLElement)!.style.transform = `translateY(-${this.scrollTop % virtualHexDocument.documentHeight}px)`;
         (document.getElementsByClassName("rowwrapper")[1] as HTMLElement)!.style.transform = `translateY(-${this.scrollTop % virtualHexDocument.documentHeight}px)`;
         (document.getElementsByClassName("rowwrapper")[2] as HTMLElement)!.style.transform = `translateY(-${this.scrollTop % virtualHexDocument.documentHeight}px)`;
-        virtualHexDocument.scrollHandler();
+        return virtualHexDocument.scrollHandler();
     }
 
     /**
@@ -106,16 +107,16 @@ export class ScrollBarHandler {
     }
     /**
      * @description Can be called to scroll the document similar to window.scrollBy
-     * @param numRows The number of rows you want to scroll
-     * @param direction The direction, up or down
+     * @param {number} numRows The number of rows you want to scroll
+     * @param {"up" | "down"} direction The direction, up or down
      */
-    public scrollDocument(numRows: number, direction: "up" | "down"): void {
+    public async scrollDocument(numRows: number, direction: "up" | "down"): Promise<void[]> {
         if (direction === "up") {
             this.updateVirtualScrollTop(this.scrollTop - (this.rowHeight * numRows));
         } else {
             this.updateVirtualScrollTop(this.scrollTop + (this.rowHeight * numRows));
         }
-        this.updateScrolledPosition();
+        return this.updateScrolledPosition();
     }
 
     /**
@@ -175,6 +176,19 @@ export class ScrollBarHandler {
         if (WebViewStateManager.getState() && WebViewStateManager.getState().scroll_top) {
             this.updateVirtualScrollTop(WebViewStateManager.getState().scroll_top);
             this.updateScrolledPosition();
+        }
+    }
+
+    public async scrollToOffset(offset: number): Promise<void[]> {
+        // if these are equal it means the document is too short to scroll anyways
+        if (this.scrollBarHeight === this.scrollThumbHeight) return [];
+        const topOffset = virtualHexDocument.topOffset();
+        const rowDifference = Math.ceil(Math.abs(offset - topOffset) / 16);
+        // The +1/-1 is because there is always a row hidden behind the header so we want the row to be visible
+        if (offset > topOffset) {
+            return this.scrollDocument(rowDifference - 1, "down");
+        } else {
+            return this.scrollDocument(rowDifference + 1, "up");
         }
     }
 }
