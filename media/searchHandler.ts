@@ -36,10 +36,12 @@ export class SearchHandler {
             const selectedValue = (event.target as HTMLSelectElement).value as "hex" | "ascii";
             this.searchType = selectedValue;
             this.updateInputGlyphs();
+            this.search();
         });
         
         this.searchOptionsHandler();
         this.findTextBox.addEventListener("keyup", this.search.bind(this));
+        this.stopSearchButton.addEventListener("click", this.cancelSearch.bind(this));
     }
 
     private async search(): Promise<void> {
@@ -165,5 +167,14 @@ export class SearchHandler {
                 caseSensitive.classList.add("toggled");
             }
         });
+    }
+
+    /**
+     * @description Handles when the user hits the stop search button
+     */
+    private cancelSearch(): void {
+        if (this.stopSearchButton.classList.contains("disabled")) return;
+        // We don't want the user to keep executing this, so we disable the button after the first search
+        this.stopSearchButton.classList.add("disabled");
     }
 }

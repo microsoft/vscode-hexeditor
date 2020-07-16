@@ -22,13 +22,13 @@ body {
 
 #editor-container {
     font-family: var(--vscode-editor-font-family);
-    font-weight: var(--vsocde-editor-font-weight);
+    font-weight: var(--vscode-editor-font-weight);
     font-size: var(--vscode-editor-font-size);
 }
 
 body:not(#editor-container) {
     font-family: var(--vscode-font-family);
-    font-weight: var(--vsocde-font-weight);
+    font-weight: var(--vscode-font-weight);
     font-size: var(--vscode-font-size);
 }
 
@@ -51,7 +51,7 @@ body:not(#editor-container) {
   
 .left {
     font-family: var(--vscode-editor-font-family);
-    font-weight: var(--vsocde-editor-font-weight);
+    font-weight: var(--vscode-editor-font-weight);
     font-size: var(--vscode-editor-font-size);
     text-align: right;
 }
@@ -85,12 +85,12 @@ body:not(#editor-container) {
 
 .vscode-high-contrast > .column > .header {
     border: 1px solid;
-    border-color: var(--vsocde-contrastActiveBorder);
+    border-color: var(--vscode-contrastActiveBorder);
 }
 
 .vscode-high-contrast > #editor-container > .column > .header {
     border: 1px solid;
-    border-color: var(--vsocde-contrastActiveBorder);
+    border-color: var(--vscode-contrastActiveBorder);
 }
 
 .header > span {
@@ -98,6 +98,9 @@ body:not(#editor-container) {
 }
 
 .right > .header {
+    font-family: var(--vscode-font-family);
+    font-weight: bold;
+    font-size: 11px;
     padding-left: 5px;
 }
 
@@ -276,13 +279,16 @@ button:disabled {
 }
 
 #search-container > .header, #data-inspector > .header {
-    font-weight: inherit;
+    font-weight: bold;
+    font-size: 11px;
 }
 
 .codicon {
     cursor: pointer;
+    color: var(--vscode-icon-foreground);
 }
 
 .disabled {
-    background-color: hotpink;
+    cursor: default;
+    opacity: 40%;
 }

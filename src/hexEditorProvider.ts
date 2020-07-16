@@ -228,7 +228,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				</div>
 			</div>
 			<div class="column right">
-				<div class="header">Decoded Text</div>
+				<div class="header">DECODED TEXT</div>
 				<div class="rowwrapper" id="ascii">
 				</div>
 			</div>
@@ -371,8 +371,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 							<span class="codicon codicon-preserve-case" id="preserve-case" title="Preserve Case"></span>
 						</span>
 						<span class="icon-group">
-							<span class="codicon codicon-replace" id="replace" title="Replace"></span>
-							<span class="codicon codicon-replace-all" id="replace-all" title="Replace All"></span>
+							<span class="codicon codicon-replace disabled" id="replace" title="Replace"></span>
+							<span class="codicon codicon-replace-all disabled" id="replace-all" title="Replace All"></span>
 						</span>
 					</div>
 				</div>
