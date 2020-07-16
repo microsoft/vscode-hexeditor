@@ -10,8 +10,8 @@ export class SelectHandler {
     public isDragging = false;
     public clearSelectionClick: boolean = false;
     public clearSelectionDrag: boolean = false;
-    public rangeSelectionElementStart: HTMLElement | undefined;
-    public oldRangeSelectionElementEnd: HTMLElement | undefined;
+    public rangeStartOffset: number | undefined;
+    public oldRangeEndOffset: number | undefined;
 
     constructor() { }
 
@@ -54,6 +54,12 @@ export class SelectHandler {
         return isSelected;
     }
 
+    /**
+     * @description Given a range offset, selects the hex and ascii elements
+     * @param {IRange} newRange  The new range to select
+     * @param {IRange} oldRange  The previous selected range, used for optimization
+     * of selection and deselection of elements
+     */
     public static rangeSelect(newRange: IRange, oldRange?: IRange): void {
         if (newRange.start !== oldRange?.start && newRange.start !== oldRange?.end && newRange.end !== oldRange?.start && newRange.end !== oldRange?.end) {
             oldRange = undefined;

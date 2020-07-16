@@ -28,6 +28,7 @@ export class VirtualDocument {
     private readonly editHandler: EditHandler;
     private readonly selectHandler: SelectHandler;
     private rows: Map<string, HTMLDivElement>[];
+
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
      * @param {number} fileSize The size, in bytes, of the file which is being displayed
@@ -135,17 +136,14 @@ export class VirtualDocument {
                     this.selectHandler.clearSelectionClick = false;
                     SelectHandler.clearSelected();
                 }
-                if (this.selectHandler.rangeSelectionElementStart) {
-                    const startOffsetAttr = this.selectHandler.rangeSelectionElementStart.getAttribute("data-offset")!;
-                    const endOffsetAttr = target.getAttribute("data-offset")!;
-                    const oldEndOffsetAttr = this.selectHandler.oldRangeSelectionElementEnd?.getAttribute("data-offset");
-
-                    const startOffset = parseInt(startOffsetAttr);
-                    const endOffset = parseInt(endOffsetAttr);
-                    const oldRange = oldEndOffsetAttr ? new Range(startOffset, parseInt(oldEndOffsetAttr!)) : undefined;
+                if (this.selectHandler.rangeStartOffset) {
+                    const startOffset = this.selectHandler.rangeStartOffset;
+                    const endOffset = parseInt(target.getAttribute("data-offset")!);
+                    const oldEndOffset = this.selectHandler.oldRangeEndOffset;
+                    const oldRange = oldEndOffset ? new Range(startOffset, oldEndOffset) : undefined;
 
                     SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
-                    this.selectHandler.oldRangeSelectionElementEnd = target;
+                    this.selectHandler.oldRangeEndOffset = endOffset;
                     target.focus();
                 }
             } else {
@@ -154,10 +152,11 @@ export class VirtualDocument {
                 } else {
                     SelectHandler.clearSelected();
                 }
-                const isSelected = SelectHandler.singleSelect(parseInt(target.getAttribute("data-offset")!));
-                this.selectHandler.rangeSelectionElementStart = target;
+                const offset = parseInt(target.getAttribute("data-offset")!);
+                const isSelected = SelectHandler.singleSelect(offset);
+                this.selectHandler.rangeStartOffset = offset;
                 if (isSelected) {
-                    target.focus();
+                    target.focus({ preventScroll: true });
                 } else {
                     target.blur();
                 }
@@ -181,11 +180,12 @@ export class VirtualDocument {
             this.selectHandler.clearSelectionDrag = true;
             if (!event.shiftKey) {
                 // Start new range selection
-                this.selectHandler.rangeSelectionElementStart = target;
-                this.selectHandler.oldRangeSelectionElementEnd = target;
+                const offset = parseInt(target.getAttribute("data-offset")!);
+                this.selectHandler.rangeStartOffset = offset;
+                this.selectHandler.oldRangeEndOffset = offset;
             }
 
-            target.focus();
+            target.focus({ preventScroll: true });
         });
         editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
             if (event.buttons !== 1) {
@@ -193,29 +193,29 @@ export class VirtualDocument {
             }
 
             const target = event.target as HTMLElement;
-            if (!target || !target.hasAttribute("data-offset") || this.selectHandler.oldRangeSelectionElementEnd === target) {
+            if (!target || !target.hasAttribute("data-offset")) {
                 return;
             }
 
-            if (this.selectHandler.isDragging && this.selectHandler.rangeSelectionElementStart && this.selectHandler.oldRangeSelectionElementEnd) {
-                const startOffsetAttr = this.selectHandler.rangeSelectionElementStart.getAttribute("data-offset")!;
-                const endOffsetAttr = target.getAttribute("data-offset")!;
-                const oldEndOffsetAttr = this.selectHandler.oldRangeSelectionElementEnd.getAttribute("data-offset")!;
+            if (this.selectHandler.isDragging && this.selectHandler.rangeStartOffset && this.selectHandler.oldRangeEndOffset) {
+                const startOffset = this.selectHandler.rangeStartOffset;
+                const endOffset = parseInt(target.getAttribute("data-offset")!);
+                const oldEndOffset = this.selectHandler.oldRangeEndOffset;
+                const oldRange = !this.selectHandler.clearSelectionDrag ? new Range(startOffset, oldEndOffset) : undefined;
 
-                const startOffset = parseInt(startOffsetAttr);
-                const endOffset = parseInt(endOffsetAttr);
-                let oldRange: Range | undefined = new Range(startOffset, parseInt(oldEndOffsetAttr!));
+                if (endOffset === oldEndOffset) {
+                    return;
+                }
 
                 if (this.selectHandler.clearSelectionDrag) {
                     this.selectHandler.clearSelectionDrag = false;
-                    oldRange = undefined;
                     SelectHandler.clearSelected();
                 }
 
                 SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
-                this.selectHandler.oldRangeSelectionElementEnd = target;
+                this.selectHandler.oldRangeEndOffset = endOffset;
 
-                target.focus();
+                target.focus({ preventScroll: true });
             }
         });
         editorContainer.addEventListener("mouseup", () => {
@@ -281,7 +281,7 @@ export class VirtualDocument {
      * @description Event handler which is called everytime the viewport is resized
      */
     private documentResize(): void {
-        this.viewPortHeight = (window.innerHeight || document.documentElement.clientHeight);
+        this.viewPortHeight = document.documentElement.clientHeight;
         if (this.scrollBarHandler) {
             this.scrollBarHandler.updateScrollBar(this.fileSize / 16);
         }
@@ -477,6 +477,47 @@ export class VirtualDocument {
             // PG Down
             this.scrollBarHandler.page(this.viewPortHeight, "down");
         }
+
+        const target = event.target as HTMLElement;
+        if (!target.classList.contains("hex") || !target.classList.contains("ascii")) {
+            return;
+        }
+
+        if (event.shiftKey && this.selectHandler.rangeStartOffset && this.selectHandler.oldRangeEndOffset) {
+            const offset = (Math.floor(this.viewPortHeight / this.rowHeight) - 1) * 16;
+            let nextElementOffset: number | undefined;
+            if (event.keyCode == 35 && event.ctrlKey) {
+                // End
+                nextElementOffset = this.fileSize - 1;
+            } else if (event.keyCode == 36 && event.ctrlKey) {
+                // Home
+                nextElementOffset = 0;
+            } else if (event.keyCode == 33) {
+                // PG Up
+                nextElementOffset = Math.max(this.selectHandler.oldRangeEndOffset - offset, 0);
+            } else if (event.keyCode == 34) {
+                // PG Down
+                nextElementOffset = Math.min(this.selectHandler.oldRangeEndOffset + offset, this.fileSize - 1);
+            }
+
+            if (nextElementOffset !== undefined) {
+                // TODO: The elements with `nextElementOffset` could not be part of the DOM so we need to wait for the next `render()` call
+                const nextElements = getElementsWithGivenOffset(nextElementOffset);
+                if (nextElements.length === 0) {
+                    return;
+                }
+                const next = target.classList.contains("hex") ? nextElements[0] : nextElements[1];
+
+                const startOffset = this.selectHandler.rangeStartOffset;
+                const endOffset = parseInt(next.getAttribute("data-offset")!);
+                const oldEndOffset = this.selectHandler.oldRangeEndOffset;
+                const oldRange = new Range(startOffset, oldEndOffset);
+
+                SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
+                this.selectHandler.oldRangeEndOffset = endOffset;
+                next.focus({ preventScroll: true });
+            }
+        }
     }
 
     /**
@@ -505,11 +546,7 @@ export class VirtualDocument {
                 // up
                 const elements_above = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) - 16);
                 if (elements_above.length === 0) break;
-                if (elements_above[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
-                    next = elements_above[0];
-                } else {
-                    next = elements_above[1];
-                }
+                next = targetElement.classList.contains("hex") ? elements_above[0] : elements_above[1];
                 break;
             case 39:
                 // right
@@ -517,13 +554,9 @@ export class VirtualDocument {
                 break;
             case 40:
                 // down
-                const elements_below = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) + 16);
+                const elements_below = getElementsWithGivenOffset(Math.min(parseInt(targetElement.getAttribute("data-offset")!) + 16, this.fileSize - 1));
                 if (elements_below.length === 0) break;
-                if (elements_below[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
-                    next = elements_below[0];
-                } else {
-                    next = elements_below[1];
-                }
+                next = targetElement.classList.contains("hex") ? elements_below[0] : elements_below[1];
                 break;
         }
         if (next && next.tagName === "SPAN") {
@@ -533,24 +566,22 @@ export class VirtualDocument {
             } else if (nextRect.top <= 0) {
                 this.scrollBarHandler.scrollDocument(1, "up");
             }
-            if (isRangeSelection && this.selectHandler.rangeSelectionElementStart && this.selectHandler.oldRangeSelectionElementEnd) {
-                const startOffsetAttr = this.selectHandler.rangeSelectionElementStart.getAttribute("data-offset")!;
-                const endOffsetAttr = next.getAttribute("data-offset")!;
-                const oldEndOffsetAttr = this.selectHandler.oldRangeSelectionElementEnd.getAttribute("data-offset")!;
-
-                const startOffset = parseInt(startOffsetAttr);
-                const endOffset = parseInt(endOffsetAttr);
-                const oldRange = new Range(startOffset, parseInt(oldEndOffsetAttr!));
+            if (isRangeSelection && this.selectHandler.rangeStartOffset && this.selectHandler.oldRangeEndOffset) {
+                const startOffset = this.selectHandler.rangeStartOffset;
+                const endOffset = parseInt(next.getAttribute("data-offset")!);
+                const oldEndOffset = this.selectHandler.oldRangeEndOffset;
+                const oldRange = new Range(startOffset, oldEndOffset);
 
                 SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
-                this.selectHandler.oldRangeSelectionElementEnd = next;
+                this.selectHandler.oldRangeEndOffset = endOffset;
             } else {
                 SelectHandler.clearSelected();
-                SelectHandler.singleSelect(parseInt(next.getAttribute("data-offset")!));
-                this.selectHandler.rangeSelectionElementStart = next;
-                this.selectHandler.oldRangeSelectionElementEnd = next;
+                const offset = parseInt(next.getAttribute("data-offset")!);
+                SelectHandler.singleSelect(offset);
+                this.selectHandler.rangeStartOffset = offset;
+                this.selectHandler.oldRangeEndOffset = offset;
             }
-            next.focus();
+            next.focus({ preventScroll: true });
         }
     }
 

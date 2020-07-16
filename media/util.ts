@@ -7,8 +7,8 @@ import { SelectHandler } from "./selectHandler";
 // Assorted helper functions
 
 export interface IRange {
-    start: number;
-    end: number;
+    readonly start: number;
+    readonly end: number;
 }
 
 /**
