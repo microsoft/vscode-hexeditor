@@ -119,20 +119,18 @@ export class SearchHandler {
     private updateInputGlyphs(): void {
         // The glyph icons that sit in the find and replace bar
         const inputGlyphs = document.getElementsByClassName("bar-glyphs") as HTMLCollectionOf<HTMLSpanElement>;
-        const inputFields = document.querySelectorAll(".bar > input") as NodeListOf<HTMLInputElement>;
+        // const inputFields = document.querySelectorAll(".bar > .input-glyph-group > input") as NodeListOf<HTMLInputElement>;
         if (this.searchType == "hex") {
             inputGlyphs[0].hidden = true;
-            inputFields[0].style.paddingRight = "0px";
             inputGlyphs[1].hidden = true;
-            inputFields[1].style.paddingRight = "0px";
         } else {
             for (let i = 0; i < inputGlyphs.length; i++) {
                 inputGlyphs[i].hidden = false;
-                const glyphRect = inputGlyphs[i].getBoundingClientRect();
-                const inputRect = inputFields[i].getBoundingClientRect();
-                // Calculates how much padding we should have so that the text doesn't run into the glyphs
-                const inputPadding = (inputRect.x + inputRect.width + 1) - glyphRect.x;
-                inputFields[i].style.paddingRight = `$${inputPadding}px`;
+                // const glyphRect = inputGlyphs[i].getBoundingClientRect();
+                // const inputRect = inputFields[i].getBoundingClientRect();
+                // // Calculates how much padding we should have so that the text doesn't run into the glyphs
+                // const inputPadding = (inputRect.x + inputRect.width + 1) - glyphRect.x;
+                // inputFields[i].style.paddingRight = `${inputPadding}px`;
             }
         }
     }

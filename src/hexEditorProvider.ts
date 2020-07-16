@@ -354,10 +354,12 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				</div>
 				<div class="search-widget">
 					<div class="bar find-bar">
-						<input type="text" autocomplete="off" spellcheck="off" name="find" id="find" placeholder="Find"/>
-						<span class="bar-glyphs">
-							<span class="codicon codicon-case-sensitive" id="case-sensitive" title="Match Case"></span>
-							<span class="codicon codicon-regex" id="regex-icon" title="Use Regular Expression"></span>
+						<span class="input-glyph-group">
+							<input type="text" autocomplete="off" spellcheck="off" name="find" id="find" placeholder="Find"/>
+							<span class="bar-glyphs">
+								<span class="codicon codicon-case-sensitive" id="case-sensitive" title="Match Case"></span>
+								<span class="codicon codicon-regex" id="regex-icon" title="Use Regular Expression"></span>
+							</span>
 						</span>
 						<span class="icon-group">
 							<span class="codicon codicon-search-stop disabled" id="search-stop" title="Cancel Search"></span>
@@ -366,9 +368,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 						</span>
 					</div>
 					<div class="bar replace-bar">
-						<input type="text" autocomplete="off" spellcheck="off" name="replace" id="replace" placeholder="Replace"/>
-						<span class="bar-glyphs">
-							<span class="codicon codicon-preserve-case" id="preserve-case" title="Preserve Case"></span>
+						<span class="input-glyph-group">
+							<input type="text" autocomplete="off" spellcheck="off" name="replace" id="replace" placeholder="Replace"/>
+							<span class="bar-glyphs">
+								<span class="codicon codicon-preserve-case" id="preserve-case" title="Preserve Case"></span>
+							</span>
 						</span>
 						<span class="icon-group">
 							<span class="codicon codicon-replace disabled" id="replace" title="Replace"></span>

@@ -243,15 +243,23 @@ button:disabled {
 
 .bar {
     position: relative;
+    display: flex;
 }
 
-.bar > input {
+.input-glyph-group {
+    position: relative;
+    flex: 1;
+}
+
+.bar > .input-glyph-group > input {
     height: 24px;
+    padding-right: 50px;
+    width: calc(100% - 50px);
 }
 
 .bar-glyphs {
     position: absolute;
-    right: 85px;
+    right: 0px;
     top: 12%;
 }
 
@@ -266,10 +274,9 @@ button:disabled {
 }
 
 .icon-group {
-    position: absolute;
-    top: 6px;
     transform: translateX(10px);
 }
+
 .search-widget {
     margin-top: 10px;
 }
