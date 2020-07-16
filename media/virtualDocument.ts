@@ -136,14 +136,14 @@ export class VirtualDocument {
                     this.selectHandler.clearSelectionClick = false;
                     SelectHandler.clearSelected();
                 }
-                if (this.selectHandler.rangeStartOffset) {
-                    const startOffset = this.selectHandler.rangeStartOffset;
+                if (this.selectHandler.selectionPivotOffset !== undefined) {
+                    const startOffset = this.selectHandler.selectionPivotOffset;
                     const endOffset = parseInt(target.getAttribute("data-offset")!);
-                    const oldEndOffset = this.selectHandler.oldRangeEndOffset;
+                    const oldEndOffset = this.selectHandler.oldSelectionEndOffset;
                     const oldRange = oldEndOffset ? new Range(startOffset, oldEndOffset) : undefined;
 
                     SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
-                    this.selectHandler.oldRangeEndOffset = endOffset;
+                    this.selectHandler.oldSelectionEndOffset = endOffset;
                     target.focus();
                 }
             } else {
@@ -154,7 +154,7 @@ export class VirtualDocument {
                 }
                 const offset = parseInt(target.getAttribute("data-offset")!);
                 const isSelected = SelectHandler.singleSelect(offset);
-                this.selectHandler.rangeStartOffset = offset;
+                this.selectHandler.selectionPivotOffset = offset;
                 if (isSelected) {
                     target.focus({ preventScroll: true });
                 } else {
@@ -181,8 +181,8 @@ export class VirtualDocument {
             if (!event.shiftKey) {
                 // Start new range selection
                 const offset = parseInt(target.getAttribute("data-offset")!);
-                this.selectHandler.rangeStartOffset = offset;
-                this.selectHandler.oldRangeEndOffset = offset;
+                this.selectHandler.selectionPivotOffset = offset;
+                this.selectHandler.oldSelectionEndOffset = offset;
             }
 
             target.focus({ preventScroll: true });
@@ -197,10 +197,10 @@ export class VirtualDocument {
                 return;
             }
 
-            if (this.selectHandler.isDragging && this.selectHandler.rangeStartOffset && this.selectHandler.oldRangeEndOffset) {
-                const startOffset = this.selectHandler.rangeStartOffset;
+            if (this.selectHandler.isDragging && this.selectHandler.selectionPivotOffset !== undefined && this.selectHandler.oldSelectionEndOffset !== undefined) {
+                const startOffset = this.selectHandler.selectionPivotOffset;
                 const endOffset = parseInt(target.getAttribute("data-offset")!);
-                const oldEndOffset = this.selectHandler.oldRangeEndOffset;
+                const oldEndOffset = this.selectHandler.oldSelectionEndOffset;
                 const oldRange = !this.selectHandler.clearSelectionDrag ? new Range(startOffset, oldEndOffset) : undefined;
 
                 if (endOffset === oldEndOffset) {
@@ -213,7 +213,7 @@ export class VirtualDocument {
                 }
 
                 SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
-                this.selectHandler.oldRangeEndOffset = endOffset;
+                this.selectHandler.oldSelectionEndOffset = endOffset;
 
                 target.focus({ preventScroll: true });
             }
@@ -479,11 +479,11 @@ export class VirtualDocument {
         }
 
         const target = event.target as HTMLElement;
-        if (!target.classList.contains("hex") || !target.classList.contains("ascii")) {
+        if (!target.classList.contains("hex") && !target.classList.contains("ascii")) {
             return;
         }
 
-        if (event.shiftKey && this.selectHandler.rangeStartOffset && this.selectHandler.oldRangeEndOffset) {
+        if (event.shiftKey && this.selectHandler.selectionPivotOffset !== undefined && this.selectHandler.oldSelectionEndOffset !== undefined) {
             const offset = (Math.floor(this.viewPortHeight / this.rowHeight) - 1) * 16;
             let nextElementOffset: number | undefined;
             if (event.keyCode == 35 && event.ctrlKey) {
@@ -494,10 +494,10 @@ export class VirtualDocument {
                 nextElementOffset = 0;
             } else if (event.keyCode == 33) {
                 // PG Up
-                nextElementOffset = Math.max(this.selectHandler.oldRangeEndOffset - offset, 0);
+                nextElementOffset = Math.max(this.selectHandler.oldSelectionEndOffset - offset, 0);
             } else if (event.keyCode == 34) {
                 // PG Down
-                nextElementOffset = Math.min(this.selectHandler.oldRangeEndOffset + offset, this.fileSize - 1);
+                nextElementOffset = Math.min(this.selectHandler.oldSelectionEndOffset + offset, this.fileSize - 1);
             }
 
             if (nextElementOffset !== undefined) {
@@ -508,13 +508,13 @@ export class VirtualDocument {
                 }
                 const next = target.classList.contains("hex") ? nextElements[0] : nextElements[1];
 
-                const startOffset = this.selectHandler.rangeStartOffset;
+                const startOffset = this.selectHandler.selectionPivotOffset;
                 const endOffset = parseInt(next.getAttribute("data-offset")!);
-                const oldEndOffset = this.selectHandler.oldRangeEndOffset;
+                const oldEndOffset = this.selectHandler.oldSelectionEndOffset;
                 const oldRange = new Range(startOffset, oldEndOffset);
 
                 SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
-                this.selectHandler.oldRangeEndOffset = endOffset;
+                this.selectHandler.oldSelectionEndOffset = endOffset;
                 next.focus({ preventScroll: true });
             }
         }
@@ -566,20 +566,20 @@ export class VirtualDocument {
             } else if (nextRect.top <= 0) {
                 this.scrollBarHandler.scrollDocument(1, "up");
             }
-            if (isRangeSelection && this.selectHandler.rangeStartOffset && this.selectHandler.oldRangeEndOffset) {
-                const startOffset = this.selectHandler.rangeStartOffset;
+            if (isRangeSelection && this.selectHandler.selectionPivotOffset !== undefined && this.selectHandler.oldSelectionEndOffset !== undefined) {
+                const startOffset = this.selectHandler.selectionPivotOffset;
                 const endOffset = parseInt(next.getAttribute("data-offset")!);
-                const oldEndOffset = this.selectHandler.oldRangeEndOffset;
+                const oldEndOffset = this.selectHandler.oldSelectionEndOffset;
                 const oldRange = new Range(startOffset, oldEndOffset);
 
                 SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
-                this.selectHandler.oldRangeEndOffset = endOffset;
+                this.selectHandler.oldSelectionEndOffset = endOffset;
             } else {
                 SelectHandler.clearSelected();
                 const offset = parseInt(next.getAttribute("data-offset")!);
                 SelectHandler.singleSelect(offset);
-                this.selectHandler.rangeStartOffset = offset;
-                this.selectHandler.oldRangeEndOffset = offset;
+                this.selectHandler.selectionPivotOffset = offset;
+                this.selectHandler.oldSelectionEndOffset = offset;
             }
             next.focus({ preventScroll: true });
         }

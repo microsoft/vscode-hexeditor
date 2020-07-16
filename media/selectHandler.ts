@@ -10,8 +10,8 @@ export class SelectHandler {
     public isDragging = false;
     public clearSelectionClick: boolean = false;
     public clearSelectionDrag: boolean = false;
-    public rangeStartOffset: number | undefined;
-    public oldRangeEndOffset: number | undefined;
+    public selectionPivotOffset: number | undefined;
+    public oldSelectionEndOffset: number | undefined;
 
     constructor() { }
 
