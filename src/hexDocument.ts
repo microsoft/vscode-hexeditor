@@ -204,7 +204,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				if (this._unsavedEdits[this._unsavedEdits.length - 1] !== undefined) {
 					// We have to flip the old in new values because redone is reapplying them so they will be exact opposites
 					// This allows us to then compare them
-					let unsavedEdits: HexDocumentEdits[] = [...this._unsavedEdits[this._unsavedEdits.length - 1]];
+					let unsavedEdits: HexDocumentEdits[] = this._unsavedEdits[this._unsavedEdits.length - 1].slice(0);
 					unsavedEdits = unsavedEdits.map((e) => {
 						if (e.newValue === undefined && e.oldValue !== undefined) {
 							e.newValue = e.oldValue;
@@ -220,7 +220,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 					// If they're not the same as what's on disk then they're unsaved and need to be tracked
 					if (!edit.sameOnDisk) unsavedEdits.push(edit);
 				}
-				this._unsavedEdits.push(unsavedEdits);
+				// Means the entire redo is the same on disk so we don't add the edit as unsaved
+				if (unsavedEdits.length !== 0) this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "redo",
