@@ -8,6 +8,7 @@ import { WebviewCollection } from "./webViewCollection";
 import path = require("path");
 import { getNonce } from "./util";
 import TelemetryReporter from "vscode-extension-telemetry";
+import { SearchResults } from "./searchProvider";
 
 interface PacketRequest {
 	initialOffset: number;
@@ -431,15 +432,22 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				} });
 				return;
 			case "search":
-				let results: number[][];
+				// If it's a cancellation request we notify the search provider we want to cancel
+				if (message.body.cancel) {
+					document.searchProvider.cancelSearch();
+					return;
+				}
+				let results: SearchResults | undefined;
 				if (message.body.type === "ascii") {
 					results = document.searchProvider.textSearch(message.body.query, message.body.options);
 				} else {
-					results = document.searchProvider.hexSearch(message.body.query);
+					results = document.searchProvider.hexSearch(message.body.query, 0);
 				}
-				panel.webview.postMessage({ type: "search", requestId: message.requestId, body: {
-					results: results
-				} });
+				if (results !== undefined) {
+					panel.webview.postMessage({ type: "search", requestId: message.requestId, body: {
+						results: results
+					} });
+				}
 				return;
 		}
 	}

@@ -1,5 +1,8 @@
 /* Copyright (c) Microsoft Corporation.
 Licensed under the MIT license. */
+:root {
+    --input-glyph-padding: 0px;
+}
 
 body {
     min-width: 1224px;
@@ -253,8 +256,8 @@ button:disabled {
 
 .bar > .input-glyph-group > input {
     height: 24px;
-    padding-right: 50px;
-    width: calc(100% - 50px);
+    padding-right: var(--input-glyph-padding);
+    width: calc(100% - var(--input-glyph-padding));
 }
 
 .bar-glyphs {

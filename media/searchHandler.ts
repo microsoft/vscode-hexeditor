@@ -6,12 +6,20 @@ interface SearchOptions {
     caseSensitive: boolean;
 }
 
+interface SearchResults {
+    result: number[][];
+    partial: boolean;
+}
+
 export class SearchHandler {
     private searchResults: number[][];
     private searchType: "hex" | "ascii" = "hex";
     private searchOptions: SearchOptions;
     private resultIndex = 0;
     private findTextBox: HTMLInputElement;
+    // How long we wait for the user to stop typign before triggering a search
+    private static typingTimeout = 1000;
+    private typingTimer = 0;
     private replaceTextBox: HTMLInputElement;
     private findPreviousButton: HTMLSpanElement;
     private findNextButton: HTMLSpanElement;
@@ -40,10 +48,18 @@ export class SearchHandler {
         });
         
         this.searchOptionsHandler();
-        this.findTextBox.addEventListener("keyup", this.search.bind(this));
+        // This keydown and keyup set timeout helps us wait for the user to stop typing before triggering a search
+        this.findTextBox.addEventListener("keydown", () => window.clearTimeout(this.typingTimer));
+        this.findTextBox.addEventListener("keyup", () => {
+            window.clearTimeout(this.typingTimer);
+            this.typingTimer = window.setTimeout(this.search.bind(this), SearchHandler.typingTimeout);
+        });
         this.stopSearchButton.addEventListener("click", this.cancelSearch.bind(this));
     }
 
+    /**
+     * @description Sends a search request to the exthost
+     */
     private async search(): Promise<void> {
         const query = this.findTextBox.value;
         if (query.length === 0) return;
@@ -59,7 +75,7 @@ export class SearchHandler {
                 query: query,
                 type: this.searchType,
                 options: this.searchOptions
-            })).results;
+            }) as { results: SearchResults}).results.result;
         } catch {
             this.stopSearchButton.classList.add("disabled");
             return;
@@ -72,7 +88,7 @@ export class SearchHandler {
             await virtualHexDocument.scrollDocumentToOffset(this.searchResults[this.resultIndex][0]);
             SelectHandler.multiSelect(this.searchResults[this.resultIndex], false);
             // If there's more than one search result we unlock the find next button
-            if (this.resultIndex < this.searchResults.length) {
+            if (this.resultIndex + 1 < this.searchResults.length) {
                 this.findNextButton.classList.remove("disabled");
             } 
         }
@@ -116,22 +132,26 @@ export class SearchHandler {
         }
     }
 
+    /**
+     * @description Handles when the user toggels between text and hex showing the input glyphs and ensureing correct padding
+     */
     private updateInputGlyphs(): void {
         // The glyph icons that sit in the find and replace bar
         const inputGlyphs = document.getElementsByClassName("bar-glyphs") as HTMLCollectionOf<HTMLSpanElement>;
-        // const inputFields = document.querySelectorAll(".bar > .input-glyph-group > input") as NodeListOf<HTMLInputElement>;
+        const inputFields = document.querySelectorAll(".bar > .input-glyph-group > input") as NodeListOf<HTMLInputElement>;
         if (this.searchType == "hex") {
             inputGlyphs[0].hidden = true;
             inputGlyphs[1].hidden = true;
+            document.documentElement.style.setProperty("--input-glyph-padding", "0px");
         } else {
             for (let i = 0; i < inputGlyphs.length; i++) {
                 inputGlyphs[i].hidden = false;
-                // const glyphRect = inputGlyphs[i].getBoundingClientRect();
-                // const inputRect = inputFields[i].getBoundingClientRect();
-                // // Calculates how much padding we should have so that the text doesn't run into the glyphs
-                // const inputPadding = (inputRect.x + inputRect.width + 1) - glyphRect.x;
-                // inputFields[i].style.paddingRight = `${inputPadding}px`;
             }
+            const glyphRect = inputGlyphs[0].getBoundingClientRect();
+            const inputRect = inputFields[0].getBoundingClientRect();
+            // Calculates how much padding we should have so that the text doesn't run into the glyphs
+            const inputPadding = (inputRect.x + inputRect.width + 1) - glyphRect.x;
+            document.documentElement.style.setProperty("--input-glyph-padding", `${inputPadding}px`);
         }
     }
 
@@ -174,5 +194,8 @@ export class SearchHandler {
         if (this.stopSearchButton.classList.contains("disabled")) return;
         // We don't want the user to keep executing this, so we disable the button after the first search
         this.stopSearchButton.classList.add("disabled");
+        // We send a cancellation message to the exthost, there's no need to  wait for a response
+        // As we're not expecting anything back just to stop processing the search
+        messageHandler.postMessageWithResponse("search", { cancel: true });
     }
 }
