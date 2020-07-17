@@ -140,7 +140,7 @@ export class VirtualDocument {
                     const startOffset = this.selectHandler.selectionPivotOffset;
                     const endOffset = parseInt(target.getAttribute("data-offset")!);
                     const oldEndOffset = this.selectHandler.oldSelectionEndOffset;
-                    const oldRange = oldEndOffset ? new Range(startOffset, oldEndOffset) : undefined;
+                    const oldRange = oldEndOffset !== undefined ? new Range(startOffset, oldEndOffset) : undefined;
 
                     SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
                     this.selectHandler.oldSelectionEndOffset = endOffset;

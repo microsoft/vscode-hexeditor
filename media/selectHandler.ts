@@ -8,12 +8,10 @@ import { clearDataInspector, populateDataInspector } from "./dataInspector";
 export class SelectHandler {
 
     public isDragging = false;
-    public clearSelectionClick: boolean = false;
-    public clearSelectionDrag: boolean = false;
+    public clearSelectionClick = false;
+    public clearSelectionDrag = false;
     public selectionPivotOffset: number | undefined;
     public oldSelectionEndOffset: number | undefined;
-
-    constructor() { }
 
     /**
      * @description Removes the selected class from all elements, this is helpful when ensuring only one byte and its associated decoded text is selected
@@ -25,9 +23,15 @@ export class SelectHandler {
     /**
      * @description Given an offset selects the elements. This does not clear the previously selected elements.
      * @param {number} offset Offset to select
+     * @param {boolean} force If force is not given, toggles selection. If force is true selects the element.
+     * If force is false deselects the element.
      */
     private static toggleSelectOffset(offset: number, force?: boolean): boolean {
         const elements = getElementsWithGivenOffset(offset);
+        if (elements.length === 0) {
+            // Element may not be part of the DOM
+            return force ?? false;
+        }
         const isSelected = elements[0].classList.toggle("selected", force);
         elements[1].classList.toggle("selected", force);
         return isSelected;
