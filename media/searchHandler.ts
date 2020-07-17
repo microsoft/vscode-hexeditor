@@ -17,9 +17,6 @@ export class SearchHandler {
     private searchOptions: SearchOptions;
     private resultIndex = 0;
     private findTextBox: HTMLInputElement;
-    // How long we wait for the user to stop typign before triggering a search
-    private static typingTimeout = 1000;
-    private typingTimer = 0;
     private replaceTextBox: HTMLInputElement;
     private findPreviousButton: HTMLSpanElement;
     private findNextButton: HTMLSpanElement;
@@ -48,12 +45,8 @@ export class SearchHandler {
         });
         
         this.searchOptionsHandler();
-        // This keydown and keyup set timeout helps us wait for the user to stop typing before triggering a search
-        this.findTextBox.addEventListener("keydown", () => window.clearTimeout(this.typingTimer));
-        this.findTextBox.addEventListener("keyup", () => {
-            window.clearTimeout(this.typingTimer);
-            this.typingTimer = window.setTimeout(this.search.bind(this), SearchHandler.typingTimeout);
-        });
+        // When the user presses a key trigger a search
+        this.findTextBox.addEventListener("keyup", this.search.bind(this));
         this.stopSearchButton.addEventListener("click", this.cancelSearch.bind(this));
     }
 
@@ -61,6 +54,8 @@ export class SearchHandler {
      * @description Sends a search request to the exthost
      */
     private async search(): Promise<void> {
+        // This gets called to cancel any searches that might be going on now
+        this.cancelSearch();
         const query = this.findTextBox.value;
         if (query.length === 0) return;
         SelectHandler.clearSelected();

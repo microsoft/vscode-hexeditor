@@ -27,65 +27,78 @@ export class SearchProvider {
         this._document = document;
     }
 
-    public textSearch(query: string, options: SearchOptions): SearchResults | undefined {
+    public async textSearch(query: string, options: SearchOptions): Promise<SearchResults> {
+        const results: SearchResults = {
+            result: [],
+            partial: false
+        };
         if (options.regex) {
-            return this.regexTextSearch(query, options.caseSensitive);
+            return new Promise((resolve) => {
+                this.regexTextSearch(query, options.caseSensitive, results, String.fromCharCode.apply(null, Array.from(this._document.documentData)), resolve);
+            });
         } else {
-            return this.normalTextSearch(query, options.caseSensitive, 0);
+            return new Promise((resolve) => {
+                this.normalTextSearch(query, options.caseSensitive, 0, results, resolve);
+            });
         }
+    }
+
+    public async hexSearch(query: string): Promise<SearchResults> {
+        const results: SearchResults = {
+            result: [],
+            partial: false
+        };
+        return new Promise((resolve) => {
+            this.normalHexSearch(query, 0, results, resolve);
+        });
     }
 
     /**
      * @description Searches the hex document for a given query
      * @param {string} query The query being searched for 
      * @param {number} documentIndex The index to start the search at
-     * @param {number[][] | undefined} results This is passed in if some results have already been calculated, i.e when we interrupt this calls to check for cancellations
+     * @param {SearchResults} results The results passed as a reference so it can be passed through the calls
+     * @param {(value: SearchResults) => void} onComplete Callback which is called when the function is completed
      */
-    public hexSearch(query: string, documentIndex: number, results?: number[][]): SearchResults | undefined {
+    public normalHexSearch(query: string, documentIndex: number, results: SearchResults, onComplete: (value: SearchResults) => void): void {
         this._searchStart = Date.now();
-        console.log(results);
-        results = results === undefined ? [] : results;
         const queryArr = query.split(" ");
         // We compare the query to every spot in the file finding matches
-        for (let i = documentIndex; i < this._document.documentData.length; i++) {
+        for (; documentIndex < this._document.documentData.length; documentIndex++) {
             const matchOffsets = [];
             for (let j = 0; j < queryArr.length; j++) {
                 // Once there isn't enough room in the file for the query we return
-                if (i + j >= this._document.documentData.length) {
-                    return {
-                        result: results,
-                        partial: false
-                    };
+                if (documentIndex + j >= this._document.documentData.length) {
+                    onComplete(results);
+                    return;
                 }
-                const hex = this._document.documentData[i+j].toString(16).toUpperCase();
+                const hex = this._document.documentData[documentIndex+j].toString(16).toUpperCase();
                 const currentComparison = queryArr[j].toUpperCase();
                 // ?? is wild card and matches anything, else they must match exactly
                 // If they don't we don't check things after in the query as that's wasted computation
                 if (currentComparison === "??" || currentComparison === hex) {
-                    matchOffsets.push(i+j);
+                    matchOffsets.push(documentIndex+j);
                 } else {
                     break;
                 }
             }
             // If We got a complete match then it is valid
             if (matchOffsets.length === queryArr.length) {
-                results.push(matchOffsets);
+                results.result.push(matchOffsets);
                 // We stop calculating results after we hit the limit and just call it a partial response
-                if (results.length === SearchProvider._searchResultLimit) {
-                    return {
-                        result: results,
-                        partial: true
-                    };
+                if (results.result.length === SearchProvider._searchResultLimit) {
+                    results.partial = true;
+                    onComplete(results);
+                    return;
                 }
             }
             // If it's cancelled we just return what we have
             if (this._cancelled) {
                 console.log("Hex cancellation!");
                 this._cancelled = false;
-                return {
-                    result: results,
-                    partial: true
-                };  
+                results.partial = true;
+                onComplete(results);
+                return;
             }
             // If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
             if ((Date.now() - this._searchStart) > SearchProvider._interruptTime) {
@@ -93,69 +106,48 @@ export class SearchProvider {
                 return undefined;
             }
         }
-        return {
-            result: results,
-            partial: false
-        };
+        onComplete(results);
+        return;
     }
 
     /**
      * @description Handles searching for regexes within the decoded text
      * @param {string} query The regex 
      * @param {boolean} caseSensitive Whether or not you care about matching cases 
-     * @param {string} transformedDocument The string to compare the regex against, this is normally the whole document
+     * @param {SearchResults} results The results of the completed search, this is passed by reference so that it can be passed during setImmediate
+     * @param {(value: SearchResults) => void} onComplete Callback which is called when the function is completed
      */
-    private regexTextSearch(query: string, caseSensitive: boolean, transformedDocument?: string): SearchResults | undefined {
+    private regexTextSearch(query: string, caseSensitive: boolean, results: SearchResults, documentString: string, onComplete: (value: SearchResults) => void): void {
         this._searchStart = Date.now();
-        transformedDocument = transformedDocument === undefined ? String.fromCharCode.apply(null, Array.from(this._document.documentData)) : transformedDocument;
-        // If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
-        if ((Date.now() - this._searchStart) > SearchProvider._interruptTime) {
-            setImmediate(this.regexTextSearch.bind(this), query, caseSensitive, transformedDocument);
-            return undefined;
-        }
-        // If it was cancelled we haven't even started the search so we return nothing
-        if (this._cancelled) {
-            this._cancelled = false;
-            return undefined;
-        }
         const flags = caseSensitive  ? "g" : "gi";
         const regex = new RegExp(query, flags);
-        const results = [];
-        try {
-            const matches = transformedDocument.matchAll(regex);
-            // If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
-            // In regex search we do this afer transforming the document and after running the matches
-            if ((Date.now() - this._searchStart) > SearchProvider._interruptTime) {
-                setImmediate(this.regexTextSearch.bind(this), query, caseSensitive, transformedDocument);
-                return undefined;
+        let match: RegExpExecArray | null;
+        while ((match = regex.exec(documentString)) !== null) {
+            if (match.index === undefined) continue;
+            const matchOffsets = [];
+            for (let i = match.index; i < match.index + match[0].length; i++) {
+                matchOffsets.push(i);
             }
-            // If it was cancelled we haven't even started the search so we return nothing
+            results.result.push(matchOffsets);
+            // If it was cancelled we return immediately
             if (this._cancelled) {
                 this._cancelled = false;
-                return undefined;
+                results.partial = true;
+                onComplete(results);
+                return;
             }
-            for (const match of matches) {
-                if (match.index === undefined) continue;
-                const matchOffsets = [];
-                for (let i = match.index; i < match.index + match[0].length; i++) {
-                    matchOffsets.push(i);
-                }
-                results.push(matchOffsets);
-                // We stop calculating results after we hit the limit and just call it a partial response
-                if (results.length === SearchProvider._searchResultLimit) {
-                    return {
-                        result: results,
-                        partial: true
-                    };
-                }
+            // If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
+            if ((Date.now() - this._searchStart) > SearchProvider._interruptTime) {
+                setImmediate(this.regexTextSearch.bind(this), query, caseSensitive, results, documentString.substr(regex.lastIndex), onComplete);
+                return;
             }
-        } catch (err) {
-            console.error(err);
+            // We stop calculating results after we hit the limit and just call it a partial response
+            if (results.result.length === SearchProvider._searchResultLimit) {
+                results.partial = true;
+                onComplete(results);
+                return;
+            }
         }
-        return {
-            result: results,
-            partial: false
-        };
     }
     
     /**
@@ -163,23 +155,21 @@ export class SearchProvider {
      * @param {string} query The query you're searching for 
      * @param {boolean} caseSensitive Whether or not case matters 
      * @param {number} documentIndex The index to start your search at 
-     * @param {number[][] | undefined} results This is passed in if some results have already been calculated, i.e when we interrupt this calls to check for cancellations
+     * @param {SearchResults} results The results of the completed search, this is passed by reference so that it can be passed during setImmediate
+     * @param {(value: SearchResults) => void} onComplete The callback to be called when the search is completed
      */
-    private normalTextSearch(query: string, caseSensitive: boolean, documentIndex: number, results?: number[][]): SearchResults | undefined {
+    private normalTextSearch(query: string, caseSensitive: boolean, documentIndex: number, results: SearchResults, onComplete: (value: SearchResults) => void): void {
         this._searchStart = Date.now();
-        results = results === undefined ? [] : results;
         // We compare the query to every spot in the file finding matches
-        for (let i = 0; i < this._document.documentData.length; i++) {
+        for (; documentIndex < this._document.documentData.length; documentIndex++) {
             const matchOffsets = [];
             for (let j = 0; j < query.length; j++) {
                 // Once there isn't enough room in the file for the query we return
-                if (i + j >= this._document.documentData.length) {
-                    return {
-                        result: results,
-                        partial: false
-                    };
+                if (documentIndex + j >= this._document.documentData.length) {
+                    onComplete(results);
+                    return;
                 }
-                let ascii = String.fromCharCode(this._document.documentData[i+j]);
+                let ascii = String.fromCharCode(this._document.documentData[documentIndex+j]);
                 let currentComparison = query[j];
                 // Ignoring case we make them uppercase                
                 if (!caseSensitive) {
@@ -188,41 +178,37 @@ export class SearchProvider {
                 }
                 // If it's a match we add the offset to the results
                 if (currentComparison === ascii) {
-                    matchOffsets.push(i+j);
+                    matchOffsets.push(documentIndex+j);
                 } else {
                     break;
                 }
             }
             // If we got a complete match then it is valid
             if (matchOffsets.length === query.length) {
-                results.push(matchOffsets);
+                results.result.push(matchOffsets);
                 // We stop calculating results after we hit the limit and just call it a partial response
-                if (results.length === SearchProvider._searchResultLimit) {
-                    return {
-                        result: results,
-                        partial: true
-                    };
+                if (results.result.length === SearchProvider._searchResultLimit) {
+                    results.partial = true;
+                    onComplete(results);
+                    return;
                 }
             }
             // If it's cancelled we just return what we have
             if (this._cancelled) {
                 console.log("Text cancellation!");
                 this._cancelled = false;
-                return {
-                    result: results,
-                    partial: true
-                };  
+                results.partial = true;
+                onComplete(results);
+                return;
             }
             // If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
             if ((Date.now() - this._searchStart) > SearchProvider._interruptTime) {
-                setImmediate(this.textSearch.bind(this), query, caseSensitive, documentIndex, results);
-                return undefined;
+                setImmediate(this.normalTextSearch.bind(this), query, caseSensitive, documentIndex, results, onComplete);
+                return;
             }
         }
-        return {
-            result: results,
-            partial: false
-        };
+        onComplete(results);
+        return;
     }
 
     public cancelSearch(): void {

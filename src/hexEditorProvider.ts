@@ -400,7 +400,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		panel.webview.postMessage({ type, body });
 	}
 
-	private onMessage(panel: vscode.WebviewPanel, document: HexDocument, message: any): void {
+	private async onMessage(panel: vscode.WebviewPanel, document: HexDocument, message: any): Promise<void> {
 		switch(message.type) {
 			// If it's a packet request
 			case "packet":
@@ -437,11 +437,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					document.searchProvider.cancelSearch();
 					return;
 				}
-				let results: SearchResults | undefined;
+				let results: SearchResults;
 				if (message.body.type === "ascii") {
-					results = document.searchProvider.textSearch(message.body.query, message.body.options);
+					results = await document.searchProvider.textSearch(message.body.query, message.body.options);
 				} else {
-					results = document.searchProvider.hexSearch(message.body.query, 0);
+					results = await document.searchProvider.hexSearch(message.body.query);
 				}
 				if (results !== undefined) {
 					panel.webview.postMessage({ type: "search", requestId: message.requestId, body: {
