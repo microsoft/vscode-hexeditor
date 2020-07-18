@@ -477,47 +477,6 @@ export class VirtualDocument {
             // PG Down
             this.scrollBarHandler.page(this.viewPortHeight, "down");
         }
-
-        const target = event.target as HTMLElement;
-        if (!target.classList.contains("hex") && !target.classList.contains("ascii")) {
-            return;
-        }
-
-        if (event.shiftKey && this.selectHandler.selectionPivotOffset !== undefined && this.selectHandler.oldSelectionEndOffset !== undefined) {
-            const offset = (Math.floor(this.viewPortHeight / this.rowHeight) - 1) * 16;
-            let nextElementOffset: number | undefined;
-            if (event.keyCode == 35 && event.ctrlKey) {
-                // End
-                nextElementOffset = this.fileSize - 1;
-            } else if (event.keyCode == 36 && event.ctrlKey) {
-                // Home
-                nextElementOffset = 0;
-            } else if (event.keyCode == 33) {
-                // PG Up
-                nextElementOffset = Math.max(this.selectHandler.oldSelectionEndOffset - offset, 0);
-            } else if (event.keyCode == 34) {
-                // PG Down
-                nextElementOffset = Math.min(this.selectHandler.oldSelectionEndOffset + offset, this.fileSize - 1);
-            }
-
-            if (nextElementOffset !== undefined) {
-                // TODO: The elements with `nextElementOffset` could not be part of the DOM so we need to wait for the next `render()` call
-                const nextElements = getElementsWithGivenOffset(nextElementOffset);
-                if (nextElements.length === 0) {
-                    return;
-                }
-                const next = target.classList.contains("hex") ? nextElements[0] : nextElements[1];
-
-                const startOffset = this.selectHandler.selectionPivotOffset;
-                const endOffset = parseInt(next.getAttribute("data-offset")!);
-                const oldEndOffset = this.selectHandler.oldSelectionEndOffset;
-                const oldRange = new Range(startOffset, oldEndOffset);
-
-                SelectHandler.rangeSelect(new Range(startOffset, endOffset), oldRange);
-                this.selectHandler.oldSelectionEndOffset = endOffset;
-                next.focus({ preventScroll: true });
-            }
-        }
     }
 
     /**
