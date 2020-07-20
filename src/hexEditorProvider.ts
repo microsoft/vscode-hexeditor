@@ -8,7 +8,7 @@ import { WebviewCollection } from "./webViewCollection";
 import path = require("path");
 import { getNonce } from "./util";
 import TelemetryReporter from "vscode-extension-telemetry";
-import { SearchResults } from "./searchProvider";
+import { SearchResults } from "./searchRequest";
 
 interface PacketRequest {
 	initialOffset: number;
@@ -434,14 +434,14 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case "search":
 				// If it's a cancellation request we notify the search provider we want to cancel
 				if (message.body.cancel) {
-					document.searchProvider.cancelSearch();
+					document.searchProvider.cancelRequest();
 					return;
 				}
 				let results: SearchResults;
 				if (message.body.type === "ascii") {
-					results = await document.searchProvider.textSearch(message.body.query, message.body.options);
+					results = await document.searchProvider.createNewRequest().textSearch(message.body.query, message.body.options);
 				} else {
-					results = await document.searchProvider.hexSearch(message.body.query);
+					results = await document.searchProvider.createNewRequest().hexSearch(message.body.query);
 				}
 				if (results !== undefined) {
 					panel.webview.postMessage({ type: "search", requestId: message.requestId, body: {
