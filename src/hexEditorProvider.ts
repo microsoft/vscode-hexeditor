@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import { HexDocument, HexDocumentEdits } from "./hexDocument";
+import { HexDocument, HexDocumentEdit } from "./hexDocument";
 import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
 import path = require("path");
@@ -58,8 +58,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				this.postMessage(webviewPanel, "update", {
 					fileSize: e.fileSize,
 					type: e.type,
-					edits: e.edits,
-					content: e.content,
+					edits: e.edits
 				});
 			}
 		}));
@@ -376,7 +375,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 							</span>
 						</span>
 						<span class="icon-group">
-							<span class="codicon codicon-replace disabled" id="replace" title="Replace"></span>
+							<span class="codicon codicon-replace disabled" id="replace-btn" title="Replace"></span>
 							<span class="codicon codicon-replace-all disabled" id="replace-all" title="Replace All"></span>
 						</span>
 					</div>
@@ -407,7 +406,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				const request = message.body as PacketRequest;
 				// Return the data requested and the offset it was requested for
 				const packet = Array.from(document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements));
-				const edits: HexDocumentEdits[] = [];
+				const edits: HexDocumentEdit[] = [];
 				document.unsavedEdits.flat().forEach((edit) => {
 					if (edit.offset >= request.initialOffset && edit.offset < request.initialOffset + request.numElements) {
 						edits.push(edit);
@@ -449,6 +448,12 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					} });
 				}
 				return;
+			case "replace":
+				// Trigger a replacement and send the new edits to the webview
+				const replaced: HexDocumentEdit[] = document.replace(message.body.query, message.body.offsets, message.body.preserveCase);
+				panel.webview.postMessage({ type: "replace", requestId: message.requestId, body: {
+					edits: replaced
+				} });
 		}
 	}
 }

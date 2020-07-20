@@ -482,7 +482,7 @@ export class VirtualDocument {
 
     /**
      * @description Redoes the given edits from the document
-     * @param {EditMessage[]} edits The edits that will be r
+     * @param {EditMessage[]} edits The edits that will be redone
      * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone 
      */
     public redo(edits: EditMessage[], fileSize: number): void {

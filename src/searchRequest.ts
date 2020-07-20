@@ -42,7 +42,7 @@ export class SearchRequest {
         }
     }
 
-    public async hexSearch(query: string): Promise<SearchResults> {
+    public async hexSearch(query: string[]): Promise<SearchResults> {
         const results: SearchResults = {
             result: [],
             partial: false
@@ -54,25 +54,26 @@ export class SearchRequest {
 
     /**
      * @description Searches the hex document for a given query
-     * @param {string} query The query being searched for 
+     * @param {string[]} query The query being searched for 
      * @param {number} documentIndex The index to start the search at
      * @param {SearchResults} results The results passed as a reference so it can be passed through the calls
      * @param {(value: SearchResults) => void} onComplete Callback which is called when the function is completed
      */
-    public normalHexSearch(query: string, documentIndex: number, results: SearchResults, onComplete: (value: SearchResults) => void): void {
+    public normalHexSearch(query: string[], documentIndex: number, results: SearchResults, onComplete: (value: SearchResults) => void): void {
         const searchStart = Date.now();
-        const queryArr = query.split(" ");
         // We compare the query to every spot in the file finding matches
         for (; documentIndex < this._document.documentData.length; documentIndex++) {
             const matchOffsets = [];
-            for (let j = 0; j < queryArr.length; j++) {
+            for (let j = 0; j < query.length; j++) {
                 // Once there isn't enough room in the file for the query we return
                 if (documentIndex + j >= this._document.documentData.length) {
                     onComplete(results);
                     return;
                 }
-                const hex = this._document.documentData[documentIndex+j].toString(16).toUpperCase();
-                const currentComparison = queryArr[j].toUpperCase();
+                let hex = this._document.documentData[documentIndex+j].toString(16).toUpperCase();
+                // ensures that 0D and D produce a match because we expect hex to be two characters
+                hex = hex.length !== 2 ? "0" + hex : hex; 
+                const currentComparison = query[j].toUpperCase();
                 // ?? is wild card and matches anything, else they must match exactly
                 // If they don't we don't check things after in the query as that's wasted computation
                 if (currentComparison === "??" || currentComparison === hex) {
@@ -82,7 +83,7 @@ export class SearchRequest {
                 }
             }
             // If We got a complete match then it is valid
-            if (matchOffsets.length === queryArr.length) {
+            if (matchOffsets.length === query.length) {
                 results.result.push(matchOffsets);
                 // We stop calculating results after we hit the limit and just call it a partial response
                 if (results.result.length === SearchRequest._searchResultLimit) {

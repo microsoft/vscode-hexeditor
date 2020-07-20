@@ -1,5 +1,6 @@
 import { messageHandler, virtualHexDocument } from "./hexEdit";
 import { SelectHandler } from "./selectHandler";
+import { hexQueryToArray } from "./util";
 
 interface SearchOptions {
     regex: boolean;
@@ -18,6 +19,9 @@ export class SearchHandler {
     private resultIndex = 0;
     private findTextBox: HTMLInputElement;
     private replaceTextBox: HTMLInputElement;
+    private replaceButton: HTMLSpanElement;
+    private replaceAllButton: HTMLSpanElement;
+    private preserveCase = false;
     private findPreviousButton: HTMLSpanElement;
     private findNextButton: HTMLSpanElement;
     private stopSearchButton: HTMLSpanElement;
@@ -30,6 +34,8 @@ export class SearchHandler {
         };
         this.findTextBox = document.getElementById("find") as HTMLInputElement;
         this.replaceTextBox = document.getElementById("replace") as HTMLInputElement;
+        this.replaceButton = document.getElementById("replace-btn") as HTMLSpanElement;
+        this.replaceAllButton = document.getElementById("replace-all") as HTMLSpanElement;
         this.findPreviousButton = document.getElementById("find-previous") as HTMLSpanElement;
         this.findNextButton = document.getElementById("find-next") as HTMLSpanElement;
         this.stopSearchButton = document.getElementById("search-stop") as HTMLSpanElement;
@@ -45,8 +51,12 @@ export class SearchHandler {
         });
         
         this.searchOptionsHandler();
+        this.replaceOptionsHandler();
+
         // When the user presses a key trigger a search
         this.findTextBox.addEventListener("keyup", this.search.bind(this));
+        this.replaceTextBox.addEventListener("keyup", this.updateReplaceButtons.bind(this));
+        this.replaceButton.addEventListener("click", this.replace.bind(this));
         this.stopSearchButton.addEventListener("click", this.cancelSearch.bind(this));
     }
 
@@ -59,7 +69,8 @@ export class SearchHandler {
         const query = this.findTextBox.value;
         if (query.length === 0) return;
         SelectHandler.clearSelected();
-        
+        this.searchResults = [];
+        this.updateReplaceButtons();
         this.findNextButton.classList.add("disabled");
         this.findPreviousButton.classList.add("disabled");
         this.stopSearchButton.classList.remove("disabled");
@@ -67,7 +78,7 @@ export class SearchHandler {
         // This is wrapped in a try catch because if the message handler gets backed up this will reject
         try {
             results = (await messageHandler.postMessageWithResponse("search", {
-                query: query,
+                query: this.searchType === "hex" ? hexQueryToArray(query) : query,
                 type: this.searchType,
                 options: this.searchOptions
             }) as { results: SearchResults}).results.result;
@@ -79,13 +90,14 @@ export class SearchHandler {
         this.resultIndex = 0;
         this.searchResults = results;
         // If we got results then we select the first result and unlock the buttons
-        if (results.length > 0) {
+        if (results.length !== 0) {
             await virtualHexDocument.scrollDocumentToOffset(this.searchResults[this.resultIndex][0]);
             SelectHandler.multiSelect(this.searchResults[this.resultIndex], false);
             // If there's more than one search result we unlock the find next button
             if (this.resultIndex + 1 < this.searchResults.length) {
                 this.findNextButton.classList.remove("disabled");
-            } 
+            }
+            this.updateReplaceButtons();
         }
     }
     
@@ -182,6 +194,20 @@ export class SearchHandler {
         });
     }
 
+    private replaceOptionsHandler(): void {
+        // Toggle preserve case
+        document.getElementById("preserve-case")?.addEventListener("click", (event: MouseEvent) => {
+            const preserveCase = event.target as HTMLSpanElement;
+            if (preserveCase.classList.contains("toggled")) {
+                this.preserveCase = false;
+                preserveCase.classList.remove("toggled");
+            } else {
+                this.preserveCase = true;
+                preserveCase.classList.add("toggled");
+            }
+        });
+    }
+
     /**
      * @description Handles when the user hits the stop search button
      */
@@ -192,5 +218,52 @@ export class SearchHandler {
         // We send a cancellation message to the exthost, there's no need to  wait for a response
         // As we're not expecting anything back just to stop processing the search
         messageHandler.postMessageWithResponse("search", { cancel: true });
+    }
+
+    /**
+     * @description Helper function which handles locking / unlocking the replace buttons
+     */
+    private updateReplaceButtons(): void {
+        if (this.searchResults.length !== 0 && this.replaceTextBox.value.trim().length !== 0) {
+            this.replaceAllButton.classList.remove("disabled");
+            this.replaceButton.classList.remove("disabled");
+        } else {
+            this.replaceAllButton.classList.add("disabled");
+            this.replaceButton.classList.add("disabled");
+        }
+    }
+
+    /**
+     * @description Handles when the user clicks replace or replace all
+     * @param {boolean} all whether this is a normal replace or a replace all 
+     */
+    private async replace(): Promise<void> {
+        const all = false;
+        const replaceQuery = this.replaceTextBox.value;
+        const replaceArray = this.searchType === "hex" ? hexQueryToArray(replaceQuery) : Array.from(replaceQuery);
+        let replaceBits: number[] = [];
+        // Since the exthost only holds data in 8 bit unsigned ints we must convert it back
+        if (this.searchType === "hex") {
+            replaceBits = replaceArray.map(val => parseInt(val, 16));
+        } else {
+            replaceBits = replaceArray.map(val => val.charCodeAt(0));
+        }
+
+        let offsets: number[][] = [];
+        if (all) {
+            offsets = this.searchResults;
+        } else {
+            offsets = [this.searchResults[this.resultIndex]];
+        }
+
+        const edits = (await messageHandler.postMessageWithResponse("replace", {
+            query: replaceBits,
+            offsets: offsets,
+            preserveCase: false
+        })).edits;
+        // We can pass the size of the document back in because with the current implementation
+        // The size of the document will never change as we only replace preexisting cells
+        virtualHexDocument.redo(edits, virtualHexDocument.documentSize);
+        this.findNext();
     }
 }
