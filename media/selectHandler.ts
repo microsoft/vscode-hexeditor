@@ -114,4 +114,28 @@ export class SelectHandler {
         const selection = document.getElementsByClassName(`selected ${section}`);
         if (selection.length !== 0) (selection[0] as HTMLSpanElement).focus();
     }
+
+    /**
+     * @description Retrieves the selection as a string, defaults to hex if there is no focus on either side
+     * @returns {string} The selection represented as a string
+     */
+    public static getSelectedValue(): string {
+        let selectedValue = "";
+        let section = "hex";
+        let selectedElements: HTMLCollectionOf<HTMLSpanElement>;
+        if (document.activeElement?.classList.contains("ascii")) {
+            section = "ascii";
+            selectedElements = document.getElementsByClassName("selected ascii") as HTMLCollectionOf<HTMLSpanElement>;
+        } else {
+            selectedElements = document.getElementsByClassName("selected hex") as HTMLCollectionOf<HTMLSpanElement>; 
+        }
+        for (const element of selectedElements) {
+            selectedValue += element.innerText;
+            if (section === "hex") selectedValue += " ";
+        }
+        // If it's hex we want to remove the last space as it doesn't make sense
+        // For ascii that space might have meaning
+        if (section === "hex") selectedValue = selectedValue.trimRight();
+        return selectedValue;
+    }
 }
