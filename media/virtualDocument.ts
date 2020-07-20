@@ -370,7 +370,10 @@ export class VirtualDocument {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         const modifierKeyPressed = event.metaKey || event.altKey || event.ctrlKey;
-        if (event.keyCode >= 37 && event.keyCode <= 40) {
+        // If the user presses ctrl / cmd + f we focus the search box and change the dropdown
+        if ((event.metaKey || event.ctrlKey) && event.key === "f") {
+            this.searchHandler.searchKeybindingHandler();
+        } else if (event.keyCode >= 37 && event.keyCode <= 40) {
             this.arrowKeyNavigate(event.keyCode, targetElement);
             event.preventDefault();
         // If the user presses Home we go to the front of the line

@@ -269,4 +269,15 @@ export class SearchHandler {
         virtualHexDocument.redo(edits, virtualHexDocument.documentSize);
         this.findNext();
     }
+
+    /**
+     * @description Function responsible for handling when the user presses cmd / ctrl + f updating the widget and focusing it
+     */
+    public searchKeybindingHandler(): void {
+        this.searchType = document.activeElement?.classList.contains("ascii") ? "ascii" : "hex";
+        const dataTypeSelect = (document.getElementById("data-type") as HTMLSelectElement);
+        dataTypeSelect.value = this.searchType;
+        dataTypeSelect.dispatchEvent(new Event("change"));
+        this.findTextBox.focus();
+    }
 }
