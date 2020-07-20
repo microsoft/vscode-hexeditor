@@ -93,7 +93,6 @@ export class SearchRequest {
             }
             // If it's cancelled we just return what we have
             if (this._cancelled) {
-                console.log("Hex cancellation!");
                 this._cancelled = false;
                 results.partial = true;
                 onComplete(results);
@@ -194,7 +193,6 @@ export class SearchRequest {
             }
             // If it's cancelled we just return what we have
             if (this._cancelled) {
-                console.log("Text cancellation!");
                 this._cancelled = false;
                 results.partial = true;
                 onComplete(results);
@@ -211,7 +209,6 @@ export class SearchRequest {
     }
 
     public cancelSearch(): void {
-        console.log("cancelled");
         this._cancelled = true;
     }
 }
