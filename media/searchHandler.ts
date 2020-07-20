@@ -59,7 +59,8 @@ export class SearchHandler {
         // When the user presses a key trigger a search
         this.findTextBox.addEventListener("keyup", this.search.bind(this));
         this.replaceTextBox.addEventListener("keyup", this.updateReplaceButtons.bind(this));
-        this.replaceButton.addEventListener("click", this.replace.bind(this));
+        this.replaceButton.addEventListener("click", () => this.replace(false));
+        this.replaceAllButton.addEventListener("click", () => this.replace(true));
         this.stopSearchButton.addEventListener("click", this.cancelSearch.bind(this));
     }
 
@@ -69,19 +70,20 @@ export class SearchHandler {
     private async search(): Promise<void> {
         // This gets called to cancel any searches that might be going on now
         this.cancelSearch();
-        const query = this.findTextBox.value;
-        if (query.length === 0) return;
         SelectHandler.clearSelected();
         this.searchResults = [];
         this.updateReplaceButtons();
         this.findNextButton.classList.add("disabled");
         this.findPreviousButton.classList.add("disabled");
+        let query: string | string[] = this.findTextBox.value;
+        query = this.searchType === "hex" ? hexQueryToArray(query) : query;
+        if (query.length === 0) return;
         this.stopSearchButton.classList.remove("disabled");
         let results: number[][] = [];
         // This is wrapped in a try catch because if the message handler gets backed up this will reject
         try {
             results = (await messageHandler.postMessageWithResponse("search", {
-                query: this.searchType === "hex" ? hexQueryToArray(query) : query,
+                query: query,
                 type: this.searchType,
                 options: this.searchOptions
             }) as { results: SearchResults}).results.result;
@@ -240,8 +242,7 @@ export class SearchHandler {
      * @description Handles when the user clicks replace or replace all
      * @param {boolean} all whether this is a normal replace or a replace all 
      */
-    private async replace(): Promise<void> {
-        const all = false;
+    private async replace(all: boolean): Promise<void> {
         const replaceQuery = this.replaceTextBox.value;
         const replaceArray = this.searchType === "hex" ? hexQueryToArray(replaceQuery) : Array.from(replaceQuery);
         let replaceBits: number[] = [];
