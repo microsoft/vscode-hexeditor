@@ -76,6 +76,9 @@ export class SearchHandler {
         this.findNextButton.classList.add("disabled");
         this.findPreviousButton.classList.add("disabled");
         let query: string | string[] = this.findTextBox.value;
+        const hexSearchRegex = new RegExp("^[a-fA-F0-9?]+$", "g");
+        // We check to see if the hex is a valid query else we don't allow a search
+        if (this.searchType === "hex" && !hexSearchRegex.test(query.replace(" ", ""))) return; 
         query = this.searchType === "hex" ? hexQueryToArray(query) : query;
         if (query.length === 0) return;
         this.stopSearchButton.classList.remove("disabled");
@@ -229,7 +232,14 @@ export class SearchHandler {
      * @description Helper function which handles locking / unlocking the replace buttons
      */
     private updateReplaceButtons(): void {
-        if (this.searchResults.length !== 0 && this.replaceTextBox.value.trim().length !== 0) {
+        const hexReplaceRegex = new RegExp("^[a-fA-F0-9]+$", "g");
+        // If it's not a valid hex query we lock the buttons, we remove whitespace from the string to simplify the regex
+        if (this.searchType === "hex" && !hexReplaceRegex.test(this.replaceTextBox.value.replace(" ", ""))) {
+            this.replaceAllButton.classList.add("disabled");
+            this.replaceButton.classList.add("disabled");
+            return;
+        }
+        if (this.searchResults.length !== 0 && this.replaceTextBox.value.length !== 0) {
             this.replaceAllButton.classList.remove("disabled");
             this.replaceButton.classList.remove("disabled");
         } else {

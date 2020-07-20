@@ -337,7 +337,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				}
 			}
 			// After the replacement is complete we add it to the document's edit queue
-			this.makeEdit(edits);
+			if (edits.length !== 0) this.makeEdit(edits);
 		}
 		return allEdits;
 	}
