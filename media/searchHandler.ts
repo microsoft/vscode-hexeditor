@@ -76,9 +76,9 @@ export class SearchHandler {
         this.findNextButton.classList.add("disabled");
         this.findPreviousButton.classList.add("disabled");
         let query: string | string[] = this.findTextBox.value;
-        const hexSearchRegex = new RegExp("^[a-fA-F0-9?]+$", "g");
+        const hexSearchRegex = new RegExp("^[a-fA-F0-9? ]+$");
         // We check to see if the hex is a valid query else we don't allow a search
-        if (this.searchType === "hex" && !hexSearchRegex.test(query.replace(" ", ""))) return; 
+        if (this.searchType === "hex" && !hexSearchRegex.test(query)) return; 
         query = this.searchType === "hex" ? hexQueryToArray(query) : query;
         if (query.length === 0) return;
         this.stopSearchButton.classList.remove("disabled");
@@ -232,9 +232,10 @@ export class SearchHandler {
      * @description Helper function which handles locking / unlocking the replace buttons
      */
     private updateReplaceButtons(): void {
-        const hexReplaceRegex = new RegExp("^[a-fA-F0-9]+$", "g");
+        const hexReplaceRegex = new RegExp("^[a-fA-F0-9]+$");
         // If it's not a valid hex query we lock the buttons, we remove whitespace from the string to simplify the regex
-        if (this.searchType === "hex" && !hexReplaceRegex.test(this.replaceTextBox.value.replace(" ", ""))) {
+        const queryNoSpaces = this.replaceTextBox.value.replace(" ", "");
+        if (this.searchType === "hex" && !hexReplaceRegex.test(queryNoSpaces)) {
             this.replaceAllButton.classList.add("disabled");
             this.replaceButton.classList.add("disabled");
             return;
