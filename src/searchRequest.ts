@@ -3,7 +3,6 @@
 
 import { HexDocument } from "./hexDocument";
 
-
 // This is the same interface in the webviews search handler, we just currently do not share interfaces across the exthost and webview
 interface SearchOptions {
     regex: boolean;
@@ -17,7 +16,7 @@ export interface SearchResults {
 
 export class SearchRequest {
 
-    private _document: HexDocument;
+    private _documentDataWithEdits: number[];
     private _cancelled = false;
 
     // How many search results we will return
@@ -26,7 +25,7 @@ export class SearchRequest {
     private static _interruptTime  = 100;
     
     constructor(document: HexDocument) {
-        this._document = document;
+        this._documentDataWithEdits = document.documentDataWithEdits;
     }
 
     public async textSearch(query: string, options: SearchOptions): Promise<SearchResults> {
@@ -36,7 +35,7 @@ export class SearchRequest {
         };
         if (options.regex) {
             return new Promise((resolve) => {
-                this.regexTextSearch(query, options.caseSensitive, results, String.fromCharCode.apply(null, Array.from(this._document.documentData)), resolve);
+                this.regexTextSearch(query, options.caseSensitive, results, String.fromCharCode.apply(null, Array.from(this._documentDataWithEdits)), resolve);
             });
         } else {
             return new Promise((resolve) => {
@@ -65,15 +64,15 @@ export class SearchRequest {
     public normalHexSearch(query: string[], documentIndex: number, results: SearchResults, onComplete: (value: SearchResults) => void): void {
         const searchStart = Date.now();
         // We compare the query to every spot in the file finding matches
-        for (; documentIndex < this._document.documentData.length; documentIndex++) {
+        for (; documentIndex < this._documentDataWithEdits.length; documentIndex++) {
             const matchOffsets = [];
             for (let j = 0; j < query.length; j++) {
                 // Once there isn't enough room in the file for the query we return
-                if (documentIndex + j >= this._document.documentData.length) {
+                if (documentIndex + j >= this._documentDataWithEdits.length) {
                     onComplete(results);
                     return;
                 }
-                let hex = this._document.documentData[documentIndex+j].toString(16).toUpperCase();
+                let hex = this._documentDataWithEdits[documentIndex+j].toString(16).toUpperCase();
                 // ensures that 0D and D produce a match because we expect hex to be two characters
                 hex = hex.length !== 2 ? "0" + hex : hex; 
                 const currentComparison = query[j].toUpperCase();
@@ -163,15 +162,15 @@ export class SearchRequest {
     private normalTextSearch(query: string, caseSensitive: boolean, documentIndex: number, results: SearchResults, onComplete: (value: SearchResults) => void): void {
         const searchStart = Date.now();
         // We compare the query to every spot in the file finding matches
-        for (; documentIndex < this._document.documentData.length; documentIndex++) {
+        for (; documentIndex < this._documentDataWithEdits.length; documentIndex++) {
             const matchOffsets = [];
             for (let j = 0; j < query.length; j++) {
                 // Once there isn't enough room in the file for the query we return
-                if (documentIndex + j >= this._document.documentData.length) {
+                if (documentIndex + j >= this._documentDataWithEdits.length) {
                     onComplete(results);
                     return;
                 }
-                let ascii = String.fromCharCode(this._document.documentData[documentIndex+j]);
+                let ascii = String.fromCharCode(this._documentDataWithEdits[documentIndex+j]);
                 let currentComparison = query[j];
                 // Ignoring case we make them uppercase                
                 if (!caseSensitive) {

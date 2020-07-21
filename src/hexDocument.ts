@@ -112,6 +112,30 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	public get documentData(): Uint8Array { return this._documentData; }
 
+	/**
+	 * @description Function which returns the document data with unsaved edits applied on top
+	 */
+	public get documentDataWithEdits(): number[] {
+		// Map the edits into the document
+		const documentArray = Array.from(this.documentData);
+		const unsavedEdits = this._unsavedEdits.flat();
+		let removals: number[] = [];
+		for (const edit of unsavedEdits) {
+			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
+				documentArray[edit.offset] = edit.newValue;
+			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
+				documentArray.push(edit.newValue);
+			} else {
+				removals.push(edit.offset);
+			}
+		}
+		removals = removals.reverse();
+		for (const removal of removals) {
+			documentArray.splice(removal, 1);
+		}
+		return documentArray;
+	}
+
     private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
     /*
         Fires when the document is disposed of
@@ -234,26 +258,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * Called by VS Code when the user saves the document.
 	 */
 	async save(cancellation?: vscode.CancellationToken): Promise<void> {
-		// Map the edits into the document before saving
-		const documentArray = Array.from(this.documentData);
-		const unsavedEdits = this._unsavedEdits.flat();
-		let removals: number[] = [];
-		for (const edit of unsavedEdits) {
-			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
-				documentArray[edit.offset] = edit.newValue;
-			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
-				documentArray.push(edit.newValue);
-			} else {
-				removals.push(edit.offset);
-			}
-			
-			edit.sameOnDisk = true;
-		}
-		removals = removals.reverse();
-		for (const removal of removals) {
-			documentArray.splice(removal, 1);
-		}
-		this._documentData = new Uint8Array(documentArray);
+		// The document data is now the document data with edits appplied
+		this._documentData = new Uint8Array(this.documentDataWithEdits);
 		this._bytesize = this.documentData.length;
 		await this.saveAs(this.uri, cancellation);
 		this.lastSave = Date.now();
@@ -319,15 +325,17 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 */
 	public replace(replacement: number[], replaceOffsets: number[][], preserveCase: boolean): HexDocumentEdit[] {
 		const allEdits: HexDocumentEdit[] = [];
+		// We only want to call this once as it's sort of expensive so we save it
+		const documentDataWithEdits = this.documentDataWithEdits;
 		for (const offsets of replaceOffsets) {
 			const edits: HexDocumentEdit[] = [];
 			// Similar to copy and paste we do the most conservative replacement
 			// i.e if the replacement is smaller we don't try to fill the whole selection
 			for (let i = 0; i < replacement.length && i < offsets.length; i++) {
-				// If they're not the same on disk then we add it as an edit as something has been replaced
-				if (replacement[i] !== this._documentData[offsets[i]]) {
+				// If they're not the same as what is displayed then we add it as an edit as something has been replaced
+				if (replacement[i] !== documentDataWithEdits[offsets[i]]) {
 					const edit: HexDocumentEdit = {
-						oldValue: this._documentData[offsets[i]],
+						oldValue: documentDataWithEdits[offsets[i]],
 						newValue: replacement[i],
 						offset: offsets[i],
 						sameOnDisk: false
