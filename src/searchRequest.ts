@@ -20,7 +20,7 @@ export class SearchRequest {
     private _cancelled = false;
 
     // How many search results we will return
-    private static _searchResultLimit = 10000;
+    private static _searchResultLimit = 1;
     // How long we want to let the search run before interrupting it to check for cancellations
     private static _interruptTime  = 100;
     

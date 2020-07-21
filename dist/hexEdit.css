@@ -256,7 +256,7 @@ button:disabled {
 
 .bar > .input-glyph-group > input {
     height: 24px;
-    padding-right: var(--input-glyph-padding);
+    padding: 0px var(--input-glyph-padding) 0px 0px;
     width: calc(100% - var(--input-glyph-padding));
 }
 
@@ -301,4 +301,45 @@ button:disabled {
 .disabled {
     cursor: default;
     opacity: 40%;
+}
+
+.input-warning {
+    background-color: var(--vscode-inputValidation-warningBackground);
+    color: var(--vscode-inputValidation-warningForeground);
+    padding-left: 3px;
+    /* 100% - the padding */
+    width: calc(100% - 3px);
+    height: 60%;
+}
+
+.input-error {
+    background-color: var(--vscode-inputValidation-errorBackground);
+    padding-left: 3px;
+    color: var(--vscode-inputValidation-errorForeground);
+    height: 60%;
+    /* 100% - the padding */
+    width: calc(100% - 3px);
+}
+
+input.warning-border {
+    outline: none !important;
+    border: 1px solid var(--vscode-inputValidation-warningBorder);
+}
+input.error-border {
+    outline: none !important;
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+}
+
+.input-warning.warning-border {
+    outline: none !important;
+    border: 1px solid var(--vscode-inputValidation-warningBorder);
+    /* So we don't get a double thick border betweent the boxes */
+    border-top: 0px;
+}
+
+.input-error.error-border {
+    outline: none !important;
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    /* So we don't get a double thick border betweent the boxes */
+    border-top: 0px;
 }

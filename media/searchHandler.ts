@@ -62,6 +62,10 @@ export class SearchHandler {
         this.replaceButton.addEventListener("click", () => this.replace(false));
         this.replaceAllButton.addEventListener("click", () => this.replace(true));
         this.stopSearchButton.addEventListener("click", this.cancelSearch.bind(this));
+        // Hide the message boxes for now as at first we have no messages to display
+        document.getElementById("find-message-box")!.hidden = true;
+        document.getElementById("replace-message-box")!.hidden = true;
+
     }
 
     /**
@@ -69,6 +73,7 @@ export class SearchHandler {
      */
     private async search(): Promise<void> {
         // This gets called to cancel any searches that might be going on now
+        this.removeInputMessage("find");
         this.cancelSearch();
         SelectHandler.clearSelected();
         this.searchResults = [];
@@ -78,27 +83,37 @@ export class SearchHandler {
         let query: string | string[] = this.findTextBox.value;
         const hexSearchRegex = new RegExp("^[a-fA-F0-9? ]+$");
         // We check to see if the hex is a valid query else we don't allow a search
-        if (this.searchType === "hex" && !hexSearchRegex.test(query)) return; 
+        if (this.searchType === "hex" && !hexSearchRegex.test(query)) {
+            if (query.length > 0) this.addInputMessage("find", "Invalid query", "error");
+            return; 
+        }
         query = this.searchType === "hex" ? hexQueryToArray(query) : query;
-        if (query.length === 0) return;
+        if (query.length === 0) {
+            // If the user didn't type anything and its just a blank query we don't want to error on them
+            if (this.findTextBox.value.length > 0) this.addInputMessage("find", "Invalid query", "error");
+            return;
+        }
         this.stopSearchButton.classList.remove("disabled");
-        let results: number[][] = [];
+        let results: SearchResults;
         // This is wrapped in a try catch because if the message handler gets backed up this will reject
         try {
             results = (await messageHandler.postMessageWithResponse("search", {
                 query: query,
                 type: this.searchType,
                 options: this.searchOptions
-            }) as { results: SearchResults}).results.result;
+            }) as { results: SearchResults}).results;
         } catch {
             this.stopSearchButton.classList.add("disabled");
             return;
         }
+        if (results.partial) {
+            this.addInputMessage("find", "Partial results returned, try narrowing your query.", "warning");
+        }
         this.stopSearchButton.classList.add("disabled");
         this.resultIndex = 0;
-        this.searchResults = results;
+        this.searchResults = results.result;
         // If we got results then we select the first result and unlock the buttons
-        if (results.length !== 0) {
+        if (this.searchResults.length !== 0) {
             await virtualHexDocument.scrollDocumentToOffset(this.searchResults[this.resultIndex][0]);
             SelectHandler.multiSelect(this.searchResults[this.resultIndex], false);
             // If there's more than one search result we unlock the find next button
@@ -232,18 +247,23 @@ export class SearchHandler {
      * @description Helper function which handles locking / unlocking the replace buttons
      */
     private updateReplaceButtons(): void {
+        this.removeInputMessage("replace");
         const hexReplaceRegex = new RegExp("^[a-fA-F0-9]+$");
         // If it's not a valid hex query we lock the buttons, we remove whitespace from the string to simplify the regex
         const queryNoSpaces = this.replaceTextBox.value.replace(" ", "");
         if (this.searchType === "hex" && !hexReplaceRegex.test(queryNoSpaces)) {
             this.replaceAllButton.classList.add("disabled");
             this.replaceButton.classList.add("disabled");
+            if (this.replaceTextBox.value.length > 0) this.addInputMessage("replace", "Invalid query", "error");
             return;
         }
-        if (this.searchResults.length !== 0 && this.replaceTextBox.value.length !== 0) {
+        const replaceQuery = this.replaceTextBox.value;
+        const replaceArray = this.searchType === "hex" ? hexQueryToArray(replaceQuery) : Array.from(replaceQuery);
+        if (this.searchResults.length !== 0 && replaceArray.length !== 0) {
             this.replaceAllButton.classList.remove("disabled");
             this.replaceButton.classList.remove("disabled");
         } else {
+            if (this.replaceTextBox.value.length > 0 && replaceArray.length === 0) this.addInputMessage("replace", "Invalid query", "error");
             this.replaceAllButton.classList.add("disabled");
             this.replaceButton.classList.add("disabled");
         }
@@ -291,5 +311,34 @@ export class SearchHandler {
         dataTypeSelect.value = this.searchType;
         dataTypeSelect.dispatchEvent(new Event("change"));
         this.findTextBox.focus();
+    }
+
+    /**
+     * @description Adds an warning / error message to the input box passed in
+     * @param {"find" | "replace"} inputBoxName Whether it's the find input box or the replace input box 
+     * @param {string} message The message to display 
+     * @param {"error" | "warning"} type Whether it's an error message or a warning message
+     */
+    private addInputMessage(inputBoxName: "find" | "replace", message: string, type: "error" | "warning"): void {
+        const inputBox: HTMLInputElement = inputBoxName === "find" ? this.findTextBox : this.replaceTextBox;
+        const errorMessageBox = document.getElementById(`${inputBoxName}-message-box`) as HTMLDivElement;
+        errorMessageBox.innerText = message;
+        // Add the classes for proper styling of the message
+        inputBox.classList.add(`${type}-border`);
+        errorMessageBox.classList.add(`${type}-border`, `input-${type}`);
+        errorMessageBox.hidden = false;
+    }
+
+    /**
+     * @description Removes the warning / error message 
+     * @param {"find" | "replace"} inputBoxName Which input box to remove the message from 
+     */
+    private removeInputMessage(inputBoxName: "find" | "replace"): void {
+        const inputBox: HTMLInputElement = inputBoxName === "find" ? this.findTextBox : this.replaceTextBox;
+        const errorMessageBox = document.getElementById(`${inputBoxName}-message-box`) as HTMLDivElement;
+        // Add the classes for proper styling of the message
+        inputBox.classList.remove("error-border", "warning-border");
+        errorMessageBox.classList.remove("error-border", "warning-border", "input-warning", "input-error");
+        errorMessageBox.hidden = true;
     }
 }
