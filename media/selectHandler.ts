@@ -18,6 +18,8 @@ export class SelectHandler {
      */
     public static clearSelected(): void {
         document.querySelectorAll(".selected").forEach(element => element.classList.remove("selected"));
+        // Clear the webview's selection state
+        WebViewStateManager.setProperty("selected_offsets", []);
     }
 
     /**
@@ -35,7 +37,10 @@ export class SelectHandler {
             if (document.activeElement) {
                 (document.activeElement as HTMLElement).blur();
             }
-            WebViewStateManager.setProperty("selected_offset", undefined);
+            const currentSelectedOffsets = WebViewStateManager.getProperty("selected_offsets") as number[];
+            const offset = parseInt(elements[0].getAttribute("data-offset")!);
+            // We stop tracking that selection in the webview
+            WebViewStateManager.setProperty("selected_offsets", currentSelectedOffsets.splice(currentSelectedOffsets.indexOf(offset), 1));
             clearDataInspector();
             elements[0].classList.remove("selected");
             elements[1].classList.remove("selected");
@@ -61,7 +66,10 @@ export class SelectHandler {
      */
     private static selectOffset(offset: number): void {
         const elements = getElementsWithGivenOffset(offset);
-        WebViewStateManager.setProperty("selected_offset", offset);
+        // We add the offset to the selection
+        const selectedOffsets = WebViewStateManager.getProperty("selected_offsets");
+        selectedOffsets.push(offset);
+        WebViewStateManager.setProperty("selected_offsets", selectedOffsets);
         elements[0].classList.add("selected");
         elements[1].classList.add("selected");
     }
@@ -130,6 +138,7 @@ export class SelectHandler {
             selectedElements = document.getElementsByClassName("selected hex") as HTMLCollectionOf<HTMLSpanElement>; 
         }
         for (const element of selectedElements) {
+            if (element.innerText === "+") continue;
             selectedValue += element.innerText;
             if (section === "hex") selectedValue += " ";
         }

@@ -196,8 +196,9 @@ export class VirtualDocument {
         document.getElementById("ascii")?.appendChild(asciiFragment);
 
         if (WebViewStateManager.getState()) {
-            if (WebViewStateManager.getState().selected_offset) {
-                SelectHandler.singleSelect(WebViewStateManager.getState().selected_offset);
+            const selectedOffsets = WebViewStateManager.getProperty("selected_offsets") as number[];
+            if (selectedOffsets.length > 0) {
+                SelectHandler.multiSelect(selectedOffsets, false);
             }
             // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
             // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load

@@ -15,7 +15,7 @@ export class WebViewStateManager {
      * @param {any} propertyValue The value to store for the property
      */
     static setProperty(propertyName: string, propertyValue: any): void {
-        let currentState = typeof vscode.getState() === "string" ? JSON.parse(vscode.getState()) : vscode.getState();
+        let currentState = WebViewStateManager.getState();
         if (currentState === undefined) {
             currentState = { };
         }
@@ -35,5 +35,14 @@ export class WebViewStateManager {
      */
     static getState(): any {
         return typeof vscode.getState() === "string" ? JSON.parse(vscode.getState()) : vscode.getState();
+    }
+
+    /**
+     * @description Retrieves a property on the state object
+     * @param {string} propertyName The name of the property to retrieve the value of
+     */
+    static getProperty(propertyName: string): any {
+        const state =  WebViewStateManager.getState();
+        return state[propertyName];
     }
 }
