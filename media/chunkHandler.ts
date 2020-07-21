@@ -78,9 +78,9 @@ export class ChunkHandler {
      * @description Called by the virtualDocument to ensure there is bufferSize chunks above and below the offset provided
      * @param {number} offset The offset given to check the buffer around
      * @param {BufferOptions} bufferOpts The options describing how many chunks above and below the given offset you want
-     * @returns {number[]} An array of chunk starting positions which can be removed as they're outside the buffer
+     * @returns {Promise<{removed: number[]; requested: Promise<void[]>}>} A promise with an array of removed chunk starts and a promise which is awaiting the requested chunks
      */
-    public ensureBuffer(offset: number, bufferOpts: BufferOptions): number[] {
+    public async ensureBuffer(offset: number, bufferOpts: BufferOptions): Promise<{removed: number[]; requested: Promise<void[]>}> {
         const chunksToRequest: Set<number> = new Set<number>();
         const chunkStart = this.retrieveChunkStart(offset);
 
@@ -101,9 +101,13 @@ export class ChunkHandler {
         
         // We stop tracking the old chunks and we request the new ones
         chunksOutsideBuffer.forEach(chunk => this.removeChunk(chunk));
-        chunksToRequestArr.forEach(chunkOffset => this.requestMoreChunks(chunkOffset));
-
-        return chunksOutsideBuffer;
+        const requested: Promise<void>[] = [];
+        chunksToRequestArr.forEach(chunkOffset => requested.push(this.requestMoreChunks(chunkOffset)));
+        const result = {
+            removed: chunksOutsideBuffer,
+            requested: Promise.all(requested)
+        };
+        return result;
     }
 
     /**

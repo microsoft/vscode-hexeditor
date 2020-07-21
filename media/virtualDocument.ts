@@ -9,6 +9,7 @@ import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
 import { WebViewStateManager } from "./webviewStateManager";
 import { SelectHandler } from "./selectHandler";
+import { SearchHandler } from "./searchHandler";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -27,6 +28,7 @@ export class VirtualDocument {
     private readonly scrollBarHandler: ScrollBarHandler;
     private readonly editHandler: EditHandler;
     private readonly selectHandler: SelectHandler;
+    private readonly searchHandler: SearchHandler;
     private rows: Map<string, HTMLDivElement>[];
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -36,6 +38,7 @@ export class VirtualDocument {
         this.fileSize = fileSize;
         this.editHandler = new EditHandler();
         this.selectHandler = new SelectHandler();
+        this.searchHandler = new SearchHandler();
         // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
         this.rows = [];
         for (let i = 0; i < 3; i++) {
@@ -48,17 +51,22 @@ export class VirtualDocument {
         const oldHexAddrHtml = hexaddr.innerHTML;
         const oldHexHtml = hex.innerHTML;
         const oldAsciiHtml = ascii.innerHTML;
+        // We have to set the ascii columns width to be large before appending the ascii or else it wraps and messes up the width calculation
+        // This is a change in the next gen layout engine
+        ascii.style.width = "500px";
         const row = document.createElement("div");
         const asciiRow = document.createElement("div");
         const hexAddrRow = document.createElement("div");
         hexAddrRow.className = "row";
         asciiRow.className = "row";
         row.className = "row";
+        // For ascii we want to test more than just one character as sometimes that doesn't set the width correctly
+        const asciiTestString = "Testing String!!";
         for (let i = 0; i < 16; i++) {
             const hex_element = document.createElement("span");
             const ascii_element = document.createElement("span");
             hex_element.innerText = "FF";
-            ascii_element.innerText = "A";
+            ascii_element.innerText = asciiTestString[i];
             asciiRow.appendChild(ascii_element);
             row.appendChild(hex_element);
         }
@@ -72,10 +80,10 @@ export class VirtualDocument {
         const spans = document.getElementsByTagName("span");
         this.rowHeight = spans[16].offsetHeight;
         // Utilize the fake rows to get the widths of them and alter the widths of the headers etc to fit
-        const asciiRowWidth = asciiRow.offsetWidth;
+        // The plus one is because the new layout engine in chrome would wrap the text otherwise which I'm unsure why
+        const asciiRowWidth = asciiRow.offsetWidth + 1;
         const hexRowWidth = spans[16].parentElement!.offsetWidth;
         // Calculate document height, we max out at 500k due to browser limitations on large div
-        //this.documentHeight = Math.min(Math.ceil(this.fileSize / 16) * this.rowHeight, 500000);
         this.documentHeight = 500000;
         // Calculate the padding needed to make the offset column right aligned
         this.hexAddrPadding = hexAddrRow.parentElement!.clientWidth - hexAddrRow.clientWidth;
@@ -96,6 +104,12 @@ export class VirtualDocument {
         const rowWrappers = document.getElementsByClassName("rowwrapper") as HTMLCollectionOf<HTMLDivElement>;
         // Sets the hexaddr column to the same width as its header ( the + 1 is needed to )
         rowWrappers[0].style.width = `${(document.getElementsByClassName("header")[0] as HTMLElement).offsetWidth}px`;
+        // We remove the text from the header to make it look like it's not there
+        const headerHeight = (document.getElementsByClassName("header")[0] as HTMLElement).offsetHeight;
+        (document.getElementsByClassName("header")[0] as HTMLElement).innerText= "";
+        (document.getElementsByClassName("header")[0] as HTMLElement).style.width = `${rowWrappers[0].style.width}px`;
+        // Minus 1 accounts for the border
+        (document.getElementsByClassName("header")[0] as HTMLElement).style.height = `${headerHeight - 1}px`;
         rowWrappers[0].style.height = `${this.documentHeight}px`;
         // This is the hex section
         (document.getElementsByClassName("header")[1] as HTMLElement).style.width = `${hexRowWidth}px`;
@@ -182,8 +196,9 @@ export class VirtualDocument {
         document.getElementById("ascii")?.appendChild(asciiFragment);
 
         if (WebViewStateManager.getState()) {
-            if (WebViewStateManager.getState().selected_offset) {
-                SelectHandler.singleSelect(WebViewStateManager.getState().selected_offset);
+            const selectedOffsets = WebViewStateManager.getProperty("selected_offsets") as number[];
+            if (selectedOffsets.length > 0) {
+                SelectHandler.multiSelect(selectedOffsets, false);
             }
             // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
             // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load
@@ -224,13 +239,14 @@ export class VirtualDocument {
     /**
      * @description Gets executed everytime the document is scrolled, this talks to the data layer to request more packets
      */
-    scrollHandler(): void {
+    public async scrollHandler(): Promise<void[]> {
         // We want to ensure there are at least 2 chunks above us and 4 chunks below us
         // These numbers were chosen arbitrarily under the assumption that scrolling down is more common
-        const removedChunks: number[] = chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
+        const chunkHandlerResponse = await chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
             topBufferSize: 2,
             bottomBufferSize: 4
         });
+        const removedChunks: number[] = chunkHandlerResponse.removed;
         // We remove the chunks from the DOM as the chunk handler is no longer tracking them
         for (const chunk of removedChunks) {
             for (let i = chunk; i < chunk + chunkHandler.chunkSize; i += 16) {
@@ -242,6 +258,7 @@ export class VirtualDocument {
                 this.rows[2].delete(i.toString());
             }
         }
+        return chunkHandlerResponse.requested;
     }
 
     /**
@@ -359,7 +376,10 @@ export class VirtualDocument {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         const modifierKeyPressed = event.metaKey || event.altKey || event.ctrlKey;
-        if (event.keyCode >= 37 && event.keyCode <= 40) {
+        // If the user presses ctrl / cmd + f we focus the search box and change the dropdown
+        if ((event.metaKey || event.ctrlKey) && event.key === "f") {
+            this.searchHandler.searchKeybindingHandler();
+        } else if (event.keyCode >= 37 && event.keyCode <= 40) {
             this.arrowKeyNavigate(event.keyCode, targetElement);
             event.preventDefault();
         // If the user presses Home we go to the front of the line
@@ -471,7 +491,7 @@ export class VirtualDocument {
 
     /**
      * @description Redoes the given edits from the document
-     * @param {EditMessage[]} edits The edits that will be r
+     * @param {EditMessage[]} edits The edits that will be redone
      * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone 
      */
     public redo(edits: EditMessage[], fileSize: number): void {
@@ -581,4 +601,7 @@ export class VirtualDocument {
         }
     }
 
+    public async scrollDocumentToOffset(offset: number): Promise<void[]> {
+        return this.scrollBarHandler.scrollToOffset(offset);
+    }
 }

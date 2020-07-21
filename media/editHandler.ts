@@ -276,6 +276,7 @@ export class EditHandler {
      */
     public copy(event: ClipboardEvent): void {
         event.clipboardData?.setData("text/json", JSON.stringify(SelectHandler.getSelectedHex()));
+        event.clipboardData?.setData("text/plain", SelectHandler.getSelectedValue());
         event.preventDefault();
     }
 

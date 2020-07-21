@@ -18,6 +18,8 @@ export class SelectHandler {
      */
     public static clearSelected(): void {
         document.querySelectorAll(".selected").forEach(element => element.classList.remove("selected"));
+        // Clear the webview's selection state
+        WebViewStateManager.setProperty("selected_offsets", []);
     }
 
     /**
@@ -35,7 +37,10 @@ export class SelectHandler {
             if (document.activeElement) {
                 (document.activeElement as HTMLElement).blur();
             }
-            WebViewStateManager.setProperty("selected_offset", undefined);
+            const currentSelectedOffsets = WebViewStateManager.getProperty("selected_offsets") as number[];
+            const offset = parseInt(elements[0].getAttribute("data-offset")!);
+            // We stop tracking that selection in the webview
+            WebViewStateManager.setProperty("selected_offsets", currentSelectedOffsets.splice(currentSelectedOffsets.indexOf(offset), 1));
             clearDataInspector();
             elements[0].classList.remove("selected");
             elements[1].classList.remove("selected");
@@ -61,7 +66,10 @@ export class SelectHandler {
      */
     private static selectOffset(offset: number): void {
         const elements = getElementsWithGivenOffset(offset);
-        WebViewStateManager.setProperty("selected_offset", offset);
+        // We add the offset to the selection
+        const selectedOffsets = WebViewStateManager.getProperty("selected_offsets");
+        selectedOffsets.push(offset);
+        WebViewStateManager.setProperty("selected_offsets", selectedOffsets);
         elements[0].classList.add("selected");
         elements[1].classList.add("selected");
     }
@@ -104,5 +112,39 @@ export class SelectHandler {
             hex.push(selected[i].innerText);
         }
         return hex;
+    }
+
+    /**
+     * @description Focuses the first element in the current selection based on the section passed in
+     * @param section {"hex" | "ascii"} The section to place the focus
+     */
+    public static focusSelection(section: "hex" | "ascii"): void {
+        const selection = document.getElementsByClassName(`selected ${section}`);
+        if (selection.length !== 0) (selection[0] as HTMLSpanElement).focus();
+    }
+
+    /**
+     * @description Retrieves the selection as a string, defaults to hex if there is no focus on either side
+     * @returns {string} The selection represented as a string
+     */
+    public static getSelectedValue(): string {
+        let selectedValue = "";
+        let section = "hex";
+        let selectedElements: HTMLCollectionOf<HTMLSpanElement>;
+        if (document.activeElement?.classList.contains("ascii")) {
+            section = "ascii";
+            selectedElements = document.getElementsByClassName("selected ascii") as HTMLCollectionOf<HTMLSpanElement>;
+        } else {
+            selectedElements = document.getElementsByClassName("selected hex") as HTMLCollectionOf<HTMLSpanElement>; 
+        }
+        for (const element of selectedElements) {
+            if (element.innerText === "+") continue;
+            selectedValue += element.innerText;
+            if (section === "hex") selectedValue += " ";
+        }
+        // If it's hex we want to remove the last space as it doesn't make sense
+        // For ascii that space might have meaning
+        if (section === "hex") selectedValue = selectedValue.trimRight();
+        return selectedValue;
     }
 }

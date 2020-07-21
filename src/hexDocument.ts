@@ -4,6 +4,7 @@
 import * as vscode from "vscode";
 import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
+import { SearchProvider } from "./searchProvider";
 
 /**
  * @description Helper function to compare two arrays
@@ -11,7 +12,7 @@ import TelemetryReporter from "vscode-extension-telemetry";
  * @param arr2 Second array to compare
  * @returns Whether or not they're equal
  */
-function arrayCompare(arr1: HexDocumentEdits[] | undefined, arr2: HexDocumentEdits[] | undefined): boolean {
+function arrayCompare(arr1: HexDocumentEdit[] | undefined, arr2: HexDocumentEdit[] | undefined): boolean {
 	if (arr1 === undefined || arr2 === undefined) return arr1 === arr2;
 	if (arr1.length !== arr2.length) return false;
 	for (let i = 0; i < arr1.length; i++) {
@@ -24,7 +25,7 @@ function arrayCompare(arr1: HexDocumentEdits[] | undefined, arr2: HexDocumentEdi
 	return true;
 }
 
-export interface HexDocumentEdits {
+export interface HexDocumentEdit {
 	oldValue: number | undefined;
 	newValue: number | undefined;
 	readonly offset: number;
@@ -50,7 +51,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
 		let fileData: Uint8Array;
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number ) * 1000000;
-		let unsavedEdits: HexDocumentEdits[][] = [];
+		let unsavedEdits: HexDocumentEdit[][] = [];
 		// If there's a backup the user already hit open anyways so we will open it even if above max file size
 		if (fileSize > maxFileSize && !backupId) {
 			fileData = new Uint8Array();
@@ -70,18 +71,19 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	private _documentData: Uint8Array;
 
-	private _edits: HexDocumentEdits[][] = [];
-	private _unsavedEdits: HexDocumentEdits[][] = [];
+	private _edits: HexDocumentEdit[][] = [];
+	private _unsavedEdits: HexDocumentEdit[][] = [];
 
 	// Last save time
 	public lastSave = Date.now();
 
+	public readonly searchProvider: SearchProvider;
 
 	private constructor(
 		uri: vscode.Uri,
 		initialContent: Uint8Array,
 		fileSize: number,
-		unsavedEdits: HexDocumentEdits[][]
+		unsavedEdits: HexDocumentEdit[][]
 	) {
 		super();
 		this._uri = uri;
@@ -90,6 +92,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._unsavedEdits = unsavedEdits;
 		// If we don't do this Array.from casting then both will reference the same array causing bad behavior
 		this._edits = Array.from(unsavedEdits);
+		this.searchProvider = new SearchProvider(this);
     }
     
 	public get uri(): vscode.Uri { return this._uri; }
@@ -108,6 +111,30 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	}
 
 	public get documentData(): Uint8Array { return this._documentData; }
+
+	/**
+	 * @description Function which returns the document data with unsaved edits applied on top
+	 */
+	public get documentDataWithEdits(): number[] {
+		// Map the edits into the document
+		const documentArray = Array.from(this.documentData);
+		const unsavedEdits = this._unsavedEdits.flat();
+		let removals: number[] = [];
+		for (const edit of unsavedEdits) {
+			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
+				documentArray[edit.offset] = edit.newValue;
+			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
+				documentArray.push(edit.newValue);
+			} else {
+				removals.push(edit.offset);
+			}
+		}
+		removals = removals.reverse();
+		for (const removal of removals) {
+			documentArray.splice(removal, 1);
+		}
+		return documentArray;
+	}
 
     private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
     /*
@@ -128,13 +155,12 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._documentData = await vscode.workspace.fs.readFile(this.uri);
 	}
 
-	public get unsavedEdits(): HexDocumentEdits[][] { return this._unsavedEdits; }
+	public get unsavedEdits(): HexDocumentEdit[][] { return this._unsavedEdits; }
 
 	private readonly _onDidChangeDocument = this._register(new vscode.EventEmitter<{
 		readonly fileSize: number;
 		readonly type: "redo" | "undo" | "revert";
-		readonly content?: Uint8Array;
-		readonly edits: readonly HexDocumentEdits[];
+		readonly edits: readonly HexDocumentEdit[];
 	}>());
 
 	/**
@@ -159,7 +185,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * 
 	 * This fires an event to notify VS Code that the document has been edited.
 	 */
-	makeEdit(edits: HexDocumentEdits[]): void {
+	makeEdit(edits: HexDocumentEdit[]): void {
 		edits.forEach(e => e.sameOnDisk = false);
 		this._edits.push(edits);
 		this._unsavedEdits.push(edits);
@@ -174,7 +200,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 					this._unsavedEdits.pop();
 					removedFromUnsaved = true;
 				}
-				const unsavedEdits: HexDocumentEdits[] = [];
+				const unsavedEdits: HexDocumentEdit[] = [];
 				for (const edit of undoneEdits) {
 					// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
 					edit.sameOnDisk = edit.oldValue !== undefined && edit.oldValue === this.documentData[edit.offset] || false;
@@ -201,7 +227,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				if (this._unsavedEdits[this._unsavedEdits.length - 1] !== undefined) {
 					// We have to flip the old in new values because redone is reapplying them so they will be exact opposites
 					// This allows us to then compare them
-					let unsavedEdits: HexDocumentEdits[] = [...this._unsavedEdits[this._unsavedEdits.length - 1]];
+					let unsavedEdits: HexDocumentEdit[] = this._unsavedEdits[this._unsavedEdits.length - 1].slice(0);
 					unsavedEdits = unsavedEdits.map((e) => {
 						if (e.newValue === undefined && e.oldValue !== undefined) {
 							e.newValue = e.oldValue;
@@ -217,7 +243,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 					// If they're not the same as what's on disk then they're unsaved and need to be tracked
 					if (!edit.sameOnDisk) unsavedEdits.push(edit);
 				}
-				this._unsavedEdits.push(unsavedEdits);
+				// Means the entire redo is the same on disk so we don't add the edit as unsaved
+				if (unsavedEdits.length !== 0) this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					type: "redo",
@@ -231,26 +258,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * Called by VS Code when the user saves the document.
 	 */
 	async save(cancellation?: vscode.CancellationToken): Promise<void> {
-		// Map the edits into the document before saving
-		const documentArray = Array.from(this.documentData);
-		const unsavedEdits = this._unsavedEdits.flat();
-		let removals: number[] = [];
-		for (const edit of unsavedEdits) {
-			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
-				documentArray[edit.offset] = edit.newValue;
-			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
-				documentArray.push(edit.newValue);
-			} else {
-				removals.push(edit.offset);
-			}
-			
-			edit.sameOnDisk = true;
-		}
-		removals = removals.reverse();
-		for (const removal of removals) {
-			documentArray.splice(removal, 1);
-		}
-		this._documentData = new Uint8Array(documentArray);
+		// The document data is now the document data with edits appplied
+		this._documentData = new Uint8Array(this.documentDataWithEdits);
 		this._bytesize = this.documentData.length;
 		await this.saveAs(this.uri, cancellation);
 		this.lastSave = Date.now();
@@ -305,5 +314,51 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				}
 			}
 		};
+	}
+
+	/**
+	 * @description Handles replacement within the document when the user clicks the replace / replace all button
+	 * @param {number[]} replacement The new values which will be replacing the old 
+	 * @param {number[][]} replaceOffsets The offsets to replace with replacement 
+	 * @param {boolean} preserveCase Whether or not to preserve case 
+	 * @returns {HexDocumentEdit[]} the new edits so we can send them back to the webview for application
+	 */
+	public replace(replacement: number[], replaceOffsets: number[][], preserveCase: boolean): HexDocumentEdit[] {
+		const allEdits: HexDocumentEdit[] = [];
+		// We only want to call this once as it's sort of expensive so we save it
+		const documentDataWithEdits = this.documentDataWithEdits;
+		for (const offsets of replaceOffsets) {
+			const edits: HexDocumentEdit[] = [];
+			// Similar to copy and paste we do the most conservative replacement
+			// i.e if the replacement is smaller we don't try to fill the whole selection
+			for (let i = 0; i < replacement.length && i < offsets.length; i++) {
+				// If we preserve case we make sure that the characters match the case of the original values
+				if (preserveCase) {
+					const replacementChar = String.fromCharCode(replacement[i]);
+					const currentDocumentChar = String.fromCharCode(documentDataWithEdits[offsets[i]]);
+					// We need to check that the inverse isn't true because things like numbers return true for both
+					if (currentDocumentChar.toUpperCase() === currentDocumentChar && currentDocumentChar.toLowerCase() != currentDocumentChar) {
+						replacement[i] = replacementChar.toUpperCase().charCodeAt(0);
+					} else if(currentDocumentChar.toLowerCase() === currentDocumentChar && currentDocumentChar.toUpperCase() != currentDocumentChar) {
+						replacement[i] = replacementChar.toLowerCase().charCodeAt(0);
+					}
+				}
+
+				// If they're not the same as what is displayed then we add it as an edit as something has been replaced
+				if (replacement[i] !== documentDataWithEdits[offsets[i]]) {
+					const edit: HexDocumentEdit = {
+						oldValue: documentDataWithEdits[offsets[i]],
+						newValue: replacement[i],
+						offset: offsets[i],
+						sameOnDisk: false
+					};
+					edits.push(edit);
+					allEdits.push(edit);
+				}
+			}
+			// After the replacement is complete we add it to the document's edit queue
+			if (edits.length !== 0) this.makeEdit(edits);
+		}
+		return allEdits;
 	}
 }

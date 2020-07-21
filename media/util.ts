@@ -174,3 +174,22 @@ export function createOffsetRange(startOffset: number, endOffset: number): numbe
     }
     return offsetsToSelect;
 }
+
+/**
+ * @description Converts a hex query to a string array ignoring spaces, if not evenly divisible we return an empty array to signify it's invalid
+ * @param {string} query The query to convert to an array
+ */
+export function hexQueryToArray(query: string): string[] {
+    let currentCharacterSequence = "";
+    const queryArray: string[] = [];
+    for (let i = 0; i < query.length; i++) {
+        if (query[i] === " ") continue;
+        currentCharacterSequence += query[i];
+        if (currentCharacterSequence.length === 2) {
+            queryArray.push(currentCharacterSequence);
+            currentCharacterSequence = "";
+        }
+    }
+    if (currentCharacterSequence.length > 0 ) return [];
+    return queryArray;
+}
