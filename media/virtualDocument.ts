@@ -51,17 +51,22 @@ export class VirtualDocument {
         const oldHexAddrHtml = hexaddr.innerHTML;
         const oldHexHtml = hex.innerHTML;
         const oldAsciiHtml = ascii.innerHTML;
+        // We have to set the ascii columns width to be large before appending the ascii or else it wraps and messes up the width calculation
+        // This is a change in the next gen layout engine
+        ascii.style.width = "500px";
         const row = document.createElement("div");
         const asciiRow = document.createElement("div");
         const hexAddrRow = document.createElement("div");
         hexAddrRow.className = "row";
         asciiRow.className = "row";
         row.className = "row";
+        // For ascii we want to test more than just one character as sometimes that doesn't set the width correctly
+        const asciiTestString = "Testing String!!";
         for (let i = 0; i < 16; i++) {
             const hex_element = document.createElement("span");
             const ascii_element = document.createElement("span");
             hex_element.innerText = "FF";
-            ascii_element.innerText = "A";
+            ascii_element.innerText = asciiTestString[i];
             asciiRow.appendChild(ascii_element);
             row.appendChild(hex_element);
         }
@@ -75,10 +80,10 @@ export class VirtualDocument {
         const spans = document.getElementsByTagName("span");
         this.rowHeight = spans[16].offsetHeight;
         // Utilize the fake rows to get the widths of them and alter the widths of the headers etc to fit
-        const asciiRowWidth = asciiRow.offsetWidth;
+        // The plus one is because the new layout engine in chrome would wrap the text otherwise which I'm unsure why
+        const asciiRowWidth = asciiRow.offsetWidth + 1;
         const hexRowWidth = spans[16].parentElement!.offsetWidth;
         // Calculate document height, we max out at 500k due to browser limitations on large div
-        //this.documentHeight = Math.min(Math.ceil(this.fileSize / 16) * this.rowHeight, 500000);
         this.documentHeight = 500000;
         // Calculate the padding needed to make the offset column right aligned
         this.hexAddrPadding = hexAddrRow.parentElement!.clientWidth - hexAddrRow.clientWidth;

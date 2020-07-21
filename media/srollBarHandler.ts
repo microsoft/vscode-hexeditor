@@ -66,6 +66,8 @@ export class ScrollBarHandler {
      * @param {MouseEvent} event The mouse event passed to the event handler
      */
     private scrollThumbDrag(event: MouseEvent): void {
+        // if these are equal it means the document is too short to scroll anyways
+        if (this.scrollBarHeight === this.scrollThumbHeight) return;
         // This helps the case where we lose track as the user releases the button outside the webview
         if (!this.isDragging || event.buttons == 0){
             this.isDragging = false;
@@ -96,6 +98,8 @@ export class ScrollBarHandler {
      * @param {MouseWheelEvent} event The event containing information about the scroll passed to the event handler
      */
     private onMouseWheel(event: MouseWheelEvent): void {
+        // if these are equal it means the document is too short to scroll anyways
+        if (this.scrollBarHeight === this.scrollThumbHeight) return;
         if (Math.abs(event.deltaX) !== 0 || event.shiftKey) return;
         if (event.deltaY > 0) {
             this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
