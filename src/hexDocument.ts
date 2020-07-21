@@ -332,6 +332,18 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			// Similar to copy and paste we do the most conservative replacement
 			// i.e if the replacement is smaller we don't try to fill the whole selection
 			for (let i = 0; i < replacement.length && i < offsets.length; i++) {
+				// If we preserve case we make sure that the characters match the case of the original values
+				if (preserveCase) {
+					const replacementChar = String.fromCharCode(replacement[i]);
+					const currentDocumentChar = String.fromCharCode(documentDataWithEdits[offsets[i]]);
+					// We need to check that the inverse isn't true because things like numbers return true for both
+					if (currentDocumentChar.toUpperCase() === currentDocumentChar && currentDocumentChar.toLowerCase() != currentDocumentChar) {
+						replacement[i] = replacementChar.toUpperCase().charCodeAt(0);
+					} else if(currentDocumentChar.toLowerCase() === currentDocumentChar && currentDocumentChar.toUpperCase() != currentDocumentChar) {
+						replacement[i] = replacementChar.toLowerCase().charCodeAt(0);
+					}
+				}
+
 				// If they're not the same as what is displayed then we add it as an edit as something has been replaced
 				if (replacement[i] !== documentDataWithEdits[offsets[i]]) {
 					const edit: HexDocumentEdit = {

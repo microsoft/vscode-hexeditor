@@ -274,7 +274,7 @@ export class SearchHandler {
         const edits = (await messageHandler.postMessageWithResponse("replace", {
             query: replaceBits,
             offsets: offsets,
-            preserveCase: false
+            preserveCase: this.preserveCase
         })).edits;
         // We can pass the size of the document back in because with the current implementation
         // The size of the document will never change as we only replace preexisting cells
