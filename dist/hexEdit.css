@@ -46,6 +46,7 @@ body:not(#editor-container) {
 
 .grid-item {
     text-align: left;
+    margin-bottom: -1px;
 }
 
 .grid-item:nth-child(2n) {
