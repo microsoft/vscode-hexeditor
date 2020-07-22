@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 import { HexDocument } from "./hexDocument";
+import { resolve } from "path";
 
 // This is the same interface in the webviews search handler, we just currently do not share interfaces across the exthost and webview
 interface SearchOptions {
@@ -103,7 +104,7 @@ export class SearchRequest {
             }
             // If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
             if ((Date.now() - searchStart) > SearchRequest._interruptTime) {
-                setImmediate(this.hexSearch.bind(this), query, documentIndex, results);
+                setImmediate(() => this.normalHexSearch(query, documentIndex, results, onComplete));
                 return undefined;
             }
         }
@@ -139,7 +140,7 @@ export class SearchRequest {
             }
             // If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
             if ((Date.now() - searchStart) > SearchRequest._interruptTime) {
-                setImmediate(this.regexTextSearch.bind(this), query, caseSensitive, results, documentString.substr(regex.lastIndex), onComplete);
+                setImmediate(() => this.regexTextSearch(query, caseSensitive, results, documentString, onComplete));
                 return;
             }
             // We stop calculating results after we hit the limit and just call it a partial response
@@ -149,6 +150,8 @@ export class SearchRequest {
                 return;
             }
         }
+        onComplete(results);
+        return;
     }
     
     /**

@@ -195,8 +195,6 @@ export class SearchHandler {
         // Toggle Regex
         document.getElementById("regex-icon")?.addEventListener("click", (event: MouseEvent) => {
             const regexIcon = event.target as HTMLSpanElement;
-            // The user is changing an option so we should trigger another search
-            this.search();
             if (regexIcon.classList.contains("toggled")) {
                 this.searchOptions.regex = false;
                 regexIcon.classList.remove("toggled");
@@ -204,12 +202,12 @@ export class SearchHandler {
                 this.searchOptions.regex = true;
                 regexIcon.classList.add("toggled");
             }
+            // The user is changing an option so we should trigger another search
+            this.search();
         });
         // Toggle case sensitive
         document.getElementById("case-sensitive")?.addEventListener("click", (event: MouseEvent) => {
             const caseSensitive = event.target as HTMLSpanElement;
-            // The user is changing an option so we should trigger another search
-            this.search();
             if (caseSensitive.classList.contains("toggled")) {
                 this.searchOptions.caseSensitive = false;
                 caseSensitive.classList.remove("toggled");
@@ -217,6 +215,8 @@ export class SearchHandler {
                 this.searchOptions.caseSensitive = true;
                 caseSensitive.classList.add("toggled");
             }
+            // The user is changing an option so we should trigger another search
+            this.search();
         });
     }
 
