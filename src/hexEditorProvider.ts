@@ -215,7 +215,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private getBodyHTML(): string {
 		return `
 		<div class="column left">
-			<div class="header">Memory Offset </div>
+			<div class="header">00000000</div>
 			<div class="rowwrapper" id="hexaddr">
 			</div>
 		</div>

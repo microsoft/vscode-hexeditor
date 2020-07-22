@@ -64,6 +64,9 @@ body:not(#editor-container) {
     color: var(--vscode-editorLineNumber-foreground);
 }
 
+.left > .header {
+    border-bottom: none;
+}
 
 #hexbody > .row > span {
     padding: 4px;

@@ -96,6 +96,7 @@ export class SearchHandler {
         }
         this.stopSearchButton.classList.remove("disabled");
         let results: SearchResults;
+        this.removeInputMessage("find");
         // This is wrapped in a try catch because if the message handler gets backed up this will reject
         try {
             results = (await messageHandler.postMessageWithResponse("search", {
@@ -103,15 +104,13 @@ export class SearchHandler {
                 type: this.searchType,
                 options: this.searchOptions
             }) as { results: SearchResults}).results;
-        } catch {
+        } catch(err) {
             this.stopSearchButton.classList.add("disabled");
             this.addInputMessage("find", "Search returned an error!", "error");
             return;
         }
         if (results.partial) {
             this.addInputMessage("find", "Partial results returned, try\n narrowing your query.", "warning");
-        } else {
-            this.removeInputMessage("find");
         }
         this.stopSearchButton.classList.add("disabled");
         this.resultIndex = 0;

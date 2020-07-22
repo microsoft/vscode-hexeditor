@@ -108,8 +108,8 @@ export class VirtualDocument {
         const headerHeight = (document.getElementsByClassName("header")[0] as HTMLElement).offsetHeight;
         (document.getElementsByClassName("header")[0] as HTMLElement).innerText= "";
         (document.getElementsByClassName("header")[0] as HTMLElement).style.width = `${rowWrappers[0].style.width}px`;
-        // Minus 1 accounts for the border
-        (document.getElementsByClassName("header")[0] as HTMLElement).style.height = `${headerHeight - 1}px`;
+        // The plus one is to account for all other headers having borders
+        (document.getElementsByClassName("header")[0] as HTMLElement).style.height = `${headerHeight + 1}px`;
         rowWrappers[0].style.height = `${this.documentHeight}px`;
         // This is the hex section
         (document.getElementsByClassName("header")[1] as HTMLElement).style.width = `${hexRowWidth}px`;
