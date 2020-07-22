@@ -251,13 +251,15 @@ button:disabled {
 
 .input-glyph-group {
     position: relative;
+    height: 100%;
     flex: 1;
 }
 
 .bar > .input-glyph-group > input {
     height: 24px;
-    padding: 0px var(--input-glyph-padding) 0px 0px;
-    width: calc(100% - var(--input-glyph-padding));
+    padding: 0px var(--input-glyph-padding) 0px 3px;
+    /* -3px takes off the added length due to the left padding */
+    width: calc(100% - var(--input-glyph-padding) - 3px);
 }
 
 .bar-glyphs {
@@ -306,6 +308,8 @@ button:disabled {
 .input-warning {
     background-color: var(--vscode-inputValidation-warningBackground);
     color: var(--vscode-inputValidation-warningForeground);
+    padding-top: 3px;
+    padding-bottom: 3px;
     padding-left: 3px;
     /* 100% - the padding */
     width: calc(100% - 3px);
@@ -314,6 +318,8 @@ button:disabled {
 
 .input-error {
     background-color: var(--vscode-inputValidation-errorBackground);
+    padding-top: 3px;
+    padding-bottom: 3px;
     padding-left: 3px;
     color: var(--vscode-inputValidation-errorForeground);
     height: 60%;

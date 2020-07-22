@@ -72,8 +72,9 @@ export class SearchHandler {
      * @description Sends a search request to the exthost
      */
     private async search(): Promise<void> {
+        // If the box is empty no need to display any warnings
+        if (this.findTextBox.value === "") this.removeInputMessage("find");
         // This gets called to cancel any searches that might be going on now
-        this.removeInputMessage("find");
         this.cancelSearch();
         SelectHandler.clearSelected();
         this.searchResults = [];
@@ -104,10 +105,13 @@ export class SearchHandler {
             }) as { results: SearchResults}).results;
         } catch {
             this.stopSearchButton.classList.add("disabled");
+            this.addInputMessage("find", "Search returned an error!", "error");
             return;
         }
         if (results.partial) {
-            this.addInputMessage("find", "Partial results returned, try narrowing your query.", "warning");
+            this.addInputMessage("find", "Partial results returned, try\n narrowing your query.", "warning");
+        } else {
+            this.removeInputMessage("find");
         }
         this.stopSearchButton.classList.add("disabled");
         this.resultIndex = 0;
@@ -321,24 +325,34 @@ export class SearchHandler {
      */
     private addInputMessage(inputBoxName: "find" | "replace", message: string, type: "error" | "warning"): void {
         const inputBox: HTMLInputElement = inputBoxName === "find" ? this.findTextBox : this.replaceTextBox;
-        const errorMessageBox = document.getElementById(`${inputBoxName}-message-box`) as HTMLDivElement;
-        errorMessageBox.innerText = message;
-        // Add the classes for proper styling of the message
-        inputBox.classList.add(`${type}-border`);
-        errorMessageBox.classList.add(`${type}-border`, `input-${type}`);
-        errorMessageBox.hidden = false;
+        const messageBox = document.getElementById(`${inputBoxName}-message-box`) as HTMLDivElement;
+        // We try to do the least amount of DOM changing as to reduce the flashing the user sees
+        if (messageBox.innerText === message && messageBox.classList.contains(`input-${type}`)) {
+            return;
+        } else if (messageBox.classList.contains(`input-${type}`)) {
+            messageBox.innerText = message;
+            return;
+        } else {
+            this.removeInputMessage("find", true);
+            messageBox.innerText = message;
+            // Add the classes for proper styling of the message
+            inputBox.classList.add(`${type}-border`);
+            messageBox.classList.add(`${type}-border`, `input-${type}`);
+            messageBox.hidden = false;
+        }
     }
 
     /**
      * @description Removes the warning / error message 
      * @param {"find" | "replace"} inputBoxName Which input box to remove the message from 
+     * @param {boolean | undefined} skipHiding Whether we want to skip hiding the empty message box, this is useful for clearing the box to add new text
      */
-    private removeInputMessage(inputBoxName: "find" | "replace"): void {
+    private removeInputMessage(inputBoxName: "find" | "replace", skipHiding?: boolean): void {
         const inputBox: HTMLInputElement = inputBoxName === "find" ? this.findTextBox : this.replaceTextBox;
         const errorMessageBox = document.getElementById(`${inputBoxName}-message-box`) as HTMLDivElement;
         // Add the classes for proper styling of the message
         inputBox.classList.remove("error-border", "warning-border");
         errorMessageBox.classList.remove("error-border", "warning-border", "input-warning", "input-error");
-        errorMessageBox.hidden = true;
+        if (skipHiding !== true) errorMessageBox.hidden = true;
     }
 }
