@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 import { HexDocument } from "./hexDocument";
-import { resolve } from "path";
 
 // This is the same interface in the webviews search handler, we just currently do not share interfaces across the exthost and webview
 interface SearchOptions {
