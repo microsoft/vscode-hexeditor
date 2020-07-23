@@ -1,23 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { retrieveSelectedByteObject, getElementsWithGivenOffset, IRange } from "./util";
+import { getElementsWithGivenOffset, relativeComplement, binarySearch } from "./util";
 import { WebViewStateManager } from "./webviewStateManager";
-import { clearDataInspector, populateDataInspector } from "./dataInspector";
 
 export class SelectHandler {
-
-    public isDragging = false;
-    public clearSelectionClick = false;
-    public clearSelectionDrag = false;
-    public selectionPivotOffset: number | undefined;
-    public oldSelectionEndOffset: number | undefined;
+    private _focus: number | undefined;
+    private _selection: number[] = [];
 
     /**
      * @description Removes the selected class from all elements, this is helpful when ensuring only one byte and its associated decoded text is selected
      */
     public static clearSelected(): void {
         document.querySelectorAll(".selected").forEach(element => element.classList.remove("selected"));
+        // Clear the webview's selection state
+        WebViewStateManager.setProperty("selected_offsets", []);
     }
 
     /**
@@ -26,138 +23,43 @@ export class SelectHandler {
      * @param {boolean} force If force is not given, toggles selection. If force is true selects the element.
      * If force is false deselects the element.
      */
-    private static toggleSelectOffset(offset: number, force?: boolean): boolean {
+    private static toggleSelectOffset(offset: number, force?: boolean): void {
         const elements = getElementsWithGivenOffset(offset);
         if (elements.length === 0) {
             // Element may not be part of the DOM
-            return force ?? false;
+            return;
         }
-        const isSelected = elements[0].classList.toggle("selected", force);
+        elements[0].classList.toggle("selected", force);
         elements[1].classList.toggle("selected", force);
-        return isSelected;
     }
 
-    /**
-     * @description Given an offset, selects the hex and ascii element
-     * @param {number} offset  The offset of the element you want to select
-     */
-    public static singleSelect(offset: number): boolean {
-        // SelectHandler.clearSelected();
-        const isSelected = SelectHandler.toggleSelectOffset(offset);
-        if (isSelected) {
-            WebViewStateManager.setProperty("selected_offset", offset);
-            const elements = getElementsWithGivenOffset(offset);
-            const byte_obj = retrieveSelectedByteObject(elements)!;
-            const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
-            populateDataInspector(byte_obj, littleEndian);
-        } else {
-            WebViewStateManager.setProperty("selected_offset", undefined);
-            clearDataInspector();
-            // (document.activeElement as HTMLElement)?.blur();
-        }
-        return isSelected;
+    public getFocused(): number | undefined {
+        return this._focus;
     }
 
-    /**
-     * @description Given a range offset, selects the hex and ascii elements
-     * @param {IRange} newRange  The new range to select
-     * @param {IRange} oldRange  The previous selected range, used for optimization
-     * of selection and deselection of elements
-     */
-    public static rangeSelect(newRange: IRange, oldRange?: IRange): void {
-        if (newRange.start !== oldRange?.start && newRange.start !== oldRange?.end && newRange.end !== oldRange?.start && newRange.end !== oldRange?.end) {
-            oldRange = undefined;
-        }
+    public setFocused(offset: number | undefined): void {
+        this._focus = offset;
+    }
 
-        let selectStart: number | undefined = newRange.start;
-        let selectEnd: number | undefined = newRange.end;
-        if (oldRange) {
-            let deselectStart: number | undefined;
-            let deselectEnd: number | undefined;
+    public getSelected(): number[] {
+        return this._selection;
+    }
 
-            if (newRange.start === oldRange.start) {
-                /**
-                 * N: new cell | S: pivot cell | O: old cell
-                 * New range : S->N | Old range : S->O
-                 *
-                 * *S*****
-                 * ***O**N
-                 */
-                if (newRange.end < oldRange.end) {
-                    deselectStart = newRange.end + 1;
-                    deselectEnd = oldRange.end;
+    public setSelected(offsets: number[]): void {
+        const oldSelection = this._selection;
 
-                    selectStart = undefined;
-                    selectEnd = undefined;
-                } else if (newRange.end > oldRange.end) {
-                    selectStart = oldRange.end + 1;
-                    selectEnd = newRange.end;
-                } else {
-                    selectStart = undefined;
-                    selectEnd = undefined;
-                }
-            } else if (newRange.end === oldRange.start) {
-                /**
-                 * N: new cell | S: pivot cell | O: old cell
-                 * New range : N->S | Old range : S->O
-                 *
-                 * ***N*S*
-                 * ***O***
-                 */
-                deselectStart = newRange.end + 1;
-                deselectEnd = oldRange.end;
+        this._selection = [...offsets].sort((a: number, b: number) => a - b);
+        WebViewStateManager.setProperty("selected_offsets", this._selection);
 
-                selectStart = newRange.start;
-                selectEnd = newRange.end - 1;
-            } else if (newRange.start === oldRange.end) {
-                /**
-                 * N: new cell | S: pivot cell | O: old cell
-                 * New range : S->N | Old range : O->S
-                 *
-                 * ***O***
-                 * *S*N***
-                 */
-                deselectStart = oldRange.start;
-                deselectEnd = oldRange.end - 1;
+        const toRender = relativeComplement(oldSelection, this._selection);
+        this.renderSelection(toRender);
+    }
 
-                selectStart = newRange.start + 1;
-                selectEnd = newRange.end;
-            } else if (newRange.end === oldRange.end) {
-                /**
-                 * N: new cell | S: pivot cell | O: old cell
-                 * New range : N->S | Old range : O->S
-                 *
-                 * N**O***
-                 * *****S*
-                 */
-                if (newRange.start > oldRange.start) {
-                    deselectStart = oldRange.start;
-                    deselectEnd = newRange.start - 1;
+    private renderSelection(offsets: number[]): void {
+        const contains = (offset: number): boolean => binarySearch(this._selection, offset, (a: number, b: number) => a - b) >= 0;
 
-                    selectStart = undefined;
-                    selectEnd = undefined;
-                } else if (newRange.start < oldRange.start) {
-                    selectStart = newRange.start;
-                    selectEnd = oldRange.start - 1;
-                } else {
-                    selectStart = undefined;
-                    selectEnd = undefined;
-                }
-            }
-
-            if (deselectStart !== undefined && deselectEnd !== undefined) {
-                while (deselectStart <= deselectEnd) {
-                    SelectHandler.toggleSelectOffset(deselectStart, false);
-                    deselectStart++;
-                }
-            }
-        }
-
-        if (selectStart !== undefined && selectEnd !== undefined) {
-            while (selectStart <= selectEnd) {
-                SelectHandler.toggleSelectOffset(selectStart, true);
-                selectStart++;
-            }
+        for (const offset of offsets) {
+            SelectHandler.toggleSelectOffset(offset, contains(offset));
         }
     }
 
@@ -173,5 +75,39 @@ export class SelectHandler {
             hex.push(selected[i].innerText);
         }
         return hex;
+    }
+
+    /**
+     * @description Focuses the first element in the current selection based on the section passed in
+     * @param section {"hex" | "ascii"} The section to place the focus
+     */
+    public static focusSelection(section: "hex" | "ascii"): void {
+        const selection = document.getElementsByClassName(`selected ${section}`);
+        if (selection.length !== 0) (selection[0] as HTMLSpanElement).focus();
+    }
+
+    /**
+     * @description Retrieves the selection as a string, defaults to hex if there is no focus on either side
+     * @returns {string} The selection represented as a string
+     */
+    public static getSelectedValue(): string {
+        let selectedValue = "";
+        let section = "hex";
+        let selectedElements: HTMLCollectionOf<HTMLSpanElement>;
+        if (document.activeElement?.classList.contains("ascii")) {
+            section = "ascii";
+            selectedElements = document.getElementsByClassName("selected ascii") as HTMLCollectionOf<HTMLSpanElement>;
+        } else {
+            selectedElements = document.getElementsByClassName("selected hex") as HTMLCollectionOf<HTMLSpanElement>;
+        }
+        for (const element of selectedElements) {
+            if (element.innerText === "+") continue;
+            selectedValue += element.innerText;
+            if (section === "hex") selectedValue += " ";
+        }
+        // If it's hex we want to remove the last space as it doesn't make sense
+        // For ascii that space might have meaning
+        if (section === "hex") selectedValue = selectedValue.trimRight();
+        return selectedValue;
     }
 }

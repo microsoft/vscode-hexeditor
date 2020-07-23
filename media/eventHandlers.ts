@@ -32,10 +32,12 @@ export function removeHover(event: MouseEvent): void {
  * @description Handles when the user changes the dropdown for whether they want little or big endianness 
  */
 export function changeEndianness(): void {
-	if (document.activeElement && WebViewStateManager.getState() && WebViewStateManager.getState().selected_offset) {
+	if (document.activeElement) {
 		// Since the inspector has no sense of state, it doesn't know what byte it is currently rendering
 		// We must retrieve it based on the dom
-		const elements = getElementsWithGivenOffset(WebViewStateManager.getState().selected_offset);
+		const offset = document.activeElement.getAttribute("data-offset");
+		if (offset === null) return;
+		const elements = getElementsWithGivenOffset(parseInt(offset));
 		const byte_obj = retrieveSelectedByteObject(elements);
 		if (!byte_obj) return;
 		const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";

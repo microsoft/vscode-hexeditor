@@ -2,14 +2,8 @@
 // Licensed under the MIT license.
 
 import { ByteData } from "./byteData";
-import { SelectHandler } from "./selectHandler";
 
 // Assorted helper functions
-
-export interface IRange {
-    readonly start: number;
-    readonly end: number;
-}
 
 /**
  * @description Class which represents a range of numbers
@@ -97,22 +91,6 @@ export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Elemen
     return getElementsWithGivenOffset(parseInt(data_offset));
 }
 
-/***
- * @description Given an offset, selects the elements and focuses the element in the same column as previous focus. Defaults to hex.
- * @param {number} offset The offset of the elements you want to select and focus
- */
-export function focusElementWithGivenOffset(offset: number): void {
-    const elements = getElementsWithGivenOffset(offset);
-    if (elements.length != 2) return;
-    SelectHandler.singleSelect(offset);
-    // If an ascii element is currently focused then we focus that, else we focus hex
-    if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
-        elements[1].focus();
-    } else {
-        elements[0].focus();
-    }
-}
-
 /**
  * @description Given a bytedata object updates the ascii element with the correct decoded text
  * @param {ByteData} byteData The object containing information about a given byte
@@ -182,4 +160,96 @@ export function createOffsetRange(startOffset: number, endOffset: number): numbe
         offsetsToSelect.push(i);
     }
     return offsetsToSelect;
+}
+
+/**
+ * @description Converts a hex query to a string array ignoring spaces, if not evenly divisible we return an empty array to signify it's invalid
+ * @param {string} query The query to convert to an array
+ */
+export function hexQueryToArray(query: string): string[] {
+    let currentCharacterSequence = "";
+    const queryArray: string[] = [];
+    for (let i = 0; i < query.length; i++) {
+        if (query[i] === " ") continue;
+        currentCharacterSequence += query[i];
+        if (currentCharacterSequence.length === 2) {
+            queryArray.push(currentCharacterSequence);
+            currentCharacterSequence = "";
+        }
+    }
+    if (currentCharacterSequence.length > 0 ) return [];
+    return queryArray;
+}
+
+/**
+ * @description Given two sorted collections of numbers, returns the union
+ * between them (OR).
+ */
+export function disjunction(one: number[], other: number[]): number[] {
+	const result: number[] = [];
+	let i = 0, j = 0;
+
+	while (i < one.length || j < other.length) {
+		if (i >= one.length) {
+			result.push(other[j++]);
+		} else if (j >= other.length) {
+			result.push(one[i++]);
+		} else if (one[i] === other[j]) {
+			result.push(one[i]);
+			i++;
+			j++;
+			continue;
+		} else if (one[i] < other[j]) {
+			result.push(one[i++]);
+		} else {
+			result.push(other[j++]);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * @description Given two sorted collections of numbers, returns the relative
+ * complement between them (XOR).
+ */
+export function relativeComplement(one: number[], other: number[]): number[] {
+	const result: number[] = [];
+	let i = 0, j = 0;
+
+	while (i < one.length || j < other.length) {
+		if (i >= one.length) {
+			result.push(other[j++]);
+		} else if (j >= other.length) {
+			result.push(one[i++]);
+		} else if (one[i] === other[j]) {
+			i++;
+			j++;
+			continue;
+		} else if (one[i] < other[j]) {
+			result.push(one[i++]);
+		} else {
+			result.push(other[j++]);
+		}
+	}
+
+	return result;
+}
+
+export function binarySearch<T>(array: ReadonlyArray<T>, key: T, comparator: (op1: T, op2: T) => number): number {
+	let low = 0,
+		high = array.length - 1;
+
+	while (low <= high) {
+		const mid = ((low + high) / 2) | 0;
+		const comp = comparator(array[mid], key);
+		if (comp < 0) {
+			low = mid + 1;
+		} else if (comp > 0) {
+			high = mid - 1;
+		} else {
+			return mid;
+		}
+	}
+	return -(low + 1);
 }

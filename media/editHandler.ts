@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { getElementsWithGivenOffset, updateAsciiValue, focusElementWithGivenOffset } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue } from "./util";
 import { ByteData } from "./byteData";
 import { messageHandler, virtualHexDocument } from "./hexEdit";
 import { SelectHandler } from "./selectHandler";
@@ -16,7 +16,7 @@ interface DocumentEdit {
 // This is what an edit to/from the extension host looks like
 export interface EditMessage {
     readonly oldValue: number | undefined;
-	readonly newValue: number | undefined;
+    readonly newValue: number | undefined;
     readonly offset: number;
     readonly sameOnDisk: boolean;
 }
@@ -65,11 +65,11 @@ export class EditHandler {
             element.innerText = "  ";
         } else {
             // This handles when the user presses the first character erasing the old value vs adding to the currently edited value
-            element.innerText = element.innerText.length !== 1 || element.innerText === "+" ?`${keyPressed.toUpperCase()} ` : element.innerText + keyPressed.toUpperCase();
+            element.innerText = element.innerText.length !== 1 || element.innerText === "+" ? `${keyPressed.toUpperCase()} ` : element.innerText + keyPressed.toUpperCase();
         }
 
         this.pendingEdit.newValue = element.innerText;
-        if(element.innerText.trimRight().length == 2) {
+        if (element.innerText.trimRight().length == 2) {
             element.classList.remove("add-cell");
             // Not really an edit if nothing changed
             if (this.pendingEdit.newValue == this.pendingEdit.previousValue) {
@@ -89,7 +89,7 @@ export class EditHandler {
 
     /**
      * @description Handles when the user starts typing on an ascii element
-     * @param {HTMLSpanElement} element The element which the keystroke was fired on 
+     * @param {HTMLSpanElement} element The element which the keystroke was fired on
      * @param {string} keyPressed The key which was pressed
      */
     public async editAscii(element: HTMLSpanElement, keyPressed: string): Promise<void> {
@@ -121,8 +121,8 @@ export class EditHandler {
 
     /**
      * @description Given a hex value updates the respective ascii value
-     * @param {string | undefined} hexValue The hex value to convert to ascii 
-     * @param {number} offset The offset of the ascii value to update 
+     * @param {string | undefined} hexValue The hex value to convert to ascii
+     * @param {number} offset The offset of the ascii value to update
      */
     private updateAscii(hexValue: string | undefined, offset: number): void {
         // For now if it's undefined we will just ignore it, but this would be the delete case
@@ -136,8 +136,8 @@ export class EditHandler {
 
     /**
      * @description Given an ascii value updates the respective hex value
-     * @param {string} asciiValue The ascii value to convert to hex 
-     * @param {number} offset The offset of the hex value to update 
+     * @param {string} asciiValue The ascii value to convert to hex
+     * @param {number} offset The offset of the hex value to update
      */
     private updateHex(asciiValue: string, offset: number): void {
         // The way the DOM is constructed the hex element will always be the first one
@@ -176,7 +176,7 @@ export class EditHandler {
 
     /**
      * @description Given a list of edits sends it to the exthost so that the ext host and webview are in sync
-     * @param {DocumentEdit} edits The edits to send to the exthost 
+     * @param {DocumentEdit} edits The edits to send to the exthost
      */
     private async sendEditToExtHost(edits: DocumentEdit[]): Promise<void> {
         const extHostMessage: EditMessage[] = [];
@@ -195,8 +195,8 @@ export class EditHandler {
         try {
             const syncedFileSize = (await messageHandler.postMessageWithResponse("edit", extHostMessage)).fileSize;
             virtualHexDocument.updateDocumentSize(syncedFileSize);
-        // Empty catch because we just don't do anything if for some reason the exthost doesn't respond with the new fileSize,
-        // we just sync at the next available opportunity
+            // Empty catch because we just don't do anything if for some reason the exthost doesn't respond with the new fileSize,
+            // we just sync at the next available opportunity
         } catch {
             return;
         }
@@ -204,7 +204,7 @@ export class EditHandler {
 
     /**
      * @description Given a list of edits undoes them from the document
-     * @param {EditMessage[]} edits The list of edits to undo 
+     * @param {EditMessage[]} edits The list of edits to undo
      */
     public undo(edits: EditMessage[]): void {
         // We want to process the highest offset first as we only support removing cells from the end of the document
@@ -215,7 +215,7 @@ export class EditHandler {
         for (const edit of edits) {
             // This would be the delete case, but for now we will leave it alone
             if (edit.oldValue === undefined) {
-                focusElementWithGivenOffset(virtualHexDocument.documentSize);
+                virtualHexDocument.focusElementWithGivenOffset(virtualHexDocument.documentSize);
                 virtualHexDocument.removeLastCell();
                 continue;
             }
@@ -232,13 +232,13 @@ export class EditHandler {
             elements[0].innerText = edit.oldValue.toString(16).toUpperCase();
             elements[0].innerText = elements[0].innerText.length == 2 ? elements[0].innerText : `0${elements[0].innerText}`;
             updateAsciiValue(new ByteData(edit.oldValue), elements[1]);
-            focusElementWithGivenOffset(edit.offset);
+            virtualHexDocument.focusElementWithGivenOffset(edit.offset);
         }
     }
 
     /**
      * @description Given a list of edits reapplies them to the document
-     * @param {EditMessage[]} edits The list of edits to redo 
+     * @param {EditMessage[]} edits The list of edits to redo
      */
     public redo(edits: EditMessage[]): void {
         for (const edit of edits) {
@@ -262,26 +262,27 @@ export class EditHandler {
             if (document.getElementsByClassName("add-cell").length === 0 && edit.oldValue === undefined) {
                 // We are going to estimate the filesize and it will be resynced at the end if wrong
                 // This is because we add 1 cell at a time therefore if we paste the filesize is larger than whats rendered breaking the plus cell logic
-                // This causes issues so this is a quick fix, another fix would be to apply all cells at once 
+                // This causes issues so this is a quick fix, another fix would be to apply all cells at once
                 virtualHexDocument.updateDocumentSize(virtualHexDocument.documentSize + 1);
                 virtualHexDocument.createAddCell();
             }
-            focusElementWithGivenOffset(edit.offset);
+            virtualHexDocument.focusElementWithGivenOffset(edit.offset);
         }
     }
 
     /**
      * @description Handles when a user copies
-     * @param {ClipboardEvent} event The clibpoard event passed to a copy event handler 
+     * @param {ClipboardEvent} event The clibpoard event passed to a copy event handler
      */
     public copy(event: ClipboardEvent): void {
         event.clipboardData?.setData("text/json", JSON.stringify(SelectHandler.getSelectedHex()));
+        event.clipboardData?.setData("text/plain", SelectHandler.getSelectedValue());
         event.preventDefault();
     }
 
     /**
      * @description Handles when a user pastes
-     * @param {ClipboardEvent} event The clibpoard event passed to a paste event handler 
+     * @param {ClipboardEvent} event The clibpoard event passed to a paste event handler
      */
     public async paste(event: ClipboardEvent): Promise<void> {
         // If what's on the clipboard isn't json we won't try to past it in
