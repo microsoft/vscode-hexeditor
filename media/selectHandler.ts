@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { getElementsWithGivenOffset, relativeComplement, binarySearch } from "./util";
+import { getElementsWithGivenOffset, relativeComplement, binarySearch, disjunction } from "./util";
 import { WebViewStateManager } from "./webviewStateManager";
 
 export class SelectHandler {
@@ -45,13 +45,13 @@ export class SelectHandler {
         return this._selection;
     }
 
-    public setSelected(offsets: number[]): void {
+    public setSelected(offsets: number[], forceRender = false): void {
         const oldSelection = this._selection;
 
         this._selection = [...offsets].sort((a: number, b: number) => a - b);
         WebViewStateManager.setProperty("selected_offsets", this._selection);
 
-        const toRender = relativeComplement(oldSelection, this._selection);
+        const toRender = forceRender ? disjunction(oldSelection, this._selection) : relativeComplement(oldSelection, this._selection);
         this.renderSelection(toRender);
     }
 
