@@ -2,7 +2,7 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad, Range, createOffsetRange, retrieveSelectedByteObject } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject } from "./util";
 import { hover, removeHover, changeEndianness } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
@@ -31,6 +31,7 @@ export class VirtualDocument {
     private readonly selectHandler: SelectHandler;
     private readonly searchHandler: SearchHandler;
     private rows: Map<string, HTMLDivElement>[];
+    private readonly editorContainer: HTMLElement;
 
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
@@ -127,108 +128,17 @@ export class VirtualDocument {
         // Intializes a few things such as viewport size and the scrollbar positions
         this.documentResize();
 
-        const editorContainer = document.getElementById("editor-container")!;
+        this.editorContainer = document.getElementById("editor-container")!;
         // Bind the event listeners
         // Will need to refactor this section soon as its getting pretty messy
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
-        editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
-        editorContainer.addEventListener("mouseover", hover);
-        editorContainer.addEventListener("mouseleave", removeHover);
+        this.editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
+        this.editorContainer.addEventListener("mouseover", hover);
+        this.editorContainer.addEventListener("mouseleave", removeHover);
 
         // Event handles to handle when the user drags to create a selection
-        editorContainer.addEventListener("click", (event: MouseEvent) => {
-            const target = event.target as HTMLElement;
-            if (!target || !target.hasAttribute("data-offset")) {
-                return;
-            }
-
-            event.preventDefault();
-
-            this.editHandler.completePendingEdits();
-
-            if (event.shiftKey) {
-                const focused = this.selectHandler.getFocused();
-                if (focused !== undefined) {
-                    const offset = parseInt(target.getAttribute("data-offset")!);
-
-                    const min = Math.min(focused, offset);
-                    const max = Math.max(focused, offset);
-
-                    this.selectHandler.setSelected(createOffsetRange(min, max));
-
-                    target.focus({ preventScroll: true });
-                }
-            } else {
-                const offset = parseInt(target.getAttribute("data-offset")!);
-
-                this.selectHandler.setFocused(offset);
-
-                if (event.ctrlKey) {
-                    const selection = this.selectHandler.getSelected();
-                    const newSelection = selection.filter(i => i !== offset);
-                    if (selection.length === newSelection.length) {
-                        this.selectHandler.setSelected([...newSelection, offset]);
-                    } else {
-                        this.selectHandler.setSelected(newSelection);
-                    }
-                } else {
-                    this.selectHandler.setSelected([offset]);
-                }
-
-                target.focus({ preventScroll: true });
-
-                this.updateInspector();
-            }
-        });
-        editorContainer.addEventListener("mousedown", (event: MouseEvent) => {
-            if (event.buttons !== 1) {
-                return;
-            }
-
-            const target = event.target as HTMLElement;
-            if (!target || !target.hasAttribute("data-offset")) {
-                return;
-            }
-
-            event.preventDefault();
-
-            this.editHandler.completePendingEdits();
-
-            const offset = parseInt(target.getAttribute("data-offset")!);
-            if (!event.shiftKey) {
-                this.selectHandler.setFocused(offset);
-                target.focus({ preventScroll: true });
-            }
-
-            const startMouseMoveOffset = offset;
-            const onMouseMove = (event: MouseEvent): void => {
-                if (event.buttons !== 1) {
-                    return;
-                }
-
-                const target = event.target as HTMLElement;
-                if (!target || !target.hasAttribute("data-offset")) {
-                    return;
-                }
-
-                const offset = parseInt(target.getAttribute("data-offset")!);
-                const focused = this.selectHandler.getFocused();
-                if (focused !== undefined && offset !== startMouseMoveOffset) {
-                    const min = Math.min(focused, offset);
-                    const max = Math.max(focused, offset);
-
-                    this.selectHandler.setSelected(createOffsetRange(min, max));
-                }
-            };
-
-            const onMouseUp = (): void => {
-                editorContainer.removeEventListener("mousemove", onMouseMove);
-                window.removeEventListener("mouseup", onMouseUp);
-            };
-
-            editorContainer.addEventListener("mousemove", onMouseMove);
-            window.addEventListener("mouseup", onMouseUp);
-        });
+        this.editorContainer.addEventListener("click", this.clickHandler.bind(this));
+        this.editorContainer.addEventListener("mousedown", this.mouseDownHandler.bind(this));
 
         window.addEventListener("copy", (event: Event) => {
             if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
@@ -272,9 +182,9 @@ export class VirtualDocument {
         document.getElementById("ascii")?.appendChild(asciiFragment);
 
         if (WebViewStateManager.getState()) {
-            const selectedOffsets = WebViewStateManager.getProperty("selected_offsets") as number[];
+            const selectedOffsets = this.selectHandler.getSelected();
             if (selectedOffsets.length > 0) {
-                this.selectHandler.setSelected(selectedOffsets, true);
+                this.selectHandler.setSelected(selectedOffsets, selectedOffsets[0], true);
             }
             // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
             // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load
@@ -445,6 +355,95 @@ export class VirtualDocument {
     }
 
     /**
+     * @description Handles the click events within the editor
+     * @param {MouseEvent} event The MouseEvent passed to the event handler.
+     */
+    private clickHandler(event: MouseEvent): void {
+        const target = event.target as HTMLElement;
+        if (!target || !target.hasAttribute("data-offset")) {
+            return;
+        }
+
+        event.preventDefault();
+        this.editHandler.completePendingEdits();
+        const offset = parseInt(target.getAttribute("data-offset")!);
+        if (event.shiftKey) {
+            const startSelection = this.selectHandler.getSelectionStart();
+            if (startSelection !== undefined) {
+                this.selectHandler.setFocused(offset);
+                const min = Math.min(startSelection, offset);
+                const max = Math.max(startSelection, offset);
+                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
+                target.focus({ preventScroll: true });
+            }
+        } else {
+            this.selectHandler.setFocused(offset);
+            if (event.ctrlKey) {
+                const selection = this.selectHandler.getSelected();
+                const newSelection = selection.filter(i => i !== offset);
+                if (selection.length === newSelection.length) {
+                    this.selectHandler.setSelected([...newSelection, offset], offset);
+                } else {
+                    this.selectHandler.setSelected(newSelection, offset);
+                }
+            } else {
+                this.selectHandler.setSelected([offset], offset);
+            }
+            this.updateInspector();
+            target.focus({ preventScroll: true });
+        }
+    }
+
+    /**
+     * @description Handles the mousedown events within the editor
+     * @param {MouseEvent} event The MouseEvent passed to the event handler.
+     */
+    private mouseDownHandler(event: MouseEvent): void {
+        if (event.buttons !== 1) {
+            return;
+        }
+
+        const target = event.target as HTMLElement;
+        if (!target || !target.hasAttribute("data-offset")) {
+            return;
+        }
+
+        event.preventDefault();
+        this.editHandler.completePendingEdits();
+        const offset = parseInt(target.getAttribute("data-offset")!);
+        const startMouseMoveOffset = offset;
+        const startSelection = event.shiftKey ? this.selectHandler.getSelectionStart() : offset;
+
+        const onMouseMove = (event: MouseEvent): void => {
+            if (event.buttons !== 1) {
+                return;
+            }
+
+            const target = event.target as HTMLElement;
+            if (!target || !target.hasAttribute("data-offset")) {
+                return;
+            }
+
+            const offset = parseInt(target.getAttribute("data-offset")!);
+            if (startSelection !== undefined && offset !== startMouseMoveOffset) {
+                this.selectHandler.setFocused(offset);
+                const min = Math.min(startSelection, offset);
+                const max = Math.max(startSelection, offset);
+                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
+                target.focus({ preventScroll: true });
+            }
+        };
+
+        const onMouseUp = (): void => {
+            this.editorContainer.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
+        };
+
+        this.editorContainer.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+    }
+
+    /**
      * @description Handles all keyboard interaction with the document
      * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
@@ -456,20 +455,20 @@ export class VirtualDocument {
             // If the user presses ctrl / cmd + f we focus the search box and change the dropdown
             this.searchHandler.searchKeybindingHandler();
         } else if ((event.keyCode >= 37 && event.keyCode <= 40 /*Arrows*/)
-            || ((event.keyCode == 35 /*End*/ || event.keyCode == 36 /*Home*/) && !event.ctrlKey)) {
-            this.arrowKeyNavigate(event.keyCode, targetElement, event.shiftKey);
+            || ((event.keyCode === 35 /*End*/ || event.keyCode === 36 /*Home*/) && !event.ctrlKey)) {
+            this.navigateByKey(event.keyCode, targetElement, event.shiftKey);
             event.preventDefault();
         } else if (!modifierKeyPressed && targetElement.classList.contains("hex")) {
             await this.editHandler.editHex(targetElement, event.key);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");
-                this.arrowKeyNavigate(39, targetElement, false);
+                this.navigateByKey(39, targetElement, false);
             }
         } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("ascii")) {
             await this.editHandler.editAscii(targetElement, event.key);
             targetElement.classList.remove("editing");
-            this.arrowKeyNavigate(39, targetElement, false);
+            this.navigateByKey(39, targetElement, false);
         }
         await this.editHandler.completePendingEdits();
     }
@@ -498,7 +497,7 @@ export class VirtualDocument {
      * @param {HTMLElement} targetElement The element
      * @param {boolean} isRangeSelection If we are selecting a range (shift key pressed)
      */
-    private arrowKeyNavigate(keyCode: number, targetElement: HTMLElement, isRangeSelection: boolean): void {
+    private navigateByKey(keyCode: number, targetElement: HTMLElement, isRangeSelection: boolean): void {
         let next: HTMLElement | undefined;
         switch (keyCode) {
             case 35:
@@ -540,22 +539,23 @@ export class VirtualDocument {
             }
 
             const offset = parseInt(next.getAttribute("data-offset")!);
-            const focused = this.selectHandler.getFocused();
-            if (isRangeSelection && focused !== undefined) {
-                const min = Math.min(focused, offset);
-                const max = Math.max(focused, offset);
-
-                this.selectHandler.setSelected(createOffsetRange(min, max));
+            this.selectHandler.setFocused(offset);
+            const startSelection = this.selectHandler.getSelectionStart();
+            if (isRangeSelection && startSelection !== undefined) {
+                const min = Math.min(startSelection, offset);
+                const max = Math.max(startSelection, offset);
+                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
             } else {
-                this.selectHandler.setFocused(offset);
-                this.selectHandler.setSelected([offset]);
-                next.focus({ preventScroll: true });
-
+                this.selectHandler.setSelected([offset], offset);
                 this.updateInspector();
             }
+            next.focus({ preventScroll: true });
         }
     }
 
+    /***
+     * @description Populates the inspector data with the currently focused element.
+     */
     private updateInspector(): void {
         const offset = this.selectHandler.getFocused();
         if (offset !== undefined) {
@@ -566,8 +566,12 @@ export class VirtualDocument {
         }
     }
 
+    /***
+     * @description Given an array of offsets, selects the corresponding elements.
+     * @param {number[]} offsets The offsets of the elements you want to select
+     */
     public setSelection(offsets: number[]): void {
-        this.selectHandler.setSelected(offsets);
+        this.selectHandler.setSelected(offsets, offsets.length > 0 ? offsets[0] : undefined);
     }
 
     /***
@@ -577,7 +581,7 @@ export class VirtualDocument {
     public focusElementWithGivenOffset(offset: number): void {
         const elements = getElementsWithGivenOffset(offset);
         if (elements.length != 2) return;
-        this.selectHandler.setSelected([offset]);
+        this.selectHandler.setSelected([offset], offset);
         // If an ascii element is currently focused then we focus that, else we focus hex
         if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
             elements[1].focus();

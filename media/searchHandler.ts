@@ -76,7 +76,7 @@ export class SearchHandler {
         if (this.findTextBox.value === "") this.removeInputMessage("find");
         // This gets called to cancel any searches that might be going on now
         this.cancelSearch();
-        SelectHandler.clearSelected();
+        virtualHexDocument.setSelection([]);
         this.searchResults = [];
         this.updateReplaceButtons();
         this.findNextButton.classList.add("disabled");

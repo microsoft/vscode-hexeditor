@@ -11,9 +11,9 @@ import { ByteData } from "./byteData";
 export class Range {
     public readonly start: number;
     public readonly end: number;
-    // Construct a range object representing [start, end] inclusive of both
+
     /**
-     * @description Constructs a range object represneting [start, end] inclusive of both
+     * @description Constructs a range object representing [start, end] inclusive of both
      * @param {number} start Represents the start of the range
      * @param {number} end Represents the end of the range
      */
@@ -177,79 +177,95 @@ export function hexQueryToArray(query: string): string[] {
             currentCharacterSequence = "";
         }
     }
-    if (currentCharacterSequence.length > 0 ) return [];
+    if (currentCharacterSequence.length > 0) return [];
     return queryArray;
 }
 
 /**
  * @description Given two sorted collections of numbers, returns the union
  * between them (OR).
+ * @param {number[]} one The first sorted array of numbers
+ * @param {number[]} other The other sorted array of numbers
+ * @returns {number[]} A sorted collections of numbers representing the union (OR)
+ * between to sorted collections of numbers
  */
 export function disjunction(one: number[], other: number[]): number[] {
-	const result: number[] = [];
-	let i = 0, j = 0;
+    const result: number[] = [];
+    let i = 0, j = 0;
 
-	while (i < one.length || j < other.length) {
-		if (i >= one.length) {
-			result.push(other[j++]);
-		} else if (j >= other.length) {
-			result.push(one[i++]);
-		} else if (one[i] === other[j]) {
-			result.push(one[i]);
-			i++;
-			j++;
-			continue;
-		} else if (one[i] < other[j]) {
-			result.push(one[i++]);
-		} else {
-			result.push(other[j++]);
-		}
-	}
+    while (i < one.length || j < other.length) {
+        if (i >= one.length) {
+            result.push(other[j++]);
+        } else if (j >= other.length) {
+            result.push(one[i++]);
+        } else if (one[i] === other[j]) {
+            result.push(one[i]);
+            i++;
+            j++;
+            continue;
+        } else if (one[i] < other[j]) {
+            result.push(one[i++]);
+        } else {
+            result.push(other[j++]);
+        }
+    }
 
-	return result;
+    return result;
 }
 
 /**
  * @description Given two sorted collections of numbers, returns the relative
  * complement between them (XOR).
+ * @param {number[]} one The first sorted array of numbers
+ * @param {number[]} other The other sorted array of numbers
+ * @returns {number[]} A sorted collections of numbers representing the complement (XOR)
+ * between to sorted collections of numbers
  */
 export function relativeComplement(one: number[], other: number[]): number[] {
-	const result: number[] = [];
-	let i = 0, j = 0;
+    const result: number[] = [];
+    let i = 0, j = 0;
 
-	while (i < one.length || j < other.length) {
-		if (i >= one.length) {
-			result.push(other[j++]);
-		} else if (j >= other.length) {
-			result.push(one[i++]);
-		} else if (one[i] === other[j]) {
-			i++;
-			j++;
-			continue;
-		} else if (one[i] < other[j]) {
-			result.push(one[i++]);
-		} else {
-			result.push(other[j++]);
-		}
-	}
+    while (i < one.length || j < other.length) {
+        if (i >= one.length) {
+            result.push(other[j++]);
+        } else if (j >= other.length) {
+            result.push(one[i++]);
+        } else if (one[i] === other[j]) {
+            i++;
+            j++;
+            continue;
+        } else if (one[i] < other[j]) {
+            result.push(one[i++]);
+        } else {
+            result.push(other[j++]);
+        }
+    }
 
-	return result;
+    return result;
 }
 
+/**
+ * @description Searches a key element inside a sorted array.
+ * @template T
+ * @param {T[]} array The sorted array to search in
+ * @param {T} key The key to search for in the sorted array
+ * @param {comparatorCallback} comparator The comparator callback
+ * @returns {number} The at which a given element can be found in the array, or a negative value if it is not present
+ */
 export function binarySearch<T>(array: ReadonlyArray<T>, key: T, comparator: (op1: T, op2: T) => number): number {
-	let low = 0,
-		high = array.length - 1;
+    let low = 0,
+        high = array.length - 1;
 
-	while (low <= high) {
-		const mid = ((low + high) / 2) | 0;
-		const comp = comparator(array[mid], key);
-		if (comp < 0) {
-			low = mid + 1;
-		} else if (comp > 0) {
-			high = mid - 1;
-		} else {
-			return mid;
-		}
-	}
-	return -(low + 1);
+    while (low <= high) {
+        const mid = ((low + high) / 2) | 0;
+        const comp = comparator(array[mid], key);
+        if (comp < 0) {
+            low = mid + 1;
+        } else if (comp > 0) {
+            high = mid - 1;
+        } else {
+            return mid;
+        }
+    }
+    return -(low + 1);
 }

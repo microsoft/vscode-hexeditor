@@ -7,15 +7,7 @@ import { WebViewStateManager } from "./webviewStateManager";
 export class SelectHandler {
     private _focus: number | undefined;
     private _selection: number[] = [];
-
-    /**
-     * @description Removes the selected class from all elements, this is helpful when ensuring only one byte and its associated decoded text is selected
-     */
-    public static clearSelected(): void {
-        document.querySelectorAll(".selected").forEach(element => element.classList.remove("selected"));
-        // Clear the webview's selection state
-        WebViewStateManager.setProperty("selected_offsets", []);
-    }
+    private _selectionStart: number | undefined;
 
     /**
      * @description Given an offset selects the elements. This does not clear the previously selected elements.
@@ -33,28 +25,63 @@ export class SelectHandler {
         elements[1].classList.toggle("selected", force);
     }
 
+    /***
+     * @description Returns the offset of the element currently focused.
+     * @returns {number} The offset of the element currently focused
+     */
     public getFocused(): number | undefined {
         return this._focus;
     }
 
+    /***
+     * @description Set the offset of the element currently focused.
+     * @param {number} offset The offset the element currently focused
+     */
     public setFocused(offset: number | undefined): void {
         this._focus = offset;
     }
 
-    public getSelected(): number[] {
-        return this._selection;
+    /***
+     * @description Returns the offset from which the selection starts.
+     * @returns {number} The offset from which the selection starts
+     */
+    public getSelectionStart(): number | undefined {
+        return this._selectionStart ?? this._focus;
     }
 
-    public setSelected(offsets: number[], forceRender = false): void {
+    /***
+     * @description Returns the offsets of the elements currently selected.
+     * @returns {number[]} The offsets of the elements currently selected
+     */
+    public getSelected(): number[] {
+        return WebViewStateManager.getProperty("selected_offsets") ?? [];
+    }
+
+    /***
+     * @description Given an array of offsets, selects the corresponding elements.
+     * @param {number[]} offsets The offsets of the elements you want to select
+     * @param {number} start The offset from which the selection starts
+     * @param {boolean} forceRender Wheter to force rendering of all elements whose
+     * selected stated will change
+     */
+    public setSelected(offsets: number[], start?: number, forceRender = false): void {
         const oldSelection = this._selection;
 
+        this._selectionStart = start;
         this._selection = [...offsets].sort((a: number, b: number) => a - b);
         WebViewStateManager.setProperty("selected_offsets", this._selection);
 
+        // Need to call renderSelection with the least number of offsets to avoid querying the DOM
+        // as much as possible, if not rendering large selections becomes laggy as we dont hold references
+        // to the DOM elements
         const toRender = forceRender ? disjunction(oldSelection, this._selection) : relativeComplement(oldSelection, this._selection);
         this.renderSelection(toRender);
     }
 
+    /***
+     * @description Renders the updated selection state of selected/unselected elements
+     * @param {number[]} offsets The offsets of the elements to render
+     */
     private renderSelection(offsets: number[]): void {
         const contains = (offset: number): boolean => binarySearch(this._selection, offset, (a: number, b: number) => a - b) >= 0;
 

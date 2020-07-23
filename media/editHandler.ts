@@ -195,9 +195,9 @@ export class EditHandler {
         try {
             const syncedFileSize = (await messageHandler.postMessageWithResponse("edit", extHostMessage)).fileSize;
             virtualHexDocument.updateDocumentSize(syncedFileSize);
+        } catch {
             // Empty catch because we just don't do anything if for some reason the exthost doesn't respond with the new fileSize,
             // we just sync at the next available opportunity
-        } catch {
             return;
         }
     }
