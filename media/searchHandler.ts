@@ -3,7 +3,7 @@
 
 import { messageHandler, virtualHexDocument } from "./hexEdit";
 import { SelectHandler } from "./selectHandler";
-import { hexQueryToArray, focusElementWithGivenOffset } from "./util";
+import { hexQueryToArray } from "./util";
 
 interface SearchOptions {
     regex: boolean;
@@ -69,7 +69,7 @@ export class SearchHandler {
                 if (selected !== undefined) {
                     selected.focus();
                 } else {
-                    focusElementWithGivenOffset(virtualHexDocument.topOffset());
+                    virtualHexDocument.focusElementWithGivenOffset(virtualHexDocument.topOffset());
                 }
             } else {
                 this.search();
