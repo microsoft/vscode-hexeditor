@@ -187,7 +187,7 @@ export class ScrollBarHandler {
         // if these are equal it means the document is too short to scroll anyways
         if (this.scrollBarHeight === this.scrollThumbHeight) return [];
         const topOffset = virtualHexDocument.topOffset();
-        const rowDifference = Math.ceil(Math.abs(offset - topOffset) / 16);
+        const rowDifference = Math.floor(Math.abs(offset - topOffset) / 16);
         // The +1/-1 is because there is always a row hidden behind the header so we want the row to be visible
         if (offset > topOffset) {
             return this.scrollDocument(rowDifference - 1, "down");

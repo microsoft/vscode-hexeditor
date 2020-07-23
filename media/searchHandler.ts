@@ -3,7 +3,7 @@
 
 import { messageHandler, virtualHexDocument } from "./hexEdit";
 import { SelectHandler } from "./selectHandler";
-import { hexQueryToArray } from "./util";
+import { hexQueryToArray, focusElementWithGivenOffset } from "./util";
 
 interface SearchOptions {
     regex: boolean;
@@ -42,8 +42,8 @@ export class SearchHandler {
         this.findPreviousButton = document.getElementById("find-previous") as HTMLSpanElement;
         this.findNextButton = document.getElementById("find-next") as HTMLSpanElement;
         this.stopSearchButton = document.getElementById("search-stop") as HTMLSpanElement;
-        this.findNextButton.addEventListener("click", this.findNext.bind(this));
-        this.findPreviousButton.addEventListener("click", this.findPrevious.bind(this));
+        this.findNextButton.addEventListener("click", () => this.findNext(true));
+        this.findPreviousButton.addEventListener("click", () => this.findPrevious(true));
         this.updateInputGlyphs();
         // Whenever the user changes the data type we update the type we're searching for and the glyphs on the input box
         document.getElementById("data-type")?.addEventListener("change", (event: Event) => {
@@ -57,7 +57,35 @@ export class SearchHandler {
         this.replaceOptionsHandler();
 
         // When the user presses a key trigger a search
-        this.findTextBox.addEventListener("keyup", this.search.bind(this));
+        this.findTextBox.addEventListener("keyup", (event: KeyboardEvent) => {
+            // Some VS Code keybinding defualts for find next, find previous, and focus restore
+            if ((event.key === "Enter" || event.key === "F3") && event.shiftKey) {
+                this.findPrevious(false);
+            } else if (event.key === "Enter" || event.key === "F3") {
+                this.findNext(false);
+            } else if (event.key === "Escape") {
+                // Pressing escape returns focus to the editor
+                const selected = document.getElementsByClassName(`selected ${this.searchType}`)[0] as HTMLSpanElement | undefined;
+                if (selected !== undefined) {
+                    selected.focus();
+                } else {
+                    focusElementWithGivenOffset(virtualHexDocument.topOffset());
+                }
+            } else {
+                this.search();
+            }
+        });
+        window.addEventListener("keyup", (event: KeyboardEvent) => {
+            // Fin previous + find next when widget isn't focused
+            if (event.key === "F3" && event.shiftKey && document.activeElement !== this.findTextBox) {
+                this.findPrevious(true);
+                event.preventDefault();
+            } else if (event.key === "F3" && document.activeElement !== this.findTextBox) {
+                this.findNext(true);
+                event.preventDefault();
+            }
+        });
+
         this.replaceTextBox.addEventListener("keyup", this.updateReplaceButtons.bind(this));
         this.replaceButton.addEventListener("click", () => this.replace(false));
         this.replaceAllButton.addEventListener("click", () => this.replace(true));
@@ -87,6 +115,18 @@ export class SearchHandler {
         if (this.searchType === "hex" && !hexSearchRegex.test(query)) {
             if (query.length > 0) this.addInputMessage("find", "Invalid query", "error");
             return;
+        }
+        // Test if it's a valid regex
+        if (this.searchOptions.regex) {
+            try {
+                new RegExp(query);
+            } catch (err) {
+                // Split up the error message to fit in the box. In the future we might want the box to do word wrapping
+                // So that it's not a manual endeavor
+                const message = (err.message as string).substr(0, 27) + "\n" + (err.message as string).substr(27);
+                this.addInputMessage("find", message, "error");
+                return;
+            }
         }
         query = this.searchType === "hex" ? hexQueryToArray(query) : query;
         if (query.length === 0) {
@@ -129,13 +169,14 @@ export class SearchHandler {
 
     /**
      * @description Handles when the user clicks the find next icon
+     * @param {boolean} focus Whether or not to focus the selection
      */
-    private async findNext(): Promise<void> {
+    private async findNext(focus: boolean): Promise<void> {
         // If the button is disabled then this function shouldn't work
         if (this.findNextButton.classList.contains("disabled")) return;
         await virtualHexDocument.scrollDocumentToOffset(this.searchResults[++this.resultIndex][0]);
         virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
-        SelectHandler.focusSelection(this.searchType);
+        if (focus) SelectHandler.focusSelection(this.searchType);
         // If there's more than one search result we unlock the find next button
         if (this.resultIndex < this.searchResults.length - 1) {
             this.findNextButton.classList.remove("disabled");
@@ -150,13 +191,14 @@ export class SearchHandler {
 
     /**
      * @description Handles when the user clicks the find previous icon
+     * @param {boolean} focus Whether or not to focus the selection
      */
-    private async findPrevious(): Promise<void> {
+    private async findPrevious(focus: boolean): Promise<void> {
         // If the button is disabled then this function shouldn't work
         if (this.findPreviousButton.classList.contains("disabled")) return;
         await virtualHexDocument.scrollDocumentToOffset(this.searchResults[--this.resultIndex][0]);
         virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
-        SelectHandler.focusSelection(this.searchType);
+        if (focus) SelectHandler.focusSelection(this.searchType);
         // If they pressed previous, they can always go next therefore we always unlock the next button
         this.findNextButton.classList.remove("disabled");
         // We lock the find previous if there isn't a previous anymore
@@ -302,7 +344,7 @@ export class SearchHandler {
         // We can pass the size of the document back in because with the current implementation
         // The size of the document will never change as we only replace preexisting cells
         virtualHexDocument.redo(edits, virtualHexDocument.documentSize);
-        this.findNext();
+        this.findNext(true);
     }
 
     /**
