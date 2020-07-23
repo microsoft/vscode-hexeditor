@@ -116,6 +116,18 @@ export class SearchHandler {
             if (query.length > 0) this.addInputMessage("find", "Invalid query", "error");
             return; 
         }
+        // Test if it's a valid regex
+        if (this.searchOptions.regex) {
+            try {
+                new RegExp(query);
+            } catch (err) {
+                // Split up the error message to fit in the box. In the future we might want the box to do word wrapping
+                // So that it's not a manual endeavor
+                const message = (err.message as string).substr(0, 27) + "\n" + (err.message as string).substr(27);
+                this.addInputMessage("find", message, "error");
+                return;
+            }
+        }
         query = this.searchType === "hex" ? hexQueryToArray(query) : query;
         if (query.length === 0) {
             // If the user didn't type anything and its just a blank query we don't want to error on them
