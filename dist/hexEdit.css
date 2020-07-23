@@ -66,6 +66,11 @@ body:not(#editor-container) {
 
 .left > .header {
     border-bottom: none;
+    margin-bottom: 7px;
+}
+
+#editor-container > .column > .header {
+    margin-bottom: 7px;
 }
 
 #hexbody > .row > span {
