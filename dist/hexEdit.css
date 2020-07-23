@@ -134,12 +134,8 @@ input {
     color: var(--vscode-input-foreground);
 }
 
-input:focus {
-    background-color: var(--vscode-input-activeBackground);
-}
-
 :focus {
-    outline-color: var(--vscode-statusBar-background) !important;
+    outline-color: var(--vscode-focusBorder) !important;
 }
 
 span:focus {
