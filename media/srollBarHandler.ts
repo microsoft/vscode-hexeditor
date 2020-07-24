@@ -188,11 +188,11 @@ export class ScrollBarHandler {
         if (this.scrollBarHeight === this.scrollThumbHeight) return [];
         const topOffset = virtualHexDocument.topOffset();
         const rowDifference = Math.floor(Math.abs(offset - topOffset) / 16);
-        // The +1/-1 is because there is always a row hidden behind the header so we want the row to be visible
+        // The +3/-3 is because there is because we want the result to not be pressed against the top
         if (offset > topOffset) {
-            return this.scrollDocument(rowDifference - 1, "down");
+            return this.scrollDocument(rowDifference - 3, "down");
         } else {
-            return this.scrollDocument(rowDifference + 1, "up");
+            return this.scrollDocument(rowDifference + 3, "up");
         }
     }
 }
