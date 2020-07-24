@@ -3,7 +3,7 @@
 
 import { messageHandler, virtualHexDocument } from "./hexEdit";
 import { SelectHandler } from "./selectHandler";
-import { hexQueryToArray, focusElementWithGivenOffset } from "./util";
+import { hexQueryToArray } from "./util";
 
 interface SearchOptions {
     regex: boolean;
@@ -52,7 +52,7 @@ export class SearchHandler {
             this.updateInputGlyphs();
             this.search();
         });
-        
+
         this.searchOptionsHandler();
         this.replaceOptionsHandler();
 
@@ -69,7 +69,7 @@ export class SearchHandler {
                 if (selected !== undefined) {
                     selected.focus();
                 } else {
-                    focusElementWithGivenOffset(virtualHexDocument.topOffset());
+                    virtualHexDocument.focusElementWithGivenOffset(virtualHexDocument.topOffset());
                 }
             } else {
                 this.search();
@@ -104,7 +104,7 @@ export class SearchHandler {
         if (this.findTextBox.value === "") this.removeInputMessage("find");
         // This gets called to cancel any searches that might be going on now
         this.cancelSearch();
-        SelectHandler.clearSelected();
+        virtualHexDocument.setSelection([]);
         this.searchResults = [];
         this.updateReplaceButtons();
         this.findNextButton.classList.add("disabled");
@@ -114,7 +114,7 @@ export class SearchHandler {
         // We check to see if the hex is a valid query else we don't allow a search
         if (this.searchType === "hex" && !hexSearchRegex.test(query)) {
             if (query.length > 0) this.addInputMessage("find", "Invalid query", "error");
-            return; 
+            return;
         }
         // Test if it's a valid regex
         if (this.searchOptions.regex) {
@@ -158,7 +158,7 @@ export class SearchHandler {
         // If we got results then we select the first result and unlock the buttons
         if (this.searchResults.length !== 0) {
             await virtualHexDocument.scrollDocumentToOffset(this.searchResults[this.resultIndex][0]);
-            SelectHandler.multiSelect(this.searchResults[this.resultIndex], false);
+            virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
             // If there's more than one search result we unlock the find next button
             if (this.resultIndex + 1 < this.searchResults.length) {
                 this.findNextButton.classList.remove("disabled");
@@ -166,7 +166,7 @@ export class SearchHandler {
             this.updateReplaceButtons();
         }
     }
-    
+
     /**
      * @description Handles when the user clicks the find next icon
      * @param {boolean} focus Whether or not to focus the selection
@@ -175,7 +175,7 @@ export class SearchHandler {
         // If the button is disabled then this function shouldn't work
         if (this.findNextButton.classList.contains("disabled")) return;
         await virtualHexDocument.scrollDocumentToOffset(this.searchResults[++this.resultIndex][0]);
-        SelectHandler.multiSelect(this.searchResults[this.resultIndex], false);
+        virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
         if (focus) SelectHandler.focusSelection(this.searchType);
         // If there's more than one search result we unlock the find next button
         if (this.resultIndex < this.searchResults.length - 1) {
@@ -197,7 +197,7 @@ export class SearchHandler {
         // If the button is disabled then this function shouldn't work
         if (this.findPreviousButton.classList.contains("disabled")) return;
         await virtualHexDocument.scrollDocumentToOffset(this.searchResults[--this.resultIndex][0]);
-        SelectHandler.multiSelect(this.searchResults[this.resultIndex], false);
+        virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
         if (focus) SelectHandler.focusSelection(this.searchType);
         // If they pressed previous, they can always go next therefore we always unlock the next button
         this.findNextButton.classList.remove("disabled");
@@ -316,7 +316,7 @@ export class SearchHandler {
 
     /**
      * @description Handles when the user clicks replace or replace all
-     * @param {boolean} all whether this is a normal replace or a replace all 
+     * @param {boolean} all whether this is a normal replace or a replace all
      */
     private async replace(all: boolean): Promise<void> {
         const replaceQuery = this.replaceTextBox.value;
@@ -360,8 +360,8 @@ export class SearchHandler {
 
     /**
      * @description Adds an warning / error message to the input box passed in
-     * @param {"find" | "replace"} inputBoxName Whether it's the find input box or the replace input box 
-     * @param {string} message The message to display 
+     * @param {"find" | "replace"} inputBoxName Whether it's the find input box or the replace input box
+     * @param {string} message The message to display
      * @param {"error" | "warning"} type Whether it's an error message or a warning message
      */
     private addInputMessage(inputBoxName: "find" | "replace", message: string, type: "error" | "warning"): void {
@@ -384,8 +384,8 @@ export class SearchHandler {
     }
 
     /**
-     * @description Removes the warning / error message 
-     * @param {"find" | "replace"} inputBoxName Which input box to remove the message from 
+     * @description Removes the warning / error message
+     * @param {"find" | "replace"} inputBoxName Which input box to remove the message from
      * @param {boolean | undefined} skipHiding Whether we want to skip hiding the empty message box, this is useful for clearing the box to add new text
      */
     private removeInputMessage(inputBoxName: "find" | "replace", skipHiding?: boolean): void {

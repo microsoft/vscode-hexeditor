@@ -1,102 +1,92 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { getElementsGivenMouseEvent, retrieveSelectedByteObject, getElementsWithGivenOffset, createOffsetRange } from "./util";
+import { getElementsWithGivenOffset, relativeComplement, binarySearch, disjunction } from "./util";
 import { WebViewStateManager } from "./webviewStateManager";
-import { clearDataInspector, populateDataInspector } from "./dataInspector";
 
 export class SelectHandler {
-
-    public isDragging: boolean;
-
-    constructor() {
-        this.isDragging = false;
-    }
-    
-    /**
-     * @description Removes the selected class from all elements, this is helpful when ensuring only one byte and its associated decoded text is selected
-     */
-    public static clearSelected(): void {
-        document.querySelectorAll(".selected").forEach(element => element.classList.remove("selected"));
-        // Clear the webview's selection state
-        WebViewStateManager.setProperty("selected_offsets", []);
-    }
-
-    /**
-     * @description Selects the clicked element and its associated hex/ascii
-     * @param {MouseEvent} event MouseEvent handed to a click listener
-     * @param {boolean} multiSelect whether or not the user is clicking ctrl to add to the selection
-     * @param {boolean} rangeSelect whether or not the user is click shift to select a range of values
-     */
-    public static selectMouseHandler(event: MouseEvent, multiSelect: boolean, rangeSelect: boolean): void  {
-        if (!event || !event.target) return;
-        const elements = getElementsGivenMouseEvent(event);
-        if (!elements) return;
-        // We toggle the select off if they clicked the same element
-        if (elements[0].classList.contains("selected")) {
-            if (document.activeElement) {
-                (document.activeElement as HTMLElement).blur();
-            }
-            const currentSelectedOffsets = WebViewStateManager.getProperty("selected_offsets") as number[];
-            const offset = parseInt(elements[0].getAttribute("data-offset")!);
-            // We stop tracking that selection in the webview
-            WebViewStateManager.setProperty("selected_offsets", currentSelectedOffsets.splice(currentSelectedOffsets.indexOf(offset), 1));
-            clearDataInspector();
-            elements[0].classList.remove("selected");
-            elements[1].classList.remove("selected");
-        } else {
-            if (rangeSelect) {
-                const selected = document.getElementsByClassName("selected");
-                const endOffset = parseInt((event.target as HTMLSpanElement).getAttribute("data-offset")!);
-                let startOffset = endOffset;
-                if (selected.length !== 0) startOffset = parseInt((selected[selected.length - 1 ]as HTMLSpanElement).getAttribute("data-offset")!);
-                this.multiSelect(createOffsetRange(startOffset, endOffset), true);
-            } else if (multiSelect) {
-                this.multiSelect([parseInt((event.target as HTMLElement).getAttribute("data-offset")!)], true);
-            } else {
-                this.singleSelect(parseInt((event.target as HTMLElement).getAttribute("data-offset")!));
-            }
-            (event.target as HTMLElement).focus();
-        }
-    }
+    private _focus: number | undefined;
+    private _selection: number[] = [];
+    private _selectionStart: number | undefined;
 
     /**
      * @description Given an offset selects the elements. This does not clear the previously selected elements.
      * @param {number} offset Offset to select
+     * @param {boolean} force If force is not given, toggles selection. If force is true selects the element.
+     * If force is false deselects the element.
      */
-    private static selectOffset(offset: number): void {
+    private static toggleSelectOffset(offset: number, force?: boolean): void {
         const elements = getElementsWithGivenOffset(offset);
-        // We add the offset to the selection
-        const selectedOffsets = WebViewStateManager.getProperty("selected_offsets");
-        selectedOffsets.push(offset);
-        WebViewStateManager.setProperty("selected_offsets", selectedOffsets);
-        elements[0].classList.add("selected");
-        elements[1].classList.add("selected");
+        if (elements.length === 0) {
+            // Element may not be part of the DOM
+            return;
+        }
+        elements[0].classList.toggle("selected", force);
+        elements[1].classList.toggle("selected", force);
     }
 
-    /**
-     * @description Given an offset, selects the hex and ascii element
-     * @param {number} offset  The offset of the element you want to select
+    /***
+     * @description Returns the offset of the element currently focused.
+     * @returns {number} The offset of the element currently focused
      */
-    public static singleSelect(offset: number): void {
-        this.clearSelected();
-        this.selectOffset(offset);
-        const elements = getElementsWithGivenOffset(offset);
-        const byte_obj = retrieveSelectedByteObject(elements);
-        if (!byte_obj) return;
-        const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
-        populateDataInspector(byte_obj, littleEndian);
+    public getFocused(): number | undefined {
+        return this._focus;
     }
 
-    /**
-     * @description Selects the hex and ascii elements with the given offsets
-     * @param {number[]} offsets The list of offsets to select 
-     * @param {boolean} append Whether it should 
+    /***
+     * @description Set the offset of the element currently focused.
+     * @param {number} offset The offset the element currently focused
      */
-    public static multiSelect(offsets: number[], append: boolean): void {
-        if (!append) this.clearSelected();
+    public setFocused(offset: number | undefined): void {
+        this._focus = offset;
+    }
+
+    /***
+     * @description Returns the offset from which the selection starts.
+     * @returns {number} The offset from which the selection starts
+     */
+    public getSelectionStart(): number | undefined {
+        return this._selectionStart ?? this._focus;
+    }
+
+    /***
+     * @description Returns the offsets of the elements currently selected.
+     * @returns {number[]} The offsets of the elements currently selected
+     */
+    public getSelected(): number[] {
+        return WebViewStateManager.getProperty("selected_offsets") ?? [];
+    }
+
+    /***
+     * @description Given an array of offsets, selects the corresponding elements.
+     * @param {number[]} offsets The offsets of the elements you want to select
+     * @param {number} start The offset from which the selection starts
+     * @param {boolean} forceRender Wheter to force rendering of all elements whose
+     * selected stated will change
+     */
+    public setSelected(offsets: number[], start?: number, forceRender = false): void {
+        const oldSelection = this._selection;
+
+        this._selectionStart = start;
+        this._selection = [...offsets].sort((a: number, b: number) => a - b);
+        WebViewStateManager.setProperty("selected_offsets", this._selection);
+
+        // Need to call renderSelection with the least number of offsets to avoid querying the DOM
+        // as much as possible, if not rendering large selections becomes laggy as we dont hold references
+        // to the DOM elements
+        const toRender = forceRender ? disjunction(oldSelection, this._selection) : relativeComplement(oldSelection, this._selection);
+        this.renderSelection(toRender);
+    }
+
+    /***
+     * @description Renders the updated selection state of selected/unselected elements
+     * @param {number[]} offsets The offsets of the elements to render
+     */
+    private renderSelection(offsets: number[]): void {
+        const contains = (offset: number): boolean => binarySearch(this._selection, offset, (a: number, b: number) => a - b) >= 0;
+
         for (const offset of offsets) {
-            this.selectOffset(offset);
+            SelectHandler.toggleSelectOffset(offset, contains(offset));
         }
     }
 
@@ -135,7 +125,7 @@ export class SelectHandler {
             section = "ascii";
             selectedElements = document.getElementsByClassName("selected ascii") as HTMLCollectionOf<HTMLSpanElement>;
         } else {
-            selectedElements = document.getElementsByClassName("selected hex") as HTMLCollectionOf<HTMLSpanElement>; 
+            selectedElements = document.getElementsByClassName("selected hex") as HTMLCollectionOf<HTMLSpanElement>;
         }
         for (const element of selectedElements) {
             if (element.innerText === "+") continue;

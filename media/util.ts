@@ -2,29 +2,32 @@
 // Licensed under the MIT license.
 
 import { ByteData } from "./byteData";
-import { SelectHandler } from "./selectHandler";
 
 // Assorted helper functions
-
 
 /**
  * @description Class which represents a range of numbers
  */
 export class Range {
-    private start: number;
-    private end?: number;
-    // Construct a range object representing [start, end] inclusive of both
+    public readonly start: number;
+    public readonly end: number;
+
     /**
-     * @description Constructs a range object represneting [start, end] inclusive of both
-     * @param {number} start Represents the start of the range 
+     * @description Constructs a range object representing [start, end] inclusive of both
+     * @param {number} start Represents the start of the range
      * @param {number} end Represents the end of the range
      */
-    constructor (start: number, end?: number) {
-        this.start = start;
-        this.end = end;
+    constructor(start: number, end: number = Number.MAX_SAFE_INTEGER) {
+        if (start > end) {
+            this.start = end;
+            this.end = start;
+        } else {
+            this.start = start;
+            this.end = end;
+        }
     }
     /**
-     * @desciption Tests if the given number if within the range 
+     * @desciption Tests if the given number if within the range
      * @param {number} num The number to test
      * @returns {boolean } True if the number is in the range, false otherwise
      */
@@ -60,7 +63,7 @@ export function generateCharacterRanges(): Range[] {
     const ranges: Range[] = [];
     ranges.push(new Range(0, 31));
     ranges.push(new Range(127, 160));
-    ranges.push(new Range(173,173));
+    ranges.push(new Range(173, 173));
     ranges.push(new Range(256));
     return ranges;
 }
@@ -72,12 +75,12 @@ export function generateCharacterRanges(): Range[] {
  * @returns {NodeListOf<HTMLElement>} returns a list of HTMLElements which have the given offset
  */
 export function getElementsWithGivenOffset(offset: number): NodeListOf<HTMLElement> {
-	return document.querySelectorAll(`span[data-offset='${offset}'`);
+    return document.querySelectorAll(`span[data-offset='${offset}'`);
 }
 
 /**
  * @description Returns the elements with the same offset as the one clicked
- * @param {MouseEvent} event The event which is handed to a mouse event listener 
+ * @param {MouseEvent} event The event which is handed to a mouse event listener
  * @returns {NodeListOf<Element> | undefined} The elements with the same offset as the clicked element, or undefined if none could be retrieved
  */
 export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Element> | undefined {
@@ -86,22 +89,6 @@ export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Elemen
     const data_offset = hovered.getAttribute("data-offset");
     if (!data_offset) return;
     return getElementsWithGivenOffset(parseInt(data_offset));
-}
-
-/***
- * @description Given an offset, selects the elements and focuses the element in the same column as previous focus. Defaults to hex.
- * @param {number} offset The offset of the elements you want to select and focus
- */
-export function focusElementWithGivenOffset(offset: number): void {
-    const elements = getElementsWithGivenOffset(offset);
-    if (elements.length != 2) return;
-    SelectHandler.singleSelect(offset);
-    // If an ascii element is currently focused then we focus that, else we focus hex
-    if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
-        elements[1].focus();
-    } else {
-        elements[0].focus();
-    }
 }
 
 /**
@@ -124,13 +111,13 @@ export function updateAsciiValue(byteData: ByteData, asciiElement: HTMLSpanEleme
 
 /**
  * @description Given a string 0 pads it up unitl the string is of length width
- * @param {string} number The number you want to 0 pad (it's a string as you're 0 padding it to display it, not to do arithmetic) 
+ * @param {string} number The number you want to 0 pad (it's a string as you're 0 padding it to display it, not to do arithmetic)
  * @param {number} width The length of the final string (if smaller than the string provided nothing happens)
  * @returns {string} The newly padded string
  */
 export function pad(number: string, width: number): string {
-	number = number + "";
-	return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
+    number = number + "";
+    return number.length >= width ? number : new Array(width - number.length + 1).join("0") + number;
 }
 
 
@@ -140,17 +127,17 @@ export function pad(number: string, width: number): string {
  * @returns {ByteData | undefined} The ByteData object or undefined if elements was malformed or empty
  */
 export function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteData | undefined {
-	for (const element of Array.from(elements)) {
-		if (element.parentElement && element.classList.contains("hex")) {
-			const byte_object = new ByteData(parseInt(element.innerHTML, 16));
-			let current_element = element.nextElementSibling || element.parentElement.nextElementSibling?.children[0];
-			for (let i = 0; i < 7; i++) {
-				if (!current_element || current_element.innerHTML === "+") break;
-				byte_object.addAdjacentByte(new ByteData(parseInt(current_element.innerHTML, 16)));
-				current_element = current_element.nextElementSibling || current_element.parentElement?.nextElementSibling?.children[0];
-			}
-			return byte_object;
-		}
+    for (const element of Array.from(elements)) {
+        if (element.parentElement && element.classList.contains("hex")) {
+            const byte_object = new ByteData(parseInt(element.innerHTML, 16));
+            let current_element = element.nextElementSibling || element.parentElement.nextElementSibling?.children[0];
+            for (let i = 0; i < 7; i++) {
+                if (!current_element || current_element.innerHTML === "+") break;
+                byte_object.addAdjacentByte(new ByteData(parseInt(current_element.innerHTML, 16)));
+                current_element = current_element.nextElementSibling || current_element.parentElement?.nextElementSibling?.children[0];
+            }
+            return byte_object;
+        }
     }
     return;
 }
@@ -158,7 +145,7 @@ export function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteD
  * @description Given a start and end offset creates an array containing all the offsets in between, inclusive of start and end
  * @param {number} startOffset The offset which defines the start of the range
  * @param {number} endOffset The offset which defines the end of the range
- * @returns {number[]} The range [startOffset, endOffset] 
+ * @returns {number[]} The range [startOffset, endOffset]
  */
 export function createOffsetRange(startOffset: number, endOffset: number): number[] {
     const offsetsToSelect = [];
@@ -190,6 +177,95 @@ export function hexQueryToArray(query: string): string[] {
             currentCharacterSequence = "";
         }
     }
-    if (currentCharacterSequence.length > 0 ) return [];
+    if (currentCharacterSequence.length > 0) return [];
     return queryArray;
+}
+
+/**
+ * @description Given two sorted collections of numbers, returns the union
+ * between them (OR).
+ * @param {number[]} one The first sorted array of numbers
+ * @param {number[]} other The other sorted array of numbers
+ * @returns {number[]} A sorted collections of numbers representing the union (OR)
+ * between to sorted collections of numbers
+ */
+export function disjunction(one: number[], other: number[]): number[] {
+    const result: number[] = [];
+    let i = 0, j = 0;
+
+    while (i < one.length || j < other.length) {
+        if (i >= one.length) {
+            result.push(other[j++]);
+        } else if (j >= other.length) {
+            result.push(one[i++]);
+        } else if (one[i] === other[j]) {
+            result.push(one[i]);
+            i++;
+            j++;
+            continue;
+        } else if (one[i] < other[j]) {
+            result.push(one[i++]);
+        } else {
+            result.push(other[j++]);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @description Given two sorted collections of numbers, returns the relative
+ * complement between them (XOR).
+ * @param {number[]} one The first sorted array of numbers
+ * @param {number[]} other The other sorted array of numbers
+ * @returns {number[]} A sorted collections of numbers representing the complement (XOR)
+ * between to sorted collections of numbers
+ */
+export function relativeComplement(one: number[], other: number[]): number[] {
+    const result: number[] = [];
+    let i = 0, j = 0;
+
+    while (i < one.length || j < other.length) {
+        if (i >= one.length) {
+            result.push(other[j++]);
+        } else if (j >= other.length) {
+            result.push(one[i++]);
+        } else if (one[i] === other[j]) {
+            i++;
+            j++;
+            continue;
+        } else if (one[i] < other[j]) {
+            result.push(one[i++]);
+        } else {
+            result.push(other[j++]);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @description Searches a key element inside a sorted array.
+ * @template T
+ * @param {T[]} array The sorted array to search in
+ * @param {T} key The key to search for in the sorted array
+ * @param {comparatorCallback} comparator The comparator callback
+ * @returns {number} The at which a given element can be found in the array, or a negative value if it is not present
+ */
+export function binarySearch<T>(array: ReadonlyArray<T>, key: T, comparator: (op1: T, op2: T) => number): number {
+    let low = 0,
+        high = array.length - 1;
+
+    while (low <= high) {
+        const mid = ((low + high) / 2) | 0;
+        const comp = comparator(array[mid], key);
+        if (comp < 0) {
+            low = mid + 1;
+        } else if (comp > 0) {
+            high = mid - 1;
+        } else {
+            return mid;
+        }
+    }
+    return -(low + 1);
 }

@@ -2,7 +2,7 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject } from "./util";
 import { hover, removeHover, changeEndianness } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
@@ -10,6 +10,7 @@ import { EditHandler, EditMessage } from "./editHandler";
 import { WebViewStateManager } from "./webviewStateManager";
 import { SelectHandler } from "./selectHandler";
 import { SearchHandler } from "./searchHandler";
+import { populateDataInspector } from "./dataInspector";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -30,6 +31,8 @@ export class VirtualDocument {
     private readonly selectHandler: SelectHandler;
     private readonly searchHandler: SearchHandler;
     private rows: Map<string, HTMLDivElement>[];
+    private readonly editorContainer: HTMLElement;
+
     /**
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
      * @param {number} fileSize The size, in bytes, of the file which is being displayed
@@ -76,7 +79,7 @@ export class VirtualDocument {
         hex.appendChild(row);
         hexaddr.appendChild(hexAddrRow);
         ascii.appendChild(asciiRow);
-        
+
         const spans = document.getElementsByTagName("span");
         this.rowHeight = spans[16].offsetHeight;
         // Utilize the fake rows to get the widths of them and alter the widths of the headers etc to fit
@@ -106,7 +109,7 @@ export class VirtualDocument {
         rowWrappers[0].style.width = `${(document.getElementsByClassName("header")[0] as HTMLElement).offsetWidth}px`;
         // We remove the text from the header to make it look like it's not there
         const headerHeight = (document.getElementsByClassName("header")[0] as HTMLElement).offsetHeight;
-        (document.getElementsByClassName("header")[0] as HTMLElement).innerText= "";
+        (document.getElementsByClassName("header")[0] as HTMLElement).innerText = "";
         (document.getElementsByClassName("header")[0] as HTMLElement).style.width = `${rowWrappers[0].style.width}px`;
         // The plus one is to account for all other headers having borders
         (document.getElementsByClassName("header")[0] as HTMLElement).style.height = `${headerHeight + 1}px`;
@@ -125,34 +128,17 @@ export class VirtualDocument {
         // Intializes a few things such as viewport size and the scrollbar positions
         this.documentResize();
 
-        const editorContainer = document.getElementById("editor-container")!;
+        this.editorContainer = document.getElementById("editor-container")!;
         // Bind the event listeners
         // Will need to refactor this section soon as its getting pretty messy
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
-        editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
-        editorContainer.addEventListener("mouseover", hover);
-        editorContainer.addEventListener("mouseleave", removeHover);
+        this.editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
+        this.editorContainer.addEventListener("mouseover", hover);
+        this.editorContainer.addEventListener("mouseleave", removeHover);
 
         // Event handles to handle when the user drags to create a selection
-        editorContainer.addEventListener("mousedown", (click: MouseEvent) => {
-            this.selectHandler.isDragging = true;
-            SelectHandler.selectMouseHandler(click, click.ctrlKey, click.shiftKey);
-            this.editHandler.completePendingEdits();
-            click.preventDefault();
-        });
-        editorContainer.addEventListener("mousemove", (event: MouseEvent) => {
-            if (event.buttons == 0) this.selectHandler.isDragging = false;
-            if (this.selectHandler.isDragging) {
-                const selected = document.getElementsByClassName("selected") as HTMLCollectionOf<HTMLSpanElement>;
-                let startOffset = selected[selected.length - 1]?.getAttribute("data-offset");
-                const endOffset = (event.target as HTMLSpanElement).getAttribute("data-offset");
-                if (endOffset !== null) {
-                    startOffset = startOffset === null ? endOffset : startOffset;
-                    SelectHandler.multiSelect(createOffsetRange(parseInt(startOffset), parseInt(endOffset)), true);
-                }
-            }
-        });
-        editorContainer.addEventListener("mouseup", () => this.selectHandler.isDragging = false);
+        this.editorContainer.addEventListener("click", this.clickHandler.bind(this));
+        this.editorContainer.addEventListener("mousedown", this.mouseDownHandler.bind(this));
 
         window.addEventListener("copy", (event: Event) => {
             if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
@@ -196,9 +182,9 @@ export class VirtualDocument {
         document.getElementById("ascii")?.appendChild(asciiFragment);
 
         if (WebViewStateManager.getState()) {
-            const selectedOffsets = WebViewStateManager.getProperty("selected_offsets") as number[];
+            const selectedOffsets = this.selectHandler.getSelected();
             if (selectedOffsets.length > 0) {
-                SelectHandler.multiSelect(selectedOffsets, false);
+                this.selectHandler.setSelected(selectedOffsets, selectedOffsets[0], true);
             }
             // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
             // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load
@@ -213,7 +199,7 @@ export class VirtualDocument {
      * @description Event handler which is called everytime the viewport is resized
      */
     private documentResize(): void {
-        this.viewPortHeight = (window.innerHeight || document.documentElement.clientHeight);
+        this.viewPortHeight = document.documentElement.clientHeight;
         if (this.scrollBarHandler) {
             this.scrollBarHandler.updateScrollBar(this.fileSize / 16);
         }
@@ -369,6 +355,95 @@ export class VirtualDocument {
     }
 
     /**
+     * @description Handles the click events within the editor
+     * @param {MouseEvent} event The MouseEvent passed to the event handler.
+     */
+    private clickHandler(event: MouseEvent): void {
+        const target = event.target as HTMLElement;
+        if (!target || !target.hasAttribute("data-offset")) {
+            return;
+        }
+
+        event.preventDefault();
+        this.editHandler.completePendingEdits();
+        const offset = parseInt(target.getAttribute("data-offset")!);
+        if (event.shiftKey) {
+            const startSelection = this.selectHandler.getSelectionStart();
+            if (startSelection !== undefined) {
+                this.selectHandler.setFocused(offset);
+                const min = Math.min(startSelection, offset);
+                const max = Math.max(startSelection, offset);
+                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
+                target.focus({ preventScroll: true });
+            }
+        } else {
+            this.selectHandler.setFocused(offset);
+            if (event.ctrlKey) {
+                const selection = this.selectHandler.getSelected();
+                const newSelection = selection.filter(i => i !== offset);
+                if (selection.length === newSelection.length) {
+                    this.selectHandler.setSelected([...newSelection, offset], offset);
+                } else {
+                    this.selectHandler.setSelected(newSelection, offset);
+                }
+            } else {
+                this.selectHandler.setSelected([offset], offset);
+            }
+            this.updateInspector();
+            target.focus({ preventScroll: true });
+        }
+    }
+
+    /**
+     * @description Handles the mousedown events within the editor
+     * @param {MouseEvent} event The MouseEvent passed to the event handler.
+     */
+    private mouseDownHandler(event: MouseEvent): void {
+        if (event.buttons !== 1) {
+            return;
+        }
+
+        const target = event.target as HTMLElement;
+        if (!target || !target.hasAttribute("data-offset")) {
+            return;
+        }
+
+        event.preventDefault();
+        this.editHandler.completePendingEdits();
+        const offset = parseInt(target.getAttribute("data-offset")!);
+        const startMouseMoveOffset = offset;
+        const startSelection = event.shiftKey ? this.selectHandler.getSelectionStart() : offset;
+
+        const onMouseMove = (event: MouseEvent): void => {
+            if (event.buttons !== 1) {
+                return;
+            }
+
+            const target = event.target as HTMLElement;
+            if (!target || !target.hasAttribute("data-offset")) {
+                return;
+            }
+
+            const offset = parseInt(target.getAttribute("data-offset")!);
+            if (startSelection !== undefined && offset !== startMouseMoveOffset) {
+                this.selectHandler.setFocused(offset);
+                const min = Math.min(startSelection, offset);
+                const max = Math.max(startSelection, offset);
+                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
+                target.focus({ preventScroll: true });
+            }
+        };
+
+        const onMouseUp = (): void => {
+            this.editorContainer.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
+        };
+
+        this.editorContainer.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+    }
+
+    /**
      * @description Handles all keyboard interaction with the document
      * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
@@ -376,95 +451,83 @@ export class VirtualDocument {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         const modifierKeyPressed = event.metaKey || event.altKey || event.ctrlKey;
-        // If the user presses ctrl / cmd + f we focus the search box and change the dropdown
         if ((event.metaKey || event.ctrlKey) && event.key === "f") {
+            // If the user presses ctrl / cmd + f we focus the search box and change the dropdown
             this.searchHandler.searchKeybindingHandler();
-        } else if (event.keyCode >= 37 && event.keyCode <= 40) {
-            this.arrowKeyNavigate(event.keyCode, targetElement);
+        } else if ((event.keyCode >= 37 && event.keyCode <= 40 /*Arrows*/)
+            || ((event.keyCode === 35 /*End*/ || event.keyCode === 36 /*Home*/) && !event.ctrlKey)) {
+            this.navigateByKey(event.keyCode, targetElement, event.shiftKey);
             event.preventDefault();
-        // If the user presses Home we go to the front of the line
-        } else if (event.keyCode == 36 && !event.ctrlKey) {
-            const firstElement = targetElement.parentElement!.children[0] as HTMLElement;
-            firstElement.focus();
-            SelectHandler.singleSelect(parseInt(firstElement.getAttribute("data-offset")!));
-        // If the user presses end we go to the end of the line
-        } else if (event.keyCode == 35 && !event.ctrlKey) {
-            const parentChildren = targetElement.parentElement!.children;
-            const lastElement = parentChildren[parentChildren.length - 1] as HTMLElement;
-            lastElement.focus();
-            SelectHandler.singleSelect(parseInt(lastElement.getAttribute("data-offset")!));
         } else if (!modifierKeyPressed && targetElement.classList.contains("hex")) {
             await this.editHandler.editHex(targetElement, event.key);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");
-                this.arrowKeyNavigate(39, targetElement);
+                this.navigateByKey(39, targetElement, false);
             }
         } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("ascii")) {
             await this.editHandler.editAscii(targetElement, event.key);
             targetElement.classList.remove("editing");
-            this.arrowKeyNavigate(39, targetElement);
+            this.navigateByKey(39, targetElement, false);
         }
         await this.editHandler.completePendingEdits();
     }
 
     /**
      * @description Handles scrolling using ctrl + home and ctrl + end
-     * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler. 
+     * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
     private keyBoardScroller(event: KeyboardEvent): void {
         if (!event || !event.target) return;
-        // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
-        if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey)
+        if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey) {
+            // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
             event.keyCode == 36 ? this.scrollBarHandler.scrollToTop() : this.scrollBarHandler.scrollToBottom();
-        // PG Up
-        else if (event.keyCode == 33) {
+        } else if (event.keyCode == 33) {
+            // PG Up
             this.scrollBarHandler.page(this.viewPortHeight, "up");
-        // PG Down
         } else if (event.keyCode == 34) {
+            // PG Down
             this.scrollBarHandler.page(this.viewPortHeight, "down");
         }
     }
 
     /**
-     * @description Handles when the user uses the arrow keys to navigate the editor
+     * @description Handles when the user uses the arrow keys, Home or End to navigate the editor
      * @param {number} keyCode The keyCode of the key pressed
      * @param {HTMLElement} targetElement The element
+     * @param {boolean} isRangeSelection If we are selecting a range (shift key pressed)
      */
-    private arrowKeyNavigate(keyCode: number, targetElement: HTMLElement): void {
-        if (!event || !event.target) return;
-        let next;
-        if (keyCode < 37 || keyCode > 40) {
-            return;
-        }
-        switch(keyCode) {
-            // left
-            case 37:
-                next = targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15];
+    private navigateByKey(keyCode: number, targetElement: HTMLElement, isRangeSelection: boolean): void {
+        let next: HTMLElement | undefined;
+        switch (keyCode) {
+            case 35:
+                // If the user presses End we go to the end of the line
+                const parentChildren = targetElement.parentElement!.children;
+                next = parentChildren[parentChildren.length - 1] as HTMLElement;
                 break;
-            // up
-            case  38:
+            case 36:
+                // If the user presses Home we go to the front of the line
+                next = targetElement.parentElement!.children[0] as HTMLElement;
+                break;
+            case 37:
+                // left
+                next = (targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
+                break;
+            case 38:
+                // up
                 const elements_above = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) - 16);
                 if (elements_above.length === 0) break;
-                if (elements_above[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
-                    next = elements_above[0];
-                } else {
-                    next = elements_above[1];
-                }
+                next = targetElement.classList.contains("hex") ? elements_above[0] : elements_above[1];
                 break;
-            // right
             case 39:
-                next = targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0];
+                // right
+                next = (targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
                 break;
-            // down
             case 40:
-                const elements_below = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) + 16);
+                // down
+                const elements_below = getElementsWithGivenOffset(Math.min(parseInt(targetElement.getAttribute("data-offset")!) + 16, this.fileSize - 1));
                 if (elements_below.length === 0) break;
-                if (elements_below[0].parentElement?.parentElement === targetElement.parentElement?.parentElement) {
-                    next = elements_below[0];
-                } else {
-                    next = elements_below[1];
-                }
+                next = targetElement.classList.contains("hex") ? elements_below[0] : elements_below[1];
                 break;
         }
         if (next && next.tagName === "SPAN") {
@@ -474,14 +537,62 @@ export class VirtualDocument {
             } else if (nextRect.top <= 0) {
                 this.scrollBarHandler.scrollDocument(1, "up");
             }
-            (next as HTMLInputElement).focus();
-            SelectHandler.singleSelect(parseInt(next.getAttribute("data-offset")!));
+
+            const offset = parseInt(next.getAttribute("data-offset")!);
+            this.selectHandler.setFocused(offset);
+            const startSelection = this.selectHandler.getSelectionStart();
+            if (isRangeSelection && startSelection !== undefined) {
+                const min = Math.min(startSelection, offset);
+                const max = Math.max(startSelection, offset);
+                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
+            } else {
+                this.selectHandler.setSelected([offset], offset);
+                this.updateInspector();
+            }
+            next.focus({ preventScroll: true });
+        }
+    }
+
+    /***
+     * @description Populates the inspector data with the currently focused element.
+     */
+    private updateInspector(): void {
+        const offset = this.selectHandler.getFocused();
+        if (offset !== undefined) {
+            const elements = getElementsWithGivenOffset(offset);
+            const byte_obj = retrieveSelectedByteObject(elements)!;
+            const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
+            populateDataInspector(byte_obj, littleEndian);
+        }
+    }
+
+    /***
+     * @description Given an array of offsets, selects the corresponding elements.
+     * @param {number[]} offsets The offsets of the elements you want to select
+     */
+    public setSelection(offsets: number[]): void {
+        this.selectHandler.setSelected(offsets, offsets.length > 0 ? offsets[0] : undefined);
+    }
+
+    /***
+     * @description Given an offset, selects the elements and focuses the element in the same column as previous focus. Defaults to hex.
+     * @param {number} offset The offset of the elements you want to select and focus
+     */
+    public focusElementWithGivenOffset(offset: number): void {
+        const elements = getElementsWithGivenOffset(offset);
+        if (elements.length != 2) return;
+        this.selectHandler.setSelected([offset], offset);
+        // If an ascii element is currently focused then we focus that, else we focus hex
+        if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
+            elements[1].focus();
+        } else {
+            elements[0].focus();
         }
     }
 
     /**
      * @description Undoes the given edits from the document
-     * @param {EditMessage[]} edits The edits that will be undone 
+     * @param {EditMessage[]} edits The edits that will be undone
      * @param {number} fileSize The size of the file, the ext host tracks this and passes it back
      */
     public undo(edits: EditMessage[], fileSize: number): void {
@@ -492,7 +603,7 @@ export class VirtualDocument {
     /**
      * @description Redoes the given edits from the document
      * @param {EditMessage[]} edits The edits that will be redone
-     * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone 
+     * @param {number} fileSize The size of the file, the ext host tracks this and passes it backedone
      */
     public redo(edits: EditMessage[], fileSize: number): void {
         this.editHandler.redo(edits);
@@ -533,19 +644,19 @@ export class VirtualDocument {
             elements[1].parentElement?.appendChild(ascii_element);
         }
     }
-    
+
     /**
-     * @description Removes the last cell from the virtual document 
+     * @description Removes the last cell from the virtual document
      */
-     public removeLastCell(): void {
-         // We can use the add cell as the last cell offset since a plus cell should always be the last cell
-         const plusCellOffset = document.getElementsByClassName("add-cell")[0].getAttribute("data-offset");
-         if (!plusCellOffset) return;
-         const lastCellOffset = parseInt(plusCellOffset);
-         const lastCells = getElementsWithGivenOffset(lastCellOffset);
-         const secondToLastCells = getElementsWithGivenOffset(lastCellOffset - 1);
-         // If the last cell was on its own row we remove the new row
-         if (lastCellOffset % 16 === 0) {
+    public removeLastCell(): void {
+        // We can use the add cell as the last cell offset since a plus cell should always be the last cell
+        const plusCellOffset = document.getElementsByClassName("add-cell")[0].getAttribute("data-offset");
+        if (!plusCellOffset) return;
+        const lastCellOffset = parseInt(plusCellOffset);
+        const lastCells = getElementsWithGivenOffset(lastCellOffset);
+        const secondToLastCells = getElementsWithGivenOffset(lastCellOffset - 1);
+        // If the last cell was on its own row we remove the new row
+        if (lastCellOffset % 16 === 0) {
             this.rows[0].get(lastCellOffset.toString())?.remove();
             this.rows[0].delete(lastCellOffset.toString());
             this.rows[1].get(lastCellOffset.toString())?.remove();
@@ -553,25 +664,25 @@ export class VirtualDocument {
             this.rows[2].get(lastCellOffset.toString())?.remove();
             this.rows[2].delete(lastCellOffset.toString());
             this.scrollBarHandler.updateScrollBar((lastCellOffset - 1) / 16);
-         } else {
-             lastCells[0].remove();
-             lastCells[1].remove();
-         }
-         secondToLastCells[0].innerText = "+";
-         secondToLastCells[0].classList.add("add-cell");
-         secondToLastCells[0].classList.remove("nongraphic");
-         secondToLastCells[0].classList.remove("edited");
-         secondToLastCells[1].innerText = "+";
-         secondToLastCells[1].classList.remove("nongraphic");
-         secondToLastCells[1].classList.add("add-cell");
-         secondToLastCells[1].classList.remove("edited");
-     }
+        } else {
+            lastCells[0].remove();
+            lastCells[1].remove();
+        }
+        secondToLastCells[0].innerText = "+";
+        secondToLastCells[0].classList.add("add-cell");
+        secondToLastCells[0].classList.remove("nongraphic");
+        secondToLastCells[0].classList.remove("edited");
+        secondToLastCells[1].innerText = "+";
+        secondToLastCells[1].classList.remove("nongraphic");
+        secondToLastCells[1].classList.add("add-cell");
+        secondToLastCells[1].classList.remove("edited");
+    }
 
     /**
      * @description Simple getter for the fileSize
      * @returns {number} The fileSize
      */
-    public get documentSize(): number { return this.fileSize;}
+    public get documentSize(): number { return this.fileSize; }
 
     /**
      * @description Updates the file size so its in sync with ext host
