@@ -139,6 +139,8 @@ input {
 }
 
 span:focus {
+    position: relative;
+    z-index: 2;
     outline-offset: 1px;
     outline: 2px solid;
 }
