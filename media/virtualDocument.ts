@@ -359,7 +359,7 @@ export class VirtualDocument {
      * @param {MouseEvent} event The MouseEvent passed to the event handler.
      */
     private clickHandler(event: MouseEvent): void {
-        if (event.buttons !== 1) return;
+        if (event.buttons > 1) return;
         const target = event.target as HTMLElement;
         if (!target || !target.hasAttribute("data-offset")) {
             return;
