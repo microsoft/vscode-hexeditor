@@ -163,7 +163,8 @@ export function createOffsetRange(startOffset: number, endOffset: number): numbe
 }
 
 /**
- * @description Converts a hex query to a string array ignoring spaces, if not evenly divisible we return an empty array to signify it's invalid
+ * @description Converts a hex query to a string array ignoring spaces, if not evenly divisible we append a leading 0 
+ * i.e A -> 0A
  * @param {string} query The query to convert to an array
  */
 export function hexQueryToArray(query: string): string[] {
@@ -177,7 +178,9 @@ export function hexQueryToArray(query: string): string[] {
             currentCharacterSequence = "";
         }
     }
-    if (currentCharacterSequence.length > 0) return [];
+    if (currentCharacterSequence.length > 0)  {
+        queryArray.push("0" + currentCharacterSequence);
+    }
     return queryArray;
 }
 
