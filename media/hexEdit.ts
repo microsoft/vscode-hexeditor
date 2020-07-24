@@ -34,7 +34,6 @@ function openAnyway(): void {
 					if (body.html !== undefined) {
 						document.getElementsByTagName("body")[0].innerHTML = body.html;
 						virtualHexDocument = new VirtualDocument(body.fileSize);
-						(window as any).virtualHexDocument = virtualHexDocument;
 						// We initially load 4 chunks below the viewport (normally we buffer 2 above as well, but there is no above at the start)
 						chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
 							topBufferSize: 0,

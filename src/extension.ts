@@ -12,7 +12,6 @@ const extensionID = `vscode-${name}`;
 let telemetryReporter: TelemetryReporter;
 
 export function activate(context: vscode.ExtensionContext): void {
-	console.log("Hexeditor is active!");
 	telemetryReporter = new TelemetryReporter(extensionID, version, aiKey);
 	const openWithCommand = vscode.commands.registerTextEditorCommand("hexEditor.openFile", (textEditor: vscode.TextEditor) => {
 		vscode.commands.executeCommand("vscode.openWith", textEditor.document.uri, "hexEditor.hexedit");
