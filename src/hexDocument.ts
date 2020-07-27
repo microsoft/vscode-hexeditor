@@ -129,7 +129,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				removals.push(edit.offset);
 			}
 		}
-		removals = removals.reverse();
+		if (removals[0] < removals[removals.length-1])removals = removals.reverse();
 		for (const removal of removals) {
 			documentArray.splice(removal, 1);
 		}
