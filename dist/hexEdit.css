@@ -87,7 +87,7 @@ body:not(#editor-container) {
     position: sticky;
     top: 0px;
     font-weight: bold;
-    font-family: var(--vscode-editor-font-family);
+    line-height: var(--vscode-editor-font-size);
     background-color: var(--vscode-editor-background);
     color: var(--vscode-editorLineNumber-activeForeground);
     z-index: 10;
@@ -109,6 +109,7 @@ body:not(#editor-container) {
 }
 
 .right > .header {
+    font-family: var(--vscode-font-family);
     font-weight: bold;
     padding-left: 5px;
 }
