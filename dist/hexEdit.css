@@ -297,6 +297,8 @@ button:disabled {
 
 #search-container > .header, #data-inspector > .header {
     font-weight: bold;
+    font-family: var(--vscode-font-family);
+    
 }
 
 .codicon {
