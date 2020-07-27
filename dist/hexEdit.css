@@ -9,6 +9,7 @@ body {
     color: var(--vscode-editor-foreground);
     overflow-y: hidden;
     overflow-x: scroll;
+    font-size: var(--vscode-editor-font-size);
 }
 
 /* Disable selection color because select is different in the custom editor */
@@ -26,13 +27,11 @@ body {
 #editor-container {
     font-family: var(--vscode-editor-font-family);
     font-weight: var(--vscode-editor-font-weight);
-    font-size: var(--vscode-editor-font-size);
 }
 
 body:not(#editor-container) {
     font-family: var(--vscode-font-family);
-    font-weight: var(--vscode-font-weight);
-    font-size: var(--vscode-font-size);
+    font-weight: var(--vscode-editor-font-weight);
 }
 
 .grid-container {
@@ -56,7 +55,6 @@ body:not(#editor-container) {
 .left {
     font-family: var(--vscode-editor-font-family);
     font-weight: var(--vscode-editor-font-weight);
-    font-size: var(--vscode-editor-font-size);
     text-align: right;
 }
 .left > .rowwrapper {
@@ -89,6 +87,7 @@ body:not(#editor-container) {
     position: sticky;
     top: 0px;
     font-weight: bold;
+    font-family: var(--vscode-editor-font-family);
     background-color: var(--vscode-editor-background);
     color: var(--vscode-editorLineNumber-activeForeground);
     z-index: 10;
@@ -110,9 +109,7 @@ body:not(#editor-container) {
 }
 
 .right > .header {
-    font-family: var(--vscode-font-family);
     font-weight: bold;
-    font-size: 11px;
     padding-left: 5px;
 }
 
@@ -299,7 +296,6 @@ button:disabled {
 
 #search-container > .header, #data-inspector > .header {
     font-weight: bold;
-    font-size: 11px;
 }
 
 .codicon {
