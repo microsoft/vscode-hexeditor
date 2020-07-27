@@ -213,7 +213,7 @@ export class EditHandler {
             edits = edits.reverse();
         }
         for (const edit of edits) {
-            // This would be the delete case, but for now we will leave it alone
+            // This is the delete case
             if (edit.oldValue === undefined) {
                 virtualHexDocument.focusElementWithGivenOffset(virtualHexDocument.documentSize);
                 virtualHexDocument.removeLastCell();
