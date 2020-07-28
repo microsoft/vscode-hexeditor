@@ -132,7 +132,7 @@ export class VirtualDocument {
         // Bind the event listeners
         // Will need to refactor this section soon as its getting pretty messy
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
-        this.editorContainer.addEventListener("keydown", this.keyBoardHandler.bind(this));
+        this.editorContainer.addEventListener("keydown", this.editorKeyBoardHandler.bind(this));
         this.editorContainer.addEventListener("mouseover", hover);
         this.editorContainer.addEventListener("mouseleave", removeHover);
 
@@ -151,7 +151,7 @@ export class VirtualDocument {
             }
         });
         window.addEventListener("resize", this.documentResize.bind(this));
-        window.addEventListener("keydown", this.keyBoardScroller.bind(this));
+        window.addEventListener("keydown", this.windowKeyboardHandler.bind(this));
     }
 
     /**
@@ -445,17 +445,14 @@ export class VirtualDocument {
     }
 
     /**
-     * @description Handles all keyboard interaction with the document
+     * @description Handles all keyboard interaction with the main editor window
      * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
-    private async keyBoardHandler(event: KeyboardEvent): Promise<void> {
+    private async editorKeyBoardHandler(event: KeyboardEvent): Promise<void> {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         const modifierKeyPressed = event.metaKey || event.altKey || event.ctrlKey;
-        if ((event.metaKey || event.ctrlKey) && event.key === "f") {
-            // If the user presses ctrl / cmd + f we focus the search box and change the dropdown
-            this.searchHandler.searchKeybindingHandler();
-        } else if ((event.keyCode >= 37 && event.keyCode <= 40 /*Arrows*/)
+        if ((event.keyCode >= 37 && event.keyCode <= 40 /*Arrows*/)
             || ((event.keyCode === 35 /*End*/ || event.keyCode === 36 /*Home*/) && !event.ctrlKey)) {
             this.navigateByKey(event.keyCode, targetElement, event.shiftKey);
             event.preventDefault();
@@ -475,12 +472,15 @@ export class VirtualDocument {
     }
 
     /**
-     * @description Handles scrolling using ctrl + home and ctrl + end
+     * @description Handles keyboard iteration with the window
      * @param {KeyboardEvent} event The KeyboardEvent passed to the event handler.
      */
-    private keyBoardScroller(event: KeyboardEvent): void {
+    private windowKeyboardHandler(event: KeyboardEvent): void {
         if (!event || !event.target) return;
-        if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey) {
+        if ((event.metaKey || event.ctrlKey) && event.key === "f") {
+            // If the user presses ctrl / cmd + f we focus the search box and change the dropdown
+            this.searchHandler.searchKeybindingHandler();
+        } else if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey) {
             // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
             event.keyCode == 36 ? this.scrollBarHandler.scrollToTop() : this.scrollBarHandler.scrollToBottom();
         } else if (event.keyCode == 33) {
