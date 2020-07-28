@@ -47,11 +47,20 @@ This extension contributes the following settings:
 
 ## Known Issues
 
-- Revert file command doesn't work ([#55](https://github.com/microsoft/vscode-hexeditor/issues/55))
+- Undoing a pending edit causes editor to get into a bad state [161](https://github.com/microsoft/vscode-hexeditor/issues/161)
+- Searching in large files can become hit or miss [149](https://github.com/microsoft/vscode-hexeditor/issues/149)
 
 To track all issues / file a new issue please go to the Github repo https://github.com/microsoft/vscode-hexeditor/issues
 
 ## Release Notes
+
+### 1.2.0
+- Simple File Watching implementation, editor will now respond to changes on disk outside of editor
+- Support for copy and paste
+- Support for Find with text regex, and hex wildcards (i.e FF ?? EE)
+- Support for multi select, along with drag, drop, and keyboard selection improvements thank to [@jeanp413 via #92](https://github.com/microsoft/vscode-hexeditor/pull/92) for helping with that
+- Fixed a bug with num pad not working inside the hex editor
+- Fixed a bug with incorrect UTF-8 decoding inside the data inspector
 
 ### 1.1.0
 - Added simple editing support for hex and decoded text
