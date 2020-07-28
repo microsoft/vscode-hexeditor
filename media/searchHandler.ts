@@ -298,7 +298,7 @@ export class SearchHandler {
         this.removeInputMessage("replace");
         const hexReplaceRegex = new RegExp("^[a-fA-F0-9]+$");
         // If it's not a valid hex query we lock the buttons, we remove whitespace from the string to simplify the regex
-        const queryNoSpaces = this.replaceTextBox.value.replace(" ", "");
+        const queryNoSpaces = this.replaceTextBox.value.replace(/\s/g, "");
         if (this.searchType === "hex" && !hexReplaceRegex.test(queryNoSpaces)) {
             this.replaceAllButton.classList.add("disabled");
             this.replaceButton.classList.add("disabled");
