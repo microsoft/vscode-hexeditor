@@ -72,23 +72,36 @@ export function generateCharacterRanges(): Range[] {
 /**
  * @description Given an offset gets all spans with that offset
  * @param {number} offset The offset to find elements of
- * @returns {NodeListOf<HTMLElement>} returns a list of HTMLElements which have the given offset
+ * @returns {HTMLCollectionOf<HTMLElement>} returns a list of HTMLElements which have the given offset
  */
-export function getElementsWithGivenOffset(offset: number): NodeListOf<HTMLElement> {
-    return document.querySelectorAll(`span[data-offset='${offset}'`);
+export function getElementsWithGivenOffset(offset: number): HTMLCollectionOf<HTMLElement> {
+    return document.getElementsByClassName(`cell-offset-${offset}`) as HTMLCollectionOf<HTMLElement>;
+}
+
+/**
+ * @description Given an element returns its offset or NaN if it doesn't have one
+ * @param {HTMLElement} element The element to get the offset of
+ * @returns {number} Returns the offset of the element or NaN
+ */
+export function getElementsOffset(element: Element): number {
+    for (const currentClass of element.classList) {
+        if (currentClass.indexOf("cell-offset") !== -1) {
+            const offset = parseInt(currentClass.replace("cell-offset-", ""));
+            return offset;
+        }
+    }
+    return NaN;
 }
 
 /**
  * @description Returns the elements with the same offset as the one clicked
  * @param {MouseEvent} event The event which is handed to a mouse event listener
- * @returns {NodeListOf<Element> | undefined} The elements with the same offset as the clicked element, or undefined if none could be retrieved
+ * @returns {HTMLCollectionOf<Element> | Array<Element>} The elements with the same offset as the clicked element, or undefined if none could be retrieved
  */
-export function getElementsGivenMouseEvent(event: MouseEvent): NodeListOf<Element> | undefined {
-    if (!event || !event.target) return;
+export function getElementsGivenMouseEvent(event: MouseEvent): HTMLCollectionOf<Element> | Array<Element> {
+    if (!event || !event.target) return [];
     const hovered = event.target as Element;
-    const data_offset = hovered.getAttribute("data-offset");
-    if (!data_offset) return;
-    return getElementsWithGivenOffset(parseInt(data_offset));
+    return getElementsWithGivenOffset(getElementsOffset(hovered));
 }
 
 /**
@@ -123,10 +136,10 @@ export function pad(number: string, width: number): string {
 
 /**
  * @description Given two elements (the hex and ascii elements), returns a ByteData object representing both of them
- * @param {NodeListOf<Element>} elements The elements representing the hex and associated ascii on the DOM
+ * @param {HTMLCollectionOf<Element>} elements The elements representing the hex and associated ascii on the DOM
  * @returns {ByteData | undefined} The ByteData object or undefined if elements was malformed or empty
  */
-export function retrieveSelectedByteObject(elements: NodeListOf<Element>): ByteData | undefined {
+export function retrieveSelectedByteObject(elements: HTMLCollectionOf<Element>): ByteData | undefined {
     for (const element of Array.from(elements)) {
         if (element.parentElement && element.classList.contains("hex")) {
             const byte_object = new ByteData(parseInt(element.innerHTML, 16));
