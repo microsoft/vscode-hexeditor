@@ -302,7 +302,7 @@ export class SearchHandler {
         if (this.searchType === "hex" && !hexReplaceRegex.test(queryNoSpaces)) {
             this.replaceAllButton.classList.add("disabled");
             this.replaceButton.classList.add("disabled");
-            if (this.replaceTextBox.value.length > 0) this.addInputMessage("replace", "Invalid query", "error");
+            if (this.replaceTextBox.value.length > 0) this.addInputMessage("replace", "Invalid replacement", "error");
             return;
         }
         const replaceQuery = this.replaceTextBox.value;
@@ -311,7 +311,7 @@ export class SearchHandler {
             this.replaceAllButton.classList.remove("disabled");
             this.replaceButton.classList.remove("disabled");
         } else {
-            if (this.replaceTextBox.value.length > 0 && replaceArray.length === 0) this.addInputMessage("replace", "Invalid query", "error");
+            if (this.replaceTextBox.value.length > 0 && replaceArray.length === 0) this.addInputMessage("replace", "Invalid replacement", "error");
             this.replaceAllButton.classList.add("disabled");
             this.replaceButton.classList.add("disabled");
         }
