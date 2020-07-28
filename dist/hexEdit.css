@@ -126,6 +126,7 @@ body:not(#editor-container) {
 input {
     padding-left: 4px;
     padding-right: 4px;
+    font-family: var(--vscode-editor-font-family);
     background-color: var(--vscode-input-background);
     border-width: 0;
     width: 170px;
