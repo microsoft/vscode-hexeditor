@@ -71,6 +71,9 @@ export class SearchHandler {
                 } else {
                     virtualHexDocument.focusElementWithGivenOffset(virtualHexDocument.topOffset());
                 }
+            } else if (event.ctrlKey || new RegExp("(^Arrow|^End|^Home)", "i").test(event.key)) {
+                // If it's any sort of navigation key we don't want to trigger another search as nothing has changed
+                return;
             } else {
                 this.search();
             }
