@@ -7,7 +7,8 @@ This an extension for Visual Studio Code 1.46+ which utilizes the custom editor 
 - Opening files as HEX
 - Navigating and scrolling through them
 - Viewing the hex values in various different formats
-- Simple editing with undo + redo support
+- Simple editing with undo, redo, copy, and paste support
+- Find and Replace support
 
 ![Navigating a file](hex-editor.gif)
 
