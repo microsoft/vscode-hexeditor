@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { getElementsWithGivenOffset, updateAsciiValue } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, getElementsOffset } from "./util";
 import { ByteData } from "./byteData";
 import { messageHandler, virtualHexDocument } from "./hexEdit";
 import { SelectHandler } from "./selectHandler";
@@ -49,7 +49,7 @@ export class EditHandler {
             return;
         }
 
-        const offset: number = parseInt(element.getAttribute("data-offset")!);
+        const offset: number = getElementsOffset(element);
         if (!this.pendingEdit || this.pendingEdit.offset != offset) {
             this.pendingEdit = {
                 offset: offset,
@@ -97,7 +97,7 @@ export class EditHandler {
         if (keyPressed.length != 1) return;
         // No need to call it edited if it's the same value
         if (element.innerText === keyPressed) return;
-        const offset: number = parseInt(element.getAttribute("data-offset")!);
+        const offset: number = getElementsOffset(element);
         const hexElement = getElementsWithGivenOffset(offset)[0];
         // We store all pending edits as hex as ascii isn't always representative due to control characters
         this.pendingEdit = {
@@ -294,7 +294,7 @@ export class EditHandler {
         // We apply as much of the hex data as we can based on the selection
         for (let i = 0; i < selected.length && i < hexData.length; i++) {
             const element = selected[i];
-            const offset: number = parseInt(element.getAttribute("data-offset")!);
+            const offset: number = getElementsOffset(element);
             const currentEdit: DocumentEdit = {
                 offset: offset,
                 previousValue: element.innerText === "+" ? undefined : element.innerText,

@@ -2,8 +2,8 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject } from "./util";
-import { hover, removeHover, changeEndianness } from "./eventHandlers";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset } from "./util";
+import { toggleHover, changeEndianness } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
@@ -133,8 +133,8 @@ export class VirtualDocument {
         // Will need to refactor this section soon as its getting pretty messy
         document.getElementById("endianness")?.addEventListener("change", changeEndianness);
         this.editorContainer.addEventListener("keydown", this.editorKeyBoardHandler.bind(this));
-        this.editorContainer.addEventListener("mouseover", hover);
-        this.editorContainer.addEventListener("mouseleave", removeHover);
+        this.editorContainer.addEventListener("mouseover", toggleHover);
+        this.editorContainer.addEventListener("mouseleave", toggleHover);
 
         // Event handles to handle when the user drags to create a selection
         this.editorContainer.addEventListener("click", this.clickHandler.bind(this));
@@ -309,7 +309,7 @@ export class VirtualDocument {
     private createHexElement(packet: VirtualizedPacket): HTMLSpanElement {
         const hex_element = document.createElement("span");
         hex_element.classList.add("hex");
-        hex_element.setAttribute("data-offset", packet.offset.toString());
+        hex_element.classList.add(`cell-offset-${packet.offset.toString()}`);
         // If the offset is greater than or equal to fileSize that's our placeholder so it's just a + symbol to signal you can type and add bytes there
         if (packet.offset < this.fileSize) {
             hex_element.innerText = pad(packet.data.toHex(), 2);
@@ -318,7 +318,7 @@ export class VirtualDocument {
             hex_element.innerText = "+";
         }
         hex_element.tabIndex = -1;
-        hex_element.addEventListener("mouseleave", removeHover);
+        hex_element.addEventListener("mouseleave", toggleHover);
         return hex_element;
     }
 
@@ -329,7 +329,7 @@ export class VirtualDocument {
      */
     private createAsciiElement(packet: VirtualizedPacket): HTMLSpanElement {
         const ascii_element = document.createElement("span");
-        ascii_element.setAttribute("data-offset", packet.offset.toString());
+        ascii_element.classList.add(`cell-offset-${packet.offset.toString()}`);
         ascii_element.classList.add("ascii");
         // If the offset is greater than or equal to fileSize that's our placeholder so it's just a + symbol to signal you can type and add bytes there
         if (packet.offset < this.fileSize) {
@@ -338,7 +338,7 @@ export class VirtualDocument {
             ascii_element.classList.add("add-cell");
             ascii_element.innerText = "+";
         }
-        ascii_element.addEventListener("mouseleave", removeHover);
+        ascii_element.addEventListener("mouseleave", toggleHover);
         ascii_element.tabIndex = -1;
         return ascii_element;
     }
@@ -361,13 +361,13 @@ export class VirtualDocument {
     private clickHandler(event: MouseEvent): void {
         if (event.buttons > 1) return;
         const target = event.target as HTMLElement;
-        if (!target || !target.hasAttribute("data-offset")) {
+        if (!target || isNaN(getElementsOffset(target))) {
             return;
         }
 
         event.preventDefault();
         this.editHandler.completePendingEdits();
-        const offset = parseInt(target.getAttribute("data-offset")!);
+        const offset = getElementsOffset(target);
         if (event.shiftKey) {
             const startSelection = this.selectHandler.getSelectionStart();
             if (startSelection !== undefined) {
@@ -405,13 +405,13 @@ export class VirtualDocument {
         }
 
         const target = event.target as HTMLElement;
-        if (!target || !target.hasAttribute("data-offset")) {
+        if (!target || isNaN(getElementsOffset(target))) {
             return;
         }
 
         event.preventDefault();
         this.editHandler.completePendingEdits();
-        const offset = parseInt(target.getAttribute("data-offset")!);
+        const offset = getElementsOffset(target);
         const startMouseMoveOffset = offset;
         const startSelection = event.shiftKey ? this.selectHandler.getSelectionStart() : offset;
 
@@ -421,11 +421,11 @@ export class VirtualDocument {
             }
 
             const target = event.target as HTMLElement;
-            if (!target || !target.hasAttribute("data-offset")) {
+            if (!target || isNaN(getElementsOffset(target))) {
                 return;
             }
 
-            const offset = parseInt(target.getAttribute("data-offset")!);
+            const offset = getElementsOffset(target);
             if (startSelection !== undefined && offset !== startMouseMoveOffset) {
                 this.selectHandler.setFocused(offset);
                 const min = Math.min(startSelection, offset);
@@ -516,7 +516,7 @@ export class VirtualDocument {
                 break;
             case 38:
                 // up
-                const elements_above = getElementsWithGivenOffset(parseInt(targetElement.getAttribute("data-offset")!) - 16);
+                const elements_above = getElementsWithGivenOffset(getElementsOffset(targetElement) - 16);
                 if (elements_above.length === 0) break;
                 next = targetElement.classList.contains("hex") ? elements_above[0] : elements_above[1];
                 break;
@@ -526,7 +526,7 @@ export class VirtualDocument {
                 break;
             case 40:
                 // down
-                const elements_below = getElementsWithGivenOffset(Math.min(parseInt(targetElement.getAttribute("data-offset")!) + 16, this.fileSize - 1));
+                const elements_below = getElementsWithGivenOffset(Math.min(getElementsOffset(targetElement) + 16, this.fileSize - 1));
                 if (elements_below.length === 0) break;
                 next = targetElement.classList.contains("hex") ? elements_below[0] : elements_below[1];
                 break;
@@ -539,7 +539,7 @@ export class VirtualDocument {
                 this.scrollBarHandler.scrollDocument(1, "up");
             }
 
-            const offset = parseInt(next.getAttribute("data-offset")!);
+            const offset = getElementsOffset(next);
             this.selectHandler.setFocused(offset);
             const startSelection = this.selectHandler.getSelectionStart();
             if (isRangeSelection && startSelection !== undefined) {
@@ -651,20 +651,19 @@ export class VirtualDocument {
      */
     public removeLastCell(): void {
         // We can use the add cell as the last cell offset since a plus cell should always be the last cell
-        const plusCellOffset = document.getElementsByClassName("add-cell")[0].getAttribute("data-offset");
-        if (!plusCellOffset) return;
-        const lastCellOffset = parseInt(plusCellOffset);
-        const lastCells = getElementsWithGivenOffset(lastCellOffset);
-        const secondToLastCells = getElementsWithGivenOffset(lastCellOffset - 1);
+        const plusCellOffset = getElementsOffset(document.getElementsByClassName("add-cell")[0]);
+        if (isNaN(plusCellOffset)) return;
+        const lastCells = getElementsWithGivenOffset(plusCellOffset);
+        const secondToLastCells = getElementsWithGivenOffset(plusCellOffset - 1);
         // If the last cell was on its own row we remove the new row
-        if (lastCellOffset % 16 === 0) {
-            this.rows[0].get(lastCellOffset.toString())?.remove();
-            this.rows[0].delete(lastCellOffset.toString());
-            this.rows[1].get(lastCellOffset.toString())?.remove();
-            this.rows[1].delete(lastCellOffset.toString());
-            this.rows[2].get(lastCellOffset.toString())?.remove();
-            this.rows[2].delete(lastCellOffset.toString());
-            this.scrollBarHandler.updateScrollBar((lastCellOffset - 1) / 16);
+        if (plusCellOffset % 16 === 0) {
+            this.rows[0].get(plusCellOffset.toString())?.remove();
+            this.rows[0].delete(plusCellOffset.toString());
+            this.rows[1].get(plusCellOffset.toString())?.remove();
+            this.rows[1].delete(plusCellOffset.toString());
+            this.rows[2].get(plusCellOffset.toString())?.remove();
+            this.rows[2].delete(plusCellOffset.toString());
+            this.scrollBarHandler.updateScrollBar((plusCellOffset - 1) / 16);
         } else {
             lastCells[0].remove();
             lastCells[1].remove();
