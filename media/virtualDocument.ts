@@ -370,8 +370,6 @@ export class VirtualDocument {
      * @param {MouseEvent} event The MouseEvent passed to the event handler.
      */
     private clickHandler(event: MouseEvent): void {
-        console.log("Top Offset: " + this.topOffset());
-        console.log("Bottom Offset: " + this.bottomOffset());
         if (event.buttons > 1) return;
         const target = event.target as HTMLElement;
         if (!target || isNaN(getElementsOffset(target))) {
