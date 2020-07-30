@@ -214,6 +214,17 @@ export class VirtualDocument {
     }
 
     /**
+     * @description Gets the offset of the packet at the bottom right of the viewport
+     * @returns {number} the offset
+     */
+    public bottomOffset(): number {
+        const clientHeight = document.getElementsByTagName("html")[0].clientHeight;
+        const numRowsInViewport = Math.floor(clientHeight / this.rowHeight);
+        // If it's the end of the file it will fall to the this.fileSize - 1 case
+        return Math.min((this.topOffset() + (numRowsInViewport * 16)) - 1, this.fileSize - 1);
+    }   
+
+    /**
      * @description Retrieves the Y position a given offset is at
      * @param {number} offset The offset to calculate the y position of
      * @returns {number} The Y position the offset is at
@@ -359,6 +370,8 @@ export class VirtualDocument {
      * @param {MouseEvent} event The MouseEvent passed to the event handler.
      */
     private clickHandler(event: MouseEvent): void {
+        console.log("Top Offset: " + this.topOffset());
+        console.log("Bottom Offset: " + this.bottomOffset());
         if (event.buttons > 1) return;
         const target = event.target as HTMLElement;
         if (!target || isNaN(getElementsOffset(target))) {
@@ -712,7 +725,12 @@ export class VirtualDocument {
         }
     }
 
-    public async scrollDocumentToOffset(offset: number): Promise<void[]> {
-        return this.scrollBarHandler.scrollToOffset(offset);
+    /**
+     * @description Scrolls to the given offset if it's outside the viewport
+     * @param offset The offset to scroll to 
+     * @param force Whether or not you should scroll even if it's in the viewport
+     */
+    public async scrollDocumentToOffset(offset: number, force?: boolean): Promise<void[]> {
+        return this.scrollBarHandler.scrollToOffset(offset, force);
     }
 }

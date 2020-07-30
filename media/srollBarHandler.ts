@@ -183,10 +183,17 @@ export class ScrollBarHandler {
         }
     }
 
-    public async scrollToOffset(offset: number): Promise<void[]> {
+    /**
+     * @description Scrolls to the given offset if it's outside the viewport
+     * @param offset The offset to scroll to 
+     * @param force Whether or not you should scroll even if it's in the viewport
+     */
+    public async scrollToOffset(offset: number, force?: boolean): Promise<void[]> {
         // if these are equal it means the document is too short to scroll anyways
         if (this.scrollBarHeight === this.scrollThumbHeight) return [];
         const topOffset = virtualHexDocument.topOffset();
+        // Don't scroll if in the viewport
+        if (!force && offset >= topOffset && offset <= virtualHexDocument.bottomOffset()) return [];
         const rowDifference = Math.floor(Math.abs(offset - topOffset) / 16);
         // The +3/-3 is because there is because we want the result to not be pressed against the top
         if (offset > topOffset) {
