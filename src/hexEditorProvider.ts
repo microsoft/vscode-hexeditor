@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
+import * as fs from "fs";
 import { HexDocument, HexDocumentEdit } from "./hexDocument";
 import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
@@ -57,6 +58,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			for (const webviewPanel of this.webviews.get(document.uri)) {
 				this.postMessage(webviewPanel, "update", {
 					fileSize: e.fileSize,
+					baseAddress: e.baseAddress,
 					type: e.type,
 					edits: e.edits
 				});
@@ -64,8 +66,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		}));
 
 		const watcher = vscode.workspace.createFileSystemWatcher(uri.fsPath); 
+		fs.writeFileSync("/tmp/haneef.1", "Watcher:" + uri.fsPath + "\n", { flag: "a" });
 		listeners.push(watcher);
 		listeners.push(watcher.onDidChange(e => {
+			fs.writeFileSync("/tmp/haneef.1", "Watcher update:" + uri.fsPath + "\n", { flag: "a" });
 			if (e.toString() === uri.toString()) {
 				if (document.unsavedEdits.length > 0) {
 					const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
@@ -124,6 +128,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			if (e.type === "ready") {
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
+					baseAddress: document.baseAddress,
 					html: document.documentData.length === document.filesize || document.unsavedEdits.length != 0 ? this.getBodyHTML() : undefined
 				});
 			}
@@ -134,6 +139,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				await document.openAnyways();
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
+					baseAddress: document.baseAddress,
 					html: this.getBodyHTML()
 				});
 			}
@@ -422,6 +428,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				});
 				panel.webview.postMessage({ type: "packet", requestId: message.requestId, body: {
 					fileSize: document.filesize,
+					baseAddress: document.baseAddress,
 					data: packet,
 					offset: request.initialOffset,
 					edits: edits
@@ -431,7 +438,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				document.makeEdit(message.body);
 				// We respond with the size of the file so that the webview is always in sync with the ext host
 				panel.webview.postMessage({ type: "edit", requestId: message.requestId, body: {
-					fileSize: document.filesize
+					fileSize: document.filesize,
+					baseAddress: document.baseAddress,
 				} });
 				return;
 			case "search":

@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
+import * as fs from "fs";
 import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { SearchProvider } from "./searchProvider";
@@ -43,6 +44,11 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
 		const unsavedEditURI = typeof backupId === "string" ? vscode.Uri.parse(backupId + ".json") : undefined;
 		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
+		const queries = HexDocument.parseQuery(uri.query);
+		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
+		fs.writeFileSync("/tmp/haneef.1", "file: " + dataFile + "\n");
+		fs.writeFileSync("/tmp/haneef.1", "query:" + uri.query + "\n", { flag: "a" });
+		fs.writeFileSync("/tmp/haneef.1", "baseAddress:" + baseAddress.toString() + "\n", { flag: "a" });
 		/* __GDPR__
 			"fileOpen" : {
 				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
@@ -62,13 +68,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				unsavedEdits = JSON.parse(Buffer.from(jsonData).toString("utf-8"));
 			}
 		}
-		return new HexDocument(uri, fileData, fileSize, unsavedEdits);
+		return new HexDocument(uri, fileData, fileSize, unsavedEdits, baseAddress);
 	}
 
 	private readonly _uri: vscode.Uri;
 
 	private _bytesize: number;
-
+	private _baseAddress: number;
 	private _documentData: Uint8Array;
 
 	private _edits: HexDocumentEdit[][] = [];
@@ -83,12 +89,14 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		uri: vscode.Uri,
 		initialContent: Uint8Array,
 		fileSize: number,
-		unsavedEdits: HexDocumentEdit[][]
+		unsavedEdits: HexDocumentEdit[][],
+		baseAddress: number
 	) {
 		super();
 		this._uri = uri;
 		this._documentData = initialContent;
 		this._bytesize = fileSize;
+		this._baseAddress = baseAddress;
 		this._unsavedEdits = unsavedEdits;
 		// If we don't do this Array.from casting then both will reference the same array causing bad behavior
 		this._edits = Array.from(unsavedEdits);
@@ -110,6 +118,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		return this._bytesize + numAdditions;
 	}
 
+	public get baseAddress(): number { return this._baseAddress; }
 	public get documentData(): Uint8Array { return this._documentData; }
 
 	/**
@@ -160,6 +169,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	private readonly _onDidChangeDocument = this._register(new vscode.EventEmitter<{
 		readonly fileSize: number;
+		readonly baseAddress: number;
 		readonly type: "redo" | "undo" | "revert";
 		readonly edits: readonly HexDocumentEdit[];
 	}>());
@@ -218,6 +228,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				if (unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
+					baseAddress: this.baseAddress,
 					type: "undo",
 					edits: undoneEdits,
 				});
@@ -248,6 +259,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				if (unsavedEdits.length !== 0) this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
+					baseAddress: this.baseAddress,
 					type: "redo",
 					edits: redoneEdits
 				});
@@ -291,6 +303,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// this._edits.flat().forEach(e => e.sameOnDisk = true);
 		this._onDidChangeDocument.fire({
 			fileSize: this.filesize,
+			baseAddress: this.baseAddress,
 			type: "revert",
 			edits: []
 		});
@@ -361,5 +374,32 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// After the replacement is complete we add it to the document's edit queue
 		if (allEdits.length !== 0) this.makeEdit(allEdits);
 		return allEdits;
+	}
+
+
+	/**
+	 * Utility function to convert a Uri query string into a map
+	 */
+	private static parseQuery(queryString: string): { [key: string]: string } {
+		const queries: { [key: string]: string } = {};
+		if (queryString) {
+			const pairs = (queryString[0] === "?" ? queryString.substr(1) : queryString).split("&");
+			for (const q of pairs) {
+				const pair = q.split("=");
+				const name = pair.shift();
+				if (name) {
+					queries[name] = pair.join("=");
+				}
+			}
+		}
+		return queries;
+	}
+
+	/**
+	 * Utility function to parse a number. Only hex and decimal supported
+	 */
+	private static parseHexOrDecInt(str: string): number {
+		str = str.toLowerCase();
+		return str.startsWith("0x") ? parseInt(str.substring(2), 16) : parseInt(str, 10);
 	}
 }

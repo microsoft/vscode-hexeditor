@@ -22,6 +22,7 @@ export interface VirtualizedPacket {
  */
 export class VirtualDocument {
     private fileSize: number;
+    private baseAddress: number;
     private rowHeight: number;
     public readonly documentHeight: number;
     private viewPortHeight!: number
@@ -37,8 +38,9 @@ export class VirtualDocument {
      * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
      * @param {number} fileSize The size, in bytes, of the file which is being displayed
      */
-    constructor(fileSize: number) {
+    constructor(fileSize: number, baseAddress = 0) {
         this.fileSize = fileSize;
+        this.baseAddress = baseAddress;
         this.editHandler = new EditHandler();
         this.selectHandler = new SelectHandler();
         this.searchHandler = new SearchHandler();
@@ -266,9 +268,10 @@ export class VirtualDocument {
     private populateHexAdresses(fragment: DocumentFragment, rowData: VirtualizedPacket[]): void {
         const offset = rowData[0].offset;
         const addr = document.createElement("div");
+        const displayOffset = offset + this.baseAddress;
         addr.className = "row";
         addr.setAttribute("data-offset", offset.toString());
-        addr.innerText = pad(offset.toString(16), 8).toUpperCase();
+        addr.innerText = pad(displayOffset.toString(16), 8).toUpperCase();
         fragment.appendChild(addr);
         this.rows[0].set(offset.toString(), addr);
         // We add a left px offset to effectively right align the column
