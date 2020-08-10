@@ -46,9 +46,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
 		const queries = HexDocument.parseQuery(uri.query);
 		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
-		fs.writeFileSync("/tmp/haneef.1", "file: " + dataFile + "\n");
-		fs.writeFileSync("/tmp/haneef.1", "query:" + uri.query + "\n", { flag: "a" });
-		fs.writeFileSync("/tmp/haneef.1", "baseAddress:" + baseAddress.toString() + "\n", { flag: "a" });
 		/* __GDPR__
 			"fileOpen" : {
 				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
