@@ -1,5 +1,8 @@
 ## Release Notes
 
+## 1.3.0 — September 8, 2020
+- Allow extensions to configure the starting address for a file. See https://github.com/microsoft/vscode-hexeditor/pull/170 for details.
+
 ### 1.2.0
 - Simple File Watching implementation, editor will now respond to changes on disk outside of editor
 - Support for copy and paste

@@ -3,3 +3,4 @@ node_modules
 .vscode-test/
 *.vsix
 dist/bundle.js
+.DS_Store
