@@ -1,9 +1,4 @@
 # Change Log
 
-All notable changes to the "hexeditor" extension will be documented in this file.
-
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
-
-## [Unreleased]
-
-- Initial release
+## 1.3.0 — September 8, 2020
+- Allow extensions to configure the starting address for a file. See https://github.com/microsoft/vscode-hexeditor/pull/170 for details.
