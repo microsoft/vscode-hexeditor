@@ -9,6 +9,9 @@
 		"type": "git",
 		"url": "https://github.com/microsoft/vscode-hexeditor"
 	},
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-hexeditor/issues"
+	},
 	"license": "MIT",
 	"engines": {
 		"vscode": "^1.46.0"
