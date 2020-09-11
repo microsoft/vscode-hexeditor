@@ -54,7 +54,7 @@
 		"commands": [
 			{
 				"command": "hexEditor.openFile",
-				"title": "HexEditor: Open file"
+				"title": "Hex Editor: Open file"
 			}
 		]
 	},
@@ -86,5 +86,10 @@
 	"dependencies": {
 		"vscode-codicons": "0.0.5",
 		"vscode-extension-telemetry": "^0.1.6"
+	},
+	"__metadata": {
+		"id": "cc7d2112-5178-4472-8e0e-25dced95e7f0",
+		"publisherDisplayName": "Microsoft",
+		"publisherId": "5f5636e7-69ed-4afe-b5d6-8d231fb3d3ee"
 	}
 }
