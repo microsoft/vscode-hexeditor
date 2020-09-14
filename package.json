@@ -54,7 +54,7 @@
 		"commands": [
 			{
 				"command": "hexEditor.openFile",
-				"title": "HexEditor: Open file"
+				"title": "Hex Editor: Open file"
 			}
 		]
 	},
