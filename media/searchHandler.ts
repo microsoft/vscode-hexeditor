@@ -399,6 +399,14 @@ export class SearchHandler {
             entryDiv.appendChild(entryIn);
             this.resultsGrid.appendChild(entryDiv);
         }
+        if (entrycount < this.pageLength) {
+            for (let i = 0; i < this.pageLength - entrycount; i++) {
+                const dummyDiv = document.createElement("div");
+                dummyDiv.classList.add("search-grid-item");
+                dummyDiv.setAttribute("id", "dummy_"+i.toString());
+                this.resultsGrid.appendChild(dummyDiv);
+            }
+        }
     }
 
     /**
