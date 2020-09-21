@@ -447,13 +447,6 @@ export class SearchHandler {
         }
     }
 
-    /**!!!!
-     * @description Handles when the user clicks the page previous icon
-     *
-    private async pageEntrySelect(): Promise<void> {
-
-    }*/
-
     private replaceOptionsHandler(): void {
         // Toggle preserve case
         document.getElementById("preserve-case")?.addEventListener("click", (event: MouseEvent) => {

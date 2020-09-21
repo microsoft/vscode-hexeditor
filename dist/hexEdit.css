@@ -362,7 +362,7 @@ button:disabled {
     transform: translate(0%, -50%);
 }
 
-.find-bar, .replace-bar {
+.find-bar {
     padding-bottom: 10px;
 }
 
