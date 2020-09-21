@@ -8,6 +8,7 @@ import { hexQueryToArray } from "./util";
 interface SearchOptions {
     regex: boolean;
     caseSensitive: boolean;
+    showResults: boolean;
 }
 
 interface SearchResults {
@@ -28,12 +29,19 @@ export class SearchHandler {
     private findPreviousButton: HTMLSpanElement;
     private findNextButton: HTMLSpanElement;
     private stopSearchButton: HTMLSpanElement;
+    private resultsGrid: HTMLDivElement;
+    private pageNextButton: HTMLSpanElement;
+    private pagePrevButton: HTMLSpanElement;
+    private pageIndex = 0;
+    private pages = 0;
+    private pageLength = 100;
 
     constructor() {
         this.searchResults = [];
         this.searchOptions = {
             regex: false,
-            caseSensitive: false
+            caseSensitive: false,
+            showResults: false
         };
         this.findTextBox = document.getElementById("find") as HTMLInputElement;
         this.replaceTextBox = document.getElementById("replace") as HTMLInputElement;
@@ -42,6 +50,11 @@ export class SearchHandler {
         this.findPreviousButton = document.getElementById("find-previous") as HTMLSpanElement;
         this.findNextButton = document.getElementById("find-next") as HTMLSpanElement;
         this.stopSearchButton = document.getElementById("search-stop") as HTMLSpanElement;
+        this.resultsGrid = document.getElementById("search-grid") as HTMLDivElement;
+        this.pageNextButton = document.getElementById("page-next") as HTMLSpanElement;
+        this.pagePrevButton = document.getElementById("page-previous") as HTMLSpanElement;
+        this.pageNextButton.addEventListener("click", () => this.pageNext());
+        this.pagePrevButton.addEventListener("click", () => this.pagePrevious());
         this.findNextButton.addEventListener("click", () => this.findNext(true));
         this.findPreviousButton.addEventListener("click", () => this.findPrevious(true));
         this.updateInputGlyphs();
@@ -109,9 +122,16 @@ export class SearchHandler {
         this.cancelSearch();
         virtualHexDocument.setSelection([]);
         this.searchResults = [];
+        this.clearResultTable();
         this.updateReplaceButtons();
         this.findNextButton.classList.add("disabled");
         this.findPreviousButton.classList.add("disabled");
+        this.pageNextButton.classList.add("disabled");
+        this.pagePrevButton.classList.add("disabled");
+        const resultCount = document.getElementById("result-count");
+        resultCount!.innerText = "";
+        const pageDisplay = document.getElementById("display-page-index");
+        pageDisplay!.innerText = "";
         let query: string | string[] = this.findTextBox.value;
         const hexSearchRegex = new RegExp("^[a-fA-F0-9? ]+$");
         // We check to see if the hex is a valid query else we don't allow a search
@@ -157,7 +177,9 @@ export class SearchHandler {
         }
         this.stopSearchButton.classList.add("disabled");
         this.resultIndex = 0;
+        this.pageIndex = 0;
         this.searchResults = results.result;
+        this.pages = Math.ceil(this.searchResults.length / this.pageLength);
         // If we got results then we select the first result and unlock the buttons
         if (this.searchResults.length !== 0) {
             await virtualHexDocument.scrollDocumentToOffset(this.searchResults[this.resultIndex][0]);
@@ -167,6 +189,12 @@ export class SearchHandler {
                 this.findNextButton.classList.remove("disabled");
             }
             this.updateReplaceButtons();
+            // Fill table with results entries.
+            if (this.pages > 1) {
+                this.pageNextButton.classList.remove("disabled");
+            }
+            // Update the search results list
+            this.updateSearchResults(this.pageIndex);
         }
     }
 
@@ -190,6 +218,8 @@ export class SearchHandler {
         if (this.resultIndex != 0) {
             this.findPreviousButton.classList.remove("disabled");
         }
+        // Update the search results list
+        this.updateSearchResults(this.pageIndex);
     }
 
     /**
@@ -208,6 +238,8 @@ export class SearchHandler {
         if (this.resultIndex == 0) {
             this.findPreviousButton.classList.add("disabled");
         }
+        // Update the search results list
+        this.updateSearchResults(this.pageIndex);
     }
 
     /**
@@ -263,7 +295,164 @@ export class SearchHandler {
             // The user is changing an option so we should trigger another search
             this.search();
         });
+        // Toggle Search Results List
+        document.getElementById("results-list-button")?.addEventListener("click", (event: MouseEvent) => {
+            const toggleResults = event.target as HTMLSpanElement;
+            const resultsDiv = document.getElementById("search-results-widget");
+            if (toggleResults.classList.contains("toggled")) {
+                toggleResults.classList.remove("toggled");
+                resultsDiv?.classList.add("disable-results");
+                this.searchOptions.showResults = false;
+            } else {
+                toggleResults.classList.add("toggled");
+                resultsDiv?.classList.remove("disable-results");
+                this.searchOptions.showResults = true;
+                this.updateSearchResults(this.pageIndex);
+            }
+            // The user is changing an option so we should trigger another search
+            //this.search();
+        });
     }
+
+    /**
+     * @description Populate search result table for page number
+     * @param {number} newPage The new pageIndex to display
+     */
+    private async updateSearchResults(newPage: number): Promise<void> {
+        this.clearResultTable();
+        // If going to a page out of range, return. This shouldn't happen, but YOLO.
+        if (newPage >= this.pages || newPage < 0) return;
+        this.pageIndex = newPage;
+        
+        // Display page and result count
+        const resultCount = document.getElementById("result-count");
+        resultCount!.innerText = this.searchResults.length.toString() + " results";
+
+        const pageDisplay = document.getElementById("display-page-index");
+        pageDisplay!.innerText = (this.pageIndex + 1).toString()+" / "+this.pages.toString();
+
+        let entrycount = this.pageLength;
+        let entryId = 0;
+        let entryDiv = null;
+        let entryIn = null;
+
+        // If last page, get actual count, if less than pageLength
+        if (this.pageIndex == this.pages - 1) {
+            entrycount = this.searchResults.length % this.pageLength;
+        }
+
+        for(let i = 0; i < entrycount; i++) {
+            // Add a result entry to the table
+            // Create entry for this.searchResults[(this.pageLength*this.pageIndex)+i]
+            entryId = (this.pageIndex*this.pageLength)+i;
+            // Build a <div> for each entry
+            entryDiv = document.createElement("div");
+            entryDiv.classList.add("search-grid-item");
+            entryDiv.setAttribute("id", "div_"+entryId.toString());
+            // Build an <input> element for each entry
+            entryIn = document.createElement("input");
+            entryIn.type = "text";
+            entryIn.readOnly = true;
+            entryIn.value = "0x" + this.searchResults[entryId][0].toString(16).padStart(8, "0").toUpperCase();
+            entryIn.classList.add("search-grid-input");
+            entryIn.setAttribute("autocomplete", "off");
+            entryIn.setAttribute("spellcheck", "off");
+            entryIn.setAttribute("id", "entry_"+entryId.toString());
+            // If the current resultIndex is on this page, set it to selected.
+            if (entryId == this.resultIndex){
+                entryIn.classList.add("search-selected");
+            }
+            // Add a selection handler to the entry Div
+            entryIn.addEventListener("click", async (event: MouseEvent) => {
+                const entry_target = event.target as HTMLDivElement;
+                const entryId = Number(entry_target.getAttribute("id")?.split("_")[1]);
+                // Unselect prior selected entry, if it exists in the DOM; update resultIndex and select.
+                this.resultsGrid.querySelector("#entry_"+this.resultIndex.toString())?.classList.remove("search-selected");
+                this.resultIndex = entryId;
+                this.resultsGrid.querySelector("#entry_"+this.resultIndex.toString())?.classList.add("search-selected");
+                // Set selection
+                await virtualHexDocument.scrollDocumentToOffset(this.searchResults[this.resultIndex][0]);
+                virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
+                // Toggle next/previous buttons.
+                if (this.resultIndex == 0) {
+                    this.findPreviousButton.classList.add("disabled");
+                } else {
+                    this.findPreviousButton.classList.remove("disabled");
+                }
+                if (this.resultIndex < this.searchResults.length - 1) {
+                    this.findNextButton.classList.remove("disabled");
+                } else {
+                    this.findNextButton.classList.add("disabled");
+                }
+            });
+            // Add event listeners for hovering over search list entries.
+            entryIn.addEventListener("mouseover", async (event: MouseEvent) => {
+                if (!event || !event.target) return [];
+                const hovered = event.target as Element;
+                hovered.classList.toggle("hover");
+            });
+            entryIn.addEventListener("mouseleave", async (event: MouseEvent) => {
+                if (!event || !event.target) return [];
+                const hovered = event.target as Element;
+                hovered.classList.toggle("hover");
+            });
+            entryDiv.appendChild(entryIn);
+            this.resultsGrid.appendChild(entryDiv);
+        }
+    }
+
+    /**
+     * @description Clears the contents of the search grid container
+     */
+    private clearResultTable(): void {
+        // Remove the results elements
+        while (this.resultsGrid?.lastChild) {
+            this.resultsGrid.removeChild(this.resultsGrid.lastChild);
+            }
+        }
+
+    /**
+     * @description Handles when the user clicks the page next icon
+     */
+    private async pageNext(): Promise<void> {
+        // If the button is disabled then this function shouldn't work
+        if (this.pageNextButton.classList.contains("disabled")) return;
+        // Change current page and update table
+        this.updateSearchResults(this.pageIndex+1);
+        // If there's more than one page we unlock the next page button
+        if (this.pageIndex < this.pages - 1) {
+            this.pageNextButton.classList.remove("disabled");
+        } else {
+            this.pageNextButton.classList.add("disabled");
+        }
+        // We also unlock the previous page button, if there is a previous page.
+        if (this.pageIndex != 0) {
+            this.pagePrevButton.classList.remove("disabled");
+        }
+    }
+
+    /**
+     * @description Handles when the user clicks the page previous icon
+     */
+    private async pagePrevious(): Promise<void> {
+        // If the button is disabled then this function shouldn't work
+        if (this.pagePrevButton.classList.contains("disabled")) return;
+        // Change current page and update table
+        this.updateSearchResults(this.pageIndex-1);
+        // If they pressed previous, they can always go next therefore we always unlock the next page button
+        this.pageNextButton.classList.remove("disabled");
+        // We lock the page previous if there isn't a previous anymore
+        if (this.pageIndex == 0) {
+            this.pagePrevButton.classList.add("disabled");
+        }
+    }
+
+    /**!!!!
+     * @description Handles when the user clicks the page previous icon
+     *
+    private async pageEntrySelect(): Promise<void> {
+
+    }*/
 
     private replaceOptionsHandler(): void {
         // Toggle preserve case

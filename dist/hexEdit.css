@@ -292,7 +292,77 @@ button:disabled {
     margin-top: 10px;
 }
 
-.find-bar {
+.search-results-widget {
+    height: 100%;
+    width: 100%;
+    position: relative;
+    padding: 2px;
+}
+
+.search-grid-container {
+    position: sticky;
+    top: 20px;
+    display: grid;
+    grid-template-columns: auto;
+    padding-top: 3px;
+    align-items: center;
+    overflow-y: scroll;
+    height: 240px;
+}
+
+.search-grid-item {
+    text-align: left;
+    margin-bottom: -1px;
+}
+
+.search-grid-input {
+    width: 95%;
+}
+
+.search-hover {
+    background-color: var(--vscode-editor-hoverHighlightBackground);
+}
+
+.search-selected {
+    background-color: var(--vscode-editor-selectionBackground);
+    color: var(--vscode-editor-selectionForeground);
+}
+
+.disable-results {
+    display: none;
+    visibility: hidden;
+}
+
+.pagination-group {
+    position: relative;
+    margin-top: 3px;
+    width: 100%;
+    height: 24px;
+    vertical-align: bottom;
+}
+
+.codicon-chevron-left {
+    position: absolute;
+    top: 50%;
+    left: 0%;
+    transform: translate(0%, -50%);
+}
+
+#display-page-index {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.codicon-chevron-right {
+    position: absolute;
+    top: 50%;
+    right: 0%;
+    transform: translate(0%, -50%);
+}
+
+.find-bar, .replace-bar {
     padding-bottom: 10px;
 }
 
