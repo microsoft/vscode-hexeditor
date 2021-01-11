@@ -35,6 +35,7 @@ export class ByteData {
 	 * @returns {string} The ByteData represented a binary string
 	 */
 	toBinary(): string {
+		if (isNaN(this.decimal)) return "End of File";
 		return ("00000000"+ this.decimal.toString(2)).slice(-8);
 	}
 
