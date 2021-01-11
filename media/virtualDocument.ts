@@ -26,7 +26,6 @@ export class VirtualDocument {
     private rowHeight: number;
     public readonly documentHeight: number;
     private viewPortHeight!: number
-    private hexAddrPadding: number;
     private readonly scrollBarHandler: ScrollBarHandler;
     private readonly editHandler: EditHandler;
     private readonly selectHandler: SelectHandler;
@@ -44,116 +43,31 @@ export class VirtualDocument {
         this.editHandler = new EditHandler();
         this.selectHandler = new SelectHandler();
         this.searchHandler = new SearchHandler();
-        // This holds the 3 main columns rows (hexaddr, hexbody, ascii)
+        // Create a reference to the editor container. This is useful for event listeners
+        this.editorContainer = document.getElementById("editor-container")!;
+        this.rowHeight = 24;
+        (document.getElementsByClassName("header")[2] as HTMLElement).style.width = "16rem";
+        this.documentHeight = 500000;
         this.rows = [];
+
+        // Initial row holders for the three columns
         for (let i = 0; i < 3; i++) {
             this.rows.push(new Map<string, HTMLDivElement>());
         }
-        // We create elements and place them on the DOM before removing them to get heights and widths of rows to setup layout correctly
-        const ascii = document.getElementById("ascii")!;
-        const hex = document.getElementById("hexbody")!;
-        const hexaddr = document.getElementById("hexaddr")!;
-        const oldHexAddrHtml = hexaddr.innerHTML;
-        const oldHexHtml = hex.innerHTML;
-        const oldAsciiHtml = ascii.innerHTML;
-        // We have to set the ascii columns width to be large before appending the ascii or else it wraps and messes up the width calculation
-        // This is a change in the next gen layout engine
-        ascii.style.width = "500px";
-        const row = document.createElement("div");
-        const asciiRow = document.createElement("div");
-        const hexAddrRow = document.createElement("div");
-        hexAddrRow.className = "row";
-        asciiRow.className = "row";
-        row.className = "row";
-        // For ascii we want to test more than just one character as sometimes that doesn't set the width correctly
-        const asciiTestString = "Testing String!!";
-        for (let i = 0; i < 16; i++) {
-            const hex_element = document.createElement("span");
-            const ascii_element = document.createElement("span");
-            hex_element.innerText = "FF";
-            ascii_element.innerText = asciiTestString[i];
-            asciiRow.appendChild(ascii_element);
-            row.appendChild(hex_element);
-        }
-        hexAddrRow.innerText = "00000000";
-        row.style.top = "0px";
-        asciiRow.style.top = "0px";
-        hex.appendChild(row);
-        hexaddr.appendChild(hexAddrRow);
-        ascii.appendChild(asciiRow);
 
-        const spans = document.getElementsByTagName("span");
-        this.rowHeight = spans[16].offsetHeight;
-        // Utilize the fake rows to get the widths of them and alter the widths of the headers etc to fit
-        // The plus one is because the new layout engine in chrome would wrap the text otherwise which I'm unsure why
-        const asciiRowWidth = asciiRow.offsetWidth + 1;
-        const hexRowWidth = spans[16].parentElement!.offsetWidth;
-        // Calculate document height, we max out at 500k due to browser limitations on large div
-        this.documentHeight = 500000;
-        // Calculate the padding needed to make the offset column right aligned
-        this.hexAddrPadding = hexAddrRow.parentElement!.clientWidth - hexAddrRow.clientWidth;
-
-
-        // We set the document back to its original state
-        hex.innerHTML = oldHexHtml;
-        ascii.innerHTML = oldAsciiHtml;
-        hexaddr.innerHTML = oldHexAddrHtml;
-
-        // Sets the columns heights for sticky scrolling to work
-        const columns = document.getElementsByClassName("column") as HTMLCollectionOf<HTMLElement>;
-        for (const column of columns) {
-            column.style.height = `${this.documentHeight}px`;
-        }
-
-        // Due to absolute positioning on the editor position we have to set a lot of sizes ourselves as the elements are not part of the document flow
-        const rowWrappers = document.getElementsByClassName("rowwrapper") as HTMLCollectionOf<HTMLDivElement>;
-        // Sets the hexaddr column to the same width as its header ( the + 1 is needed to )
-        rowWrappers[0].style.width = `${(document.getElementsByClassName("header")[0] as HTMLElement).offsetWidth}px`;
+        // The leftmost column is a little special so we set it up a little differently
         // We remove the text from the header to make it look like it's not there
         const headerHeight = (document.getElementsByClassName("header")[0] as HTMLElement).offsetHeight;
         (document.getElementsByClassName("header")[0] as HTMLElement).innerText = "";
-        (document.getElementsByClassName("header")[0] as HTMLElement).style.width = `${rowWrappers[0].style.width}px`;
+        (document.getElementsByClassName("header")[0] as HTMLElement).style.width = "4rem";
         // The plus one is to account for all other headers having borders
         (document.getElementsByClassName("header")[0] as HTMLElement).style.height = `${headerHeight + 1}px`;
-        rowWrappers[0].style.height = `${this.documentHeight}px`;
-        // This is the hex section
-        (document.getElementsByClassName("header")[1] as HTMLElement).style.width = `${hexRowWidth}px`;
-        rowWrappers[1].style.width = `${hexRowWidth}px`;
-        rowWrappers[1].style.height = `${this.documentHeight}px`;
-        // This is the ascii  section
-        (document.getElementsByClassName("header")[2] as HTMLElement).style.width = `${asciiRowWidth}px`;
-        rowWrappers[2].style.width = `${asciiRowWidth}px`;
-        rowWrappers[2].style.height = `${this.documentHeight}px`;
 
         // Creates the scrollBar Handler
         this.scrollBarHandler = new ScrollBarHandler("scrollbar", this.fileSize / 16, this.rowHeight);
         // Intializes a few things such as viewport size and the scrollbar positions
         this.documentResize();
-
-        this.editorContainer = document.getElementById("editor-container")!;
-        // Bind the event listeners
-        // Will need to refactor this section soon as its getting pretty messy
-        document.getElementById("endianness")?.addEventListener("change", changeEndianness);
-        this.editorContainer.addEventListener("keydown", this.editorKeyBoardHandler.bind(this));
-        this.editorContainer.addEventListener("mouseover", toggleHover);
-        this.editorContainer.addEventListener("mouseleave", toggleHover);
-
-        // Event handles to handle when the user drags to create a selection
-        this.editorContainer.addEventListener("click", this.clickHandler.bind(this));
-        this.editorContainer.addEventListener("mousedown", this.mouseDownHandler.bind(this));
-
-        window.addEventListener("copy", (event: Event) => {
-            if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
-                this.editHandler.copy(event as ClipboardEvent);
-            }
-        });
-        window.addEventListener("paste", (event: Event) => {
-            if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
-                this.editHandler.paste(event as ClipboardEvent);
-            }
-        });
-        window.addEventListener("resize", this.documentResize.bind(this));
-        window.addEventListener("keydown", this.windowKeyboardHandler.bind(this));
+        this.bindEventListeners();
     }
 
     /**
@@ -195,6 +109,35 @@ export class VirtualDocument {
                 this.scrollBarHandler.resyncScrollPosition();
             }
         }
+    }
+
+    /**
+     * @description Binds all the event listeners which apply to the virtual document
+     */
+    private bindEventListeners(): void {
+        // Bind the event listeners
+        // Will need to refactor this section soon as its getting pretty messy
+        document.getElementById("endianness")?.addEventListener("change", () => changeEndianness(this.selectHandler));
+        this.editorContainer.addEventListener("keydown", this.editorKeyBoardHandler.bind(this));
+        this.editorContainer.addEventListener("mouseover", toggleHover);
+        this.editorContainer.addEventListener("mouseleave", toggleHover);
+
+        // Event handles to handle when the user drags to create a selection
+        this.editorContainer.addEventListener("click", this.clickHandler.bind(this));
+        this.editorContainer.addEventListener("mousedown", this.mouseDownHandler.bind(this));
+
+        window.addEventListener("copy", (event: Event) => {
+            if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
+                this.editHandler.copy(event as ClipboardEvent);
+            }
+        });
+        window.addEventListener("paste", (event: Event) => {
+            if (document.activeElement?.classList.contains("hex") || document.activeElement?.classList.contains("ascii")) {
+                this.editHandler.paste(event as ClipboardEvent);
+            }
+        });
+        window.addEventListener("resize", this.documentResize.bind(this));
+        window.addEventListener("keydown", this.windowKeyboardHandler.bind(this));
     }
 
     /**
@@ -274,8 +217,6 @@ export class VirtualDocument {
         addr.innerText = pad(displayOffset.toString(16), 8).toUpperCase();
         fragment.appendChild(addr);
         this.rows[0].set(offset.toString(), addr);
-        // We add a left px offset to effectively right align the column
-        addr.style.left = `${this.hexAddrPadding}px`;
         this.translateRow(addr, offset);
     }
 

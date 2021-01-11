@@ -22,6 +22,7 @@ body {
     cursor: default;
     float: left;
     padding-right: 10px;
+    height: 500000px;
 }
 
 #editor-container {
@@ -164,6 +165,8 @@ select:not(.inline-select) {
 
 .rowwrapper {
     position: relative;
+    width: 100%;
+    height: 100%;
 }
 
 .row {
