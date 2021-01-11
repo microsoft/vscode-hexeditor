@@ -7,6 +7,7 @@ import { HexDocument } from "./hexDocument";
 interface SearchOptions {
     regex: boolean;
     caseSensitive: boolean;
+    showResults: boolean;
 }
 
 export interface SearchResults {

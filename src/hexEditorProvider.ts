@@ -355,6 +355,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 							<option value="ascii">Text</option>
 						</select>
 					</span>
+					<span class="codicon codicon-list-flat" id="results-list-button" title="Results List"></span>
 				</div>
 				<div class="search-widget">
 					<div class="bar find-bar">
@@ -386,6 +387,16 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 							<span class="codicon codicon-replace disabled" id="replace-btn" title="Replace"></span>
 							<span class="codicon codicon-replace-all disabled" id="replace-all" title="Replace All"></span>
 						</span>
+					</div>
+				</div>
+				<div id="search-results-widget" class="search-results-widget disable-results">
+					<span id="result-count"></span>
+					<div id="search-grid" class="search-grid-container">
+					</div>
+					<div class="pagination-group">
+						<span class="codicon codicon-chevron-left disabled" id="page-previous" title="Previous Page"></span>
+						<span id="display-page-index"></span>
+						<span class="codicon codicon-chevron-right disabled" id="page-next" title="Next Page"></span>
 					</div>
 				</div>
 			</div>
