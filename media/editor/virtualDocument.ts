@@ -116,7 +116,6 @@ export class VirtualDocument {
      */
     private bindEventListeners(): void {
         // Bind the event listeners
-        // Will need to refactor this section soon as its getting pretty messy
         document.getElementById("endianness")?.addEventListener("change", () => changeEndianness(this.selectHandler));
         this.editorContainer.addEventListener("keydown", this.editorKeyBoardHandler.bind(this));
         this.editorContainer.addEventListener("mouseover", toggleHover);

@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import * as fs from "fs";
 import { HexDocument, HexDocumentEdit } from "./hexDocument";
 import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
@@ -10,6 +9,7 @@ import path = require("path");
 import { getNonce } from "./util";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { SearchResults } from "./searchRequest";
+import { DataInspectorView } from "./dataInspectorView";
 
 interface PacketRequest {
 	initialOffset: number;
@@ -17,10 +17,10 @@ interface PacketRequest {
 }
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
-    public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter): vscode.Disposable {
+    public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView): vscode.Disposable {
         return vscode.window.registerCustomEditorProvider(
             HexEditorProvider.viewType,
-            new HexEditorProvider(context, telemetryReporter),
+            new HexEditorProvider(context, telemetryReporter, dataInspectorView),
             {
                 supportsMultipleEditorsPerDocument: false
             }
@@ -33,7 +33,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
     constructor(
 		private readonly _context: vscode.ExtensionContext,
-		private readonly _telemetryReporter: TelemetryReporter
+		private readonly _telemetryReporter: TelemetryReporter,
+		private readonly _dataInspectorView: DataInspectorView
     ) { }
     
     async openCustomDocument(
@@ -174,7 +175,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Local path to script and css for the webview
 		const scriptUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "dist", "bundle.js")
+			path.join(this._context.extensionPath, "dist", "editor.js")
 		));
 		const styleUri = webview.asWebviewUri(vscode.Uri.file(
 			path.join(this._context.extensionPath, "dist", "hexEdit.css")
@@ -464,6 +465,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				panel.webview.postMessage({ type: "replace", requestId: message.requestId, body: {
 					edits: replaced
 				} });
+				return;
+			case "dataInspector":
+				// This message was meant for the data inspector view so we forward it there
+				this._dataInspectorView.handleEditorMessage(message.body);
 		}
 	}
 }

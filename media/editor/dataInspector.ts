@@ -2,11 +2,13 @@
 // Licensed under the MIT license.
 
 import { ByteData } from "./byteData";
+import { DataInspectorHandler } from "./dataInspectorHandler";
 
 /**
- * @description Clears the data spector back to its default state
+ * @description Clears the data inspector back to its default state
  */
 export function clearDataInspector(): void {
+	DataInspectorHandler.clearInspector();
     // This function only gets called when these elements exist so these casts are safe
 	(document.getElementById("binary8") as HTMLInputElement).value = "";
 	(document.getElementById("binary8") as HTMLInputElement).disabled = true;
@@ -38,6 +40,7 @@ export function clearDataInspector(): void {
  * @param {boolean} littleEndian Wether the data inspector is in littleEndian or bigEndian mode
  */
 export function populateDataInspector(byte_obj: ByteData, littleEndian: boolean): void {
+	DataInspectorHandler.updateInspector(byte_obj);
 	(document.getElementById("binary8") as HTMLInputElement).value = byte_obj.toBinary();
 	(document.getElementById("binary8") as HTMLInputElement).disabled = false;
 	for (let i = 0; i < 4; i++) {

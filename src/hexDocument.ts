@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import * as fs from "fs";
 import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { SearchProvider } from "./searchProvider";

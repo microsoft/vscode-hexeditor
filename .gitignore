@@ -2,5 +2,5 @@ out
 node_modules
 .vscode-test/
 *.vsix
-dist/bundle.js
+dist/*.js
 .DS_Store

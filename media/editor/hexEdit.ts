@@ -47,7 +47,7 @@ function openAnyway(): void {
 							<p>Opening this large file may cause instability. <a id="open-anyway" href="#">Open anyways</a></p>
 							</div>
                         `;
-                        // We construct the element right above this so it is definitely never null
+            // We construct the element right above this so it is definitely never null
 						document.getElementById("open-anyway")!.addEventListener("click", openAnyway);
 						return;
 					}
