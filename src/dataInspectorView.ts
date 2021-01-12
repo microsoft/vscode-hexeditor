@@ -7,6 +7,7 @@ import { getNonce } from "./util";
 export class DataInspectorView implements vscode.WebviewViewProvider {
   public static readonly viewType = "hexEditor.dataInpsectorView";
   private _view?: vscode.WebviewView;
+  private _lastMessage: any;
 
   constructor(private readonly _extensionURI: vscode.Uri) {}
   
@@ -26,6 +27,12 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getWebviewHTML(webviewView.webview);
     // Message handler for when the data inspector view sends messages back to the ext host
     webviewView.webview.onDidReceiveMessage(data => console.log(data));
+    // If the webview just became visible we send it the last message so that it stays in sync
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible && this._lastMessage) {
+        webviewView.webview.postMessage(this._lastMessage);
+      }
+    });
   }
 
   /**
@@ -34,6 +41,8 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
    */
   public handleEditorMessage(message: any): void {
     console.log(message);
+    // We save the last message as the webview constantly gets disposed of, but the provider still receives messages
+    this._lastMessage = message;
     this._view?.webview.postMessage(message);
   }
 

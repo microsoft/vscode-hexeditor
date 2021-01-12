@@ -27,6 +27,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
         ); 
     }
 
+		public static numEditors = 0;
+
     private static readonly viewType = "hexEditor.hexedit";
 
     private readonly webviews = new WebviewCollection();
@@ -42,9 +44,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
         openContext: vscode.CustomDocumentOpenContext,
         token: vscode.CancellationToken
     ): Promise<HexDocument> {
-        const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
-        // We don't need any listeners right now because the document is readonly, but this will help to have when we enable edits
+    const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
+		HexEditorProvider.numEditors++;
+		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", HexEditorProvider.numEditors !== 0);
 		
 		listeners.push(document.onDidChange(e => {
 			// Tell VS Code that the document has been edited by the user.
@@ -101,7 +104,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			}
 		}));
 
-        document.onDidDispose(() => disposeAll(listeners));
+      document.onDidDispose(() => {
+				HexEditorProvider.numEditors--;
+				vscode.commands.executeCommand("setContext", "hexEditor:openEditor", HexEditorProvider.numEditors !== 0);
+				disposeAll(listeners);
+			});
 
         return document;
     }
@@ -243,110 +250,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			</div>
 		</div>
 		<div class="column">
-			<div id="data-inspector">
-				<div class="header">DATA INSPECTOR</div>
-				<div class="grid-container">
-					<div class="grid-item">
-						<label for="binary8">8 bit Binary</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="binary8" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int8">Int8</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int8" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint8">UInt8</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint8" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int16">Int16</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int16" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint16">UInt16</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint16" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int24">Int24</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int24" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint24">UInt24</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint24" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int32">Int32</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int32" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint32">UInt32</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint32" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int64">Int64</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int64" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint64">UInt64</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint64" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="utf8">UTF-8</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="utf8" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="utf16">UTF-16</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="utf16" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="float32">Float 32</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="float32" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="float64">Float 64</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="float64" readonly/>
-					</div>
-					<div class="grid-item endian-select">
-						<label for="endianness">Endianness</label>
-					</div>
-					<div class="grid-item endian-select">
-						<select id="endianness">
-							<option value="little">Little Endian</option>
-							<option value="big">Big Endian</option>
-						</select>
-					</div>
-				</div>
-			</div>
 			<div id="search-container">
 				<div class="header">
 					SEARCH IN

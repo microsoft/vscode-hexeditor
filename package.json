@@ -63,7 +63,8 @@
 				{
 					"id": "hexExplorer",
 					"title": "Hex Editor",
-					"icon": "icon.png"
+					"icon": "icon.png",
+					"when": "hexEditor:openEditor"
 				}
 			]
 		},
@@ -72,7 +73,8 @@
 				{
 					"type": "webview",
 					"id": "hexEditor.dataInpsectorView",
-					"name": "Data Inspector"
+					"name": "Data Inspector",
+					"when": "hexEditor:openEditor"
 				}
 			]
 		}
