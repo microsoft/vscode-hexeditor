@@ -48,6 +48,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const listeners: vscode.Disposable[] = [];
 		HexEditorProvider.numEditors++;
 		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", HexEditorProvider.numEditors !== 0);
+		this._dataInspectorView.show();
 		
 		listeners.push(document.onDidChange(e => {
 			// Tell VS Code that the document has been edited by the user.

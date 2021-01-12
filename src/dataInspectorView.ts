@@ -26,7 +26,9 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
     };
     webviewView.webview.html = this._getWebviewHTML(webviewView.webview);
     // Message handler for when the data inspector view sends messages back to the ext host
-    webviewView.webview.onDidReceiveMessage(data => console.log(data));
+    webviewView.webview.onDidReceiveMessage(data => {
+      if (data.type === "ready") webviewView.show();
+    });
     // If the webview just became visible we send it the last message so that it stays in sync
     webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible && this._lastMessage) {
@@ -44,6 +46,13 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
     // We save the last message as the webview constantly gets disposed of, but the provider still receives messages
     this._lastMessage = message;
     this._view?.webview.postMessage(message);
+  }
+
+  /**
+   * @description Function to reveal the view panel
+   */
+  public show(): void {
+    this._view?.show();
   }
 
   private _getWebviewHTML(webview: vscode.Webview): string {
