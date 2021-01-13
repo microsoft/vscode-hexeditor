@@ -16,9 +16,10 @@ export class ByteData {
 	 * @param message The message from the editor
 	 */
 	public static constructFromMessage(message: ByteDataMessage): ByteData {
-		const byteObj = new ByteData(message.decimal);
+		// The message protocol converts NaN to Null so we convert it back here
+		const byteObj = new ByteData(message.decimal ? message.decimal : NaN);
 		for (const adjacentBytes of message.adjacentBytes) {
-			const current = new ByteData(adjacentBytes.decimal);
+			const current = new ByteData(adjacentBytes.decimal ? adjacentBytes.decimal : NaN);
 			byteObj.addAdjacentByte(current);
 		}
 		return byteObj;
