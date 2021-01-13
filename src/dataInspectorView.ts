@@ -52,7 +52,15 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
    * @description Function to reveal the view panel
    */
   public show(): void {
-    this._view?.show();
+    if (this._view) {
+      this._view.show();
+    } else {
+      vscode.commands.executeCommand(`${DataInspectorView.viewType}.focus`);
+    }
+    // We attempt to send the last 
+    if (this._lastMessage) {
+      this._view?.webview.postMessage(this._lastMessage);
+    }
   }
 
   private _getWebviewHTML(webview: vscode.Webview): string {

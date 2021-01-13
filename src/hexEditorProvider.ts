@@ -27,8 +27,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
         ); 
     }
 
-		public static numEditors = 0;
-
     private static readonly viewType = "hexEditor.hexedit";
 
     private readonly webviews = new WebviewCollection();
@@ -46,10 +44,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
     ): Promise<HexDocument> {
     const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
-		HexEditorProvider.numEditors++;
-		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", HexEditorProvider.numEditors !== 0);
+		// Set the hex editor activity panel to be visible
+		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", true);
 		this._dataInspectorView.show();
-		
 		listeners.push(document.onDidChange(e => {
 			// Tell VS Code that the document has been edited by the user.
 			this._onDidChangeCustomDocument.fire({
@@ -106,8 +103,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		}));
 
       document.onDidDispose(() => {
-				HexEditorProvider.numEditors--;
-				vscode.commands.executeCommand("setContext", "hexEditor:openEditor", HexEditorProvider.numEditors !== 0);
 				disposeAll(listeners);
 			});
 
@@ -127,7 +122,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			enableScripts: true,
 		};
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
-
+		// Detects when the webview changes visibility to update the activity bar accordingly
+		webviewPanel.onDidChangeViewState(e => 	vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible));
 		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(webviewPanel, document, e));
 
 		// Wait for the webview to be properly ready before we init
