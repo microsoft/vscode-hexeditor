@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import * as fs from "fs";
 import { HexDocument, HexDocumentEdit } from "./hexDocument";
 import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
@@ -10,6 +9,7 @@ import path = require("path");
 import { getNonce } from "./util";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { SearchResults } from "./searchRequest";
+import { DataInspectorView } from "./dataInspectorView";
 
 interface PacketRequest {
 	initialOffset: number;
@@ -17,10 +17,10 @@ interface PacketRequest {
 }
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
-    public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter): vscode.Disposable {
+    public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView): vscode.Disposable {
         return vscode.window.registerCustomEditorProvider(
             HexEditorProvider.viewType,
-            new HexEditorProvider(context, telemetryReporter),
+            new HexEditorProvider(context, telemetryReporter, dataInspectorView),
             {
                 supportsMultipleEditorsPerDocument: false
             }
@@ -33,7 +33,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
     constructor(
 		private readonly _context: vscode.ExtensionContext,
-		private readonly _telemetryReporter: TelemetryReporter
+		private readonly _telemetryReporter: TelemetryReporter,
+		private readonly _dataInspectorView: DataInspectorView
     ) { }
     
     async openCustomDocument(
@@ -41,10 +42,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
         openContext: vscode.CustomDocumentOpenContext,
         token: vscode.CancellationToken
     ): Promise<HexDocument> {
-        const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
-        // We don't need any listeners right now because the document is readonly, but this will help to have when we enable edits
+    const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
-		
+		// Set the hex editor activity panel to be visible
+		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", true);
+		this._dataInspectorView.show();
 		listeners.push(document.onDidChange(e => {
 			// Tell VS Code that the document has been edited by the user.
 			this._onDidChangeCustomDocument.fire({
@@ -100,7 +102,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			}
 		}));
 
-        document.onDidDispose(() => disposeAll(listeners));
+      document.onDidDispose(() => {
+				// Make the hex editor panel hidden since we're disposing of the webview
+				vscode.commands.executeCommand("setContext", "hexEditor:openEditor", false);
+				disposeAll(listeners);
+			});
 
         return document;
     }
@@ -118,7 +124,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			enableScripts: true,
 		};
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
-
+		// Detects when the webview changes visibility to update the activity bar accordingly
+		webviewPanel.onDidChangeViewState(e => 	{
+			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible);
+			if (e.webviewPanel.visible) {
+				this._dataInspectorView.show(true);
+			}
+		});
 		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(webviewPanel, document, e));
 
 		// Wait for the webview to be properly ready before we init
@@ -174,7 +186,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Local path to script and css for the webview
 		const scriptUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "dist", "bundle.js")
+			path.join(this._context.extensionPath, "dist", "editor.js")
 		));
 		const styleUri = webview.asWebviewUri(vscode.Uri.file(
 			path.join(this._context.extensionPath, "dist", "hexEdit.css")
@@ -242,110 +254,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			</div>
 		</div>
 		<div class="column">
-			<div id="data-inspector">
-				<div class="header">DATA INSPECTOR</div>
-				<div class="grid-container">
-					<div class="grid-item">
-						<label for="binary8">8 bit Binary</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="binary8" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int8">Int8</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int8" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint8">UInt8</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint8" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int16">Int16</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int16" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint16">UInt16</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint16" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int24">Int24</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int24" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint24">UInt24</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint24" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int32">Int32</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int32" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint32">UInt32</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint32" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="int64">Int64</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="int64" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="uint64">UInt64</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="uint64" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="utf8">UTF-8</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="utf8" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="utf16">UTF-16</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="utf16" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="float32">Float 32</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="float32" readonly/>
-					</div>
-					<div class="grid-item">
-						<label for="float64">Float 64</label>
-					</div>
-					<div class="grid-item">
-						<input type="text" autocomplete="off" spellcheck="off" id="float64" readonly/>
-					</div>
-					<div class="grid-item endian-select">
-						<label for="endianness">Endianness</label>
-					</div>
-					<div class="grid-item endian-select">
-						<select id="endianness">
-							<option value="little">Little Endian</option>
-							<option value="big">Big Endian</option>
-						</select>
-					</div>
-				</div>
-			</div>
 			<div id="search-container">
 				<div class="header">
 					SEARCH IN
@@ -464,6 +372,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				panel.webview.postMessage({ type: "replace", requestId: message.requestId, body: {
 					edits: replaced
 				} });
+				return;
+			case "dataInspector":
+				// This message was meant for the data inspector view so we forward it there
+				this._dataInspectorView.handleEditorMessage(message.body);
 		}
 	}
 }

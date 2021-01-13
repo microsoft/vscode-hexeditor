@@ -4,7 +4,7 @@
 import { ByteData } from "./byteData";
 
 /**
- * @description Clears the data spector back to its default state
+ * @description Clears the data inspector back to its default state
  */
 export function clearDataInspector(): void {
     // This function only gets called when these elements exist so these casts are safe
@@ -69,4 +69,14 @@ export function populateDataInspector(byte_obj: ByteData, littleEndian: boolean)
 	const float64 = byte_obj.byteConverter(64, true, littleEndian, true);
 	(document.getElementById("float64") as HTMLInputElement).value = isNaN(Number(float64)) ? "End of File" : float64.toString();
 	(document.getElementById("float64") as HTMLInputElement).disabled = false;
+}
+
+// This is bound to the on change event for the select which decides to render big or little endian
+/**
+ * @description Handles when the user changes the dropdown for whether they want little or big endianness 
+ * @param byte_obj The bytedata object representing the selected bytes
+ */
+export function changeEndianness(byte_obj: ByteData): void {
+	const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
+	populateDataInspector(byte_obj, littleEndian);
 }

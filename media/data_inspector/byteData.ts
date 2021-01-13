@@ -1,10 +1,30 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-export class ByteData {
-    private decimal: number;
-    private adjacentBytes: ByteData[];
+interface ByteDataMessage {
+	decimal: number;
+	adjacentBytes: ByteDataMessage[];
+}
 
+export class ByteData {
+
+  private decimal: number;
+  private adjacentBytes: ByteData[];
+
+	/**
+	 * @description Constructs a bytedata object from a message sent over by the editor
+	 * @param message The message from the editor
+	 */
+	public static constructFromMessage(message: ByteDataMessage): ByteData {
+		// The message protocol converts NaN to Null so we convert it back here
+		const byteObj = new ByteData(message.decimal ? message.decimal : NaN);
+		for (const adjacentBytes of message.adjacentBytes) {
+			const current = new ByteData(adjacentBytes.decimal ? adjacentBytes.decimal : NaN);
+			byteObj.addAdjacentByte(current);
+		}
+		return byteObj;
+	}
+	
 	/**
 	 * @description Creates a ByteData object which acts as the datalayer for a single hex value
 	 * @param uint8num The 8bit number from the file to be represented

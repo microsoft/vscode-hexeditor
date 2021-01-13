@@ -3,14 +3,14 @@
 
 import { ByteData } from "./byteData";
 import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset } from "./util";
-import { toggleHover, changeEndianness } from "./eventHandlers";
+import { toggleHover } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
 import { WebViewStateManager } from "./webviewStateManager";
 import { SelectHandler } from "./selectHandler";
 import { SearchHandler } from "./searchHandler";
-import { populateDataInspector } from "./dataInspector";
+import { DataInspectorHandler } from "./dataInspectorHandler";
 
 export interface VirtualizedPacket {
     offset: number;
@@ -116,8 +116,6 @@ export class VirtualDocument {
      */
     private bindEventListeners(): void {
         // Bind the event listeners
-        // Will need to refactor this section soon as its getting pretty messy
-        document.getElementById("endianness")?.addEventListener("change", () => changeEndianness(this.selectHandler));
         this.editorContainer.addEventListener("keydown", this.editorKeyBoardHandler.bind(this));
         this.editorContainer.addEventListener("mouseover", toggleHover);
         this.editorContainer.addEventListener("mouseleave", toggleHover);
@@ -517,8 +515,7 @@ export class VirtualDocument {
         if (offset !== undefined) {
             const elements = getElementsWithGivenOffset(offset);
             const byte_obj = retrieveSelectedByteObject(elements)!;
-            const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
-            populateDataInspector(byte_obj, littleEndian);
+            DataInspectorHandler.updateInspector(byte_obj);
         }
     }
 

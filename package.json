@@ -21,6 +21,7 @@
 	],
 	"icon": "icon.png",
 	"activationEvents": [
+		"onView:hexEditor.dataInpsectorView",
 		"onCustomEditor:hexEditor.hexedit",
 		"onCommand:hexEditor.openFile"
 	],
@@ -56,7 +57,27 @@
 				"command": "hexEditor.openFile",
 				"title": "Hex Editor: Open file"
 			}
-		]
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "hexExplorer",
+					"title": "Hex Editor",
+					"icon": "icon.png",
+					"when": "hexEditor:openEditor"
+				}
+			]
+		},
+		"views": {
+			"hexExplorer": [
+				{
+					"type": "webview",
+					"id": "hexEditor.dataInpsectorView",
+					"name": "Data Inspector",
+					"when": "hexEditor:openEditor"
+				}
+			]
+		}
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
