@@ -52,7 +52,6 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
    * @param message The message from the main editor window
    */
   public handleEditorMessage(message: any): void {
-    console.log(message);
     // We save the last message as the webview constantly gets disposed of, but the provider still receives messages
     this._lastMessage = message;
     this._view?.webview.postMessage(message);
