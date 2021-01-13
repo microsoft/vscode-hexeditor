@@ -17,7 +17,6 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
     _token: vscode.CancellationToken
   ): void {
     this._view = webviewView;
-
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [
@@ -25,16 +24,23 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
       ]
     };
     webviewView.webview.html = this._getWebviewHTML(webviewView.webview);
+    
     // Message handler for when the data inspector view sends messages back to the ext host
     webviewView.webview.onDidReceiveMessage(data => {
       if (data.type === "ready") webviewView.show();
     });
+
     // If the webview just became visible we send it the last message so that it stays in sync
     webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible && this._lastMessage) {
         webviewView.webview.postMessage(this._lastMessage);
       }
     });
+
+    // Send the last message to the inspector so it preserves state upon hiding and shwoing
+    if (this._lastMessage) {
+      webviewView.webview.postMessage(this._lastMessage);
+    }
   }
 
   /**
