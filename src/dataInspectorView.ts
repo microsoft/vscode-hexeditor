@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import { throws } from "assert";
 import * as vscode from "vscode";
 import { getNonce } from "./util";
 
@@ -30,6 +31,9 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
       if (data.type === "ready") webviewView.show();
     });
 
+    // Once the view is disposed of we don't want to keep a reference to it anymore
+    this._view.onDidDispose(() => this._view = undefined);
+
     // If the webview just became visible we send it the last message so that it stays in sync
     webviewView.onDidChangeVisibility(() => {
       if (webviewView.visible && this._lastMessage) {
@@ -56,14 +60,15 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
 
   /**
    * @description Function to reveal the view panel
+   * @param forceFocus Whether or not to force focus of the panel
    */
-  public show(): void {
-    if (this._view) {
+  public show(forceFocus?: boolean): void {
+    if (this._view && !forceFocus) {
       this._view.show();
     } else {
       vscode.commands.executeCommand(`${DataInspectorView.viewType}.focus`);
     }
-    // We attempt to send the last 
+    // We attempt to send the last message, this prevents the inspector from coming up blank
     if (this._lastMessage) {
       this._view?.webview.postMessage(this._lastMessage);
     }

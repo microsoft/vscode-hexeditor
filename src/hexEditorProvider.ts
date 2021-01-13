@@ -103,6 +103,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		}));
 
       document.onDidDispose(() => {
+				// Make the hex editor panel hidden since we're disposing of the webview
+				vscode.commands.executeCommand("setContext", "hexEditor:openEditor", false);
 				disposeAll(listeners);
 			});
 
@@ -123,7 +125,12 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		};
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 		// Detects when the webview changes visibility to update the activity bar accordingly
-		webviewPanel.onDidChangeViewState(e => 	vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible));
+		webviewPanel.onDidChangeViewState(e => 	{
+			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible);
+			if (e.webviewPanel.visible) {
+				this._dataInspectorView.show(true);
+			}
+		});
 		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(webviewPanel, document, e));
 
 		// Wait for the webview to be properly ready before we init
