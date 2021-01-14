@@ -3,7 +3,7 @@
 
 import { VirtualDocument } from "./virtualDocument";
 import { ChunkHandler } from "./chunkHandler";
-import { MessageHandler } from "./messageHandler";
+import { MessageHandler } from "../common/messageHandler";
 
 declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();

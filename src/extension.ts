@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	});
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
-	context.subscriptions.push(HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider));
+	context.subscriptions.push(HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, searchViewProvider));
 }
 
 export function deactivate(): void {

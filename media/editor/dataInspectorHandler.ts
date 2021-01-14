@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { ByteData } from "./byteData";
+import { ByteData } from "../common/byteData";
 import { messageHandler } from "./hexEdit";
 
 // Class responsible for notifying the data inspector view of the necessary editor information

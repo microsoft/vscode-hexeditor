@@ -3,7 +3,7 @@
 
 import { virtualHexDocument, messageHandler } from "./hexEdit";
 import { VirtualizedPacket } from "./virtualDocument";
-import { ByteData } from "./byteData";
+import { ByteData } from "../common/byteData";
 import { EditMessage } from "./editHandler";
 
 /**

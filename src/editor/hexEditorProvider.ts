@@ -10,6 +10,7 @@ import { getNonce } from "../util";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { SearchResults } from "../search/searchRequest";
 import { DataInspectorView } from "../data_inspector/dataInspectorView";
+import { SearchView } from "../search/searchView";
 
 interface PacketRequest {
 	initialOffset: number;
@@ -17,10 +18,10 @@ interface PacketRequest {
 }
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
-    public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView): vscode.Disposable {
+    public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView, searchView: SearchView): vscode.Disposable {
         return vscode.window.registerCustomEditorProvider(
             HexEditorProvider.viewType,
-            new HexEditorProvider(context, telemetryReporter, dataInspectorView),
+            new HexEditorProvider(context, telemetryReporter, dataInspectorView, searchView),
             {
                 supportsMultipleEditorsPerDocument: false
             }
@@ -34,7 +35,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
     constructor(
 		private readonly _context: vscode.ExtensionContext,
 		private readonly _telemetryReporter: TelemetryReporter,
-		private readonly _dataInspectorView: DataInspectorView
+		private readonly _dataInspectorView: DataInspectorView,
+		private readonly _searchView: SearchView
     ) { }
     
     async openCustomDocument(
@@ -105,6 +107,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
       document.onDidDispose(() => {
 				// Make the hex editor panel hidden since we're disposing of the webview
 				vscode.commands.executeCommand("setContext", "hexEditor:openEditor", false);
+				this._searchView.switchDocument(undefined);
 				disposeAll(listeners);
 			});
 
@@ -118,17 +121,23 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	): Promise<void> {
 		// Add the webview to our internal set of active webviews
 		this.webviews.add(document.uri, webviewPanel);
+		// Notify the search view that this is the current document to reference
+		this._searchView.switchDocument(document, webviewPanel.webview);
 
 		// Setup initial content for the webview
 		webviewPanel.webview.options = {
 			enableScripts: true,
 		};
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
-		// Detects when the webview changes visibility to update the activity bar accordingly
+		// Detects when the webview changes visibility to update the activity bar
+		// This also updates the search view to reference the currently visible document
 		webviewPanel.onDidChangeViewState(e => 	{
 			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible);
 			if (e.webviewPanel.visible) {
+				this._searchView.switchDocument(document, webviewPanel.webview);
 				this._dataInspectorView.show(true);
+			} else {
+				this._searchView.switchDocument(undefined);
 			}
 		});
 		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(webviewPanel, document, e));

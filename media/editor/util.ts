@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { ByteData } from "./byteData";
+import { ByteData } from "../common/byteData";
 
 // Assorted helper functions
 

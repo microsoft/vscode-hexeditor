@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { ByteData } from "./byteData";
+import { ByteData } from "../common/byteData";
 import { changeEndianness, clearDataInspector, populateDataInspector } from "./dataInspector";
 
 declare const acquireVsCodeApi: any;

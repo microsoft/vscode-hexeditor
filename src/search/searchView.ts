@@ -1,14 +1,22 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import path = require("path");
 import * as vscode from "vscode";
+import { HexDocument } from "../editor/hexDocument";
 import { getNonce } from "../util";
+
+// Messages which are directed for the main editor arrive in this form
+interface EditorMessage {
+  type: "editor";
+  action: string;
+}
 
 export class SearchView implements vscode.WebviewViewProvider {
   public static readonly viewType = "hexEditor.searchView";
   private _view?: vscode.WebviewView;
-
+  // We need a reference to the current document in order to execute searches against it
+  private _document?: HexDocument;
+  private _documentWebview?: vscode.Webview;
   constructor(private readonly _extensionURI: vscode.Uri) {}
   
   public resolveWebviewView(
@@ -25,9 +33,12 @@ export class SearchView implements vscode.WebviewViewProvider {
     };
     webviewView.webview.html = this._getWebviewHTML(webviewView.webview);
     
-    // Message handler for when the data inspector view sends messages back to the ext host
+    // Message handler for when the search widget sends messages back to the ext host
     webviewView.webview.onDidReceiveMessage(data => {
-      if (data.type === "ready") this.show();
+      switch (data.type) {
+        case "editor":
+          this._handleEditorMessage(data);
+      }
     });
 
     // Once the view is disposed of we don't want to keep a reference to it anymore
@@ -35,11 +46,15 @@ export class SearchView implements vscode.WebviewViewProvider {
   }
 
   /**
-   * @description This is where all the messages from the editor enter the view provider
-   * @param message The message from the main editor window
+   * @description Called whenever the hex document is switched so we are always making searches against the current document
+   * @param document The document object
+   * @param documentWebview The webview which relates to the passed in document
    */
-  public handleEditorMessage(message: any): void {
-    this._view?.webview.postMessage(message);
+  public switchDocument(document?: HexDocument, documentWebview?: vscode.Webview): void {
+    // Cancel the current search and switch the document
+    this._document?.searchProvider.cancelRequest();
+    this._document = document;
+    this._documentWebview = documentWebview;
   }
 
   /**
@@ -47,23 +62,24 @@ export class SearchView implements vscode.WebviewViewProvider {
    * @param forceFocus Whether or not to force focus of the panel
    */
   public show(forceFocus?: boolean): void {
-    // if (this._view && !forceFocus) {
-    //   this._view.show();
-    // } else {
-    //   vscode.commands.executeCommand(`${SearchView.viewType}.focus`);
-    // }
+    if (this._view && !forceFocus) {
+      this._view.show();
+    } else {
+      vscode.commands.executeCommand(`${SearchView.viewType}.focus`);
+    }
+  }
+
+  /**
+   * @description Handles sending messages to update the current editor
+   * @param message The message destined for the editor
+   */
+  private _handleEditorMessage(message: EditorMessage): void {
+    console.log(message);
   }
 
   private _getWebviewHTML(webview: vscode.Webview): string {
     const scriptURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "search.js"));
     const styleURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "search.css"));
-    // const codiconsUri = webview.asWebviewUri(vscode.Uri.file(
-		// 	path.join(this._extensionURI.fsPath, "node_modules", "vscode-codicons", "dist", "codicon.css")
-		// ));
-		
-		// const codiconsFontUri = webview.asWebviewUri(vscode.Uri.file(
-		// 	path.join(this._extensionURI.fsPath, "node_modules", "vscode-codicons", "dist", "codicon.ttf")
-		// ));
     const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "node_modules", "vscode-codicons", "dist", "codicon.css"));
 		const codiconsFontUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "node_modules", "vscode-codicons", "dist", "codicon.ttf"));
     

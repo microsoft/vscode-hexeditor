@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license
 
-import { ByteData } from "./byteData";
+import { ByteData } from "../common/byteData";
 import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset } from "./util";
 import { toggleHover } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";

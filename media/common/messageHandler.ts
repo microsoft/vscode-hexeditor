@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { vscode } from "./hexEdit";
+import { vscode } from "../editor/hexEdit";
 
 /**
  * Class which handles messages between the webview and the exthost

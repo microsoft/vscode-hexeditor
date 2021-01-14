@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import { getElementsWithGivenOffset, updateAsciiValue, getElementsOffset } from "./util";
-import { ByteData } from "./byteData";
+import { ByteData } from "../common/byteData";
 import { messageHandler, virtualHexDocument } from "./hexEdit";
 import { SelectHandler } from "./selectHandler";
 

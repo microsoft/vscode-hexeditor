@@ -17,7 +17,7 @@ export class SearchProvider {
 
     /***
      * @description Creates a new search request and returns the request object
-     * @
+     * @returns The request object
      */
     public createNewRequest(): SearchRequest {
         this._request = new SearchRequest(this._document);
