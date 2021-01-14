@@ -188,26 +188,15 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		return document.backup(context.destination, cancellation);
 	}
 
-    /**
+  /**
 	 * Get the static HTML used for in our editor's webviews.
-	 * Document size is needed to decide if the document is being opened
 	*/
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Local path to script and css for the webview
-		const scriptUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "dist", "editor.js")
-		));
-		const styleUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "dist", "hexEdit.css")
-		));
-		console.log(`Extension Path: ${this._context.extensionPath}`);
-		const codiconsUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "node_modules", "vscode-codicons", "dist", "codicon.css")
-		));
-		
-		const codiconsFontUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "node_modules", "vscode-codicons", "dist", "codicon.ttf")
-		));
+		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.js"));
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "hexEdit.css"));
+    const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "node_modules", "vscode-codicons", "dist", "codicon.css"));
+		const codiconsFontUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "node_modules", "vscode-codicons", "dist", "codicon.ttf"));
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();
