@@ -1,9 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { throws } from "assert";
 import * as vscode from "vscode";
-import { getNonce } from "./util";
+import { getNonce } from "../util";
 
 export class DataInspectorView implements vscode.WebviewViewProvider {
   public static readonly viewType = "hexEditor.dataInpsectorView";
@@ -28,7 +27,7 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
     
     // Message handler for when the data inspector view sends messages back to the ext host
     webviewView.webview.onDidReceiveMessage(data => {
-      if (data.type === "ready") webviewView.show();
+      if (data.type === "ready") this.show();
     });
 
     // Once the view is disposed of we don't want to keep a reference to it anymore
@@ -62,15 +61,15 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
    * @param forceFocus Whether or not to force focus of the panel
    */
   public show(forceFocus?: boolean): void {
-    if (this._view && !forceFocus) {
-      this._view.show();
-    } else {
-      vscode.commands.executeCommand(`${DataInspectorView.viewType}.focus`);
-    }
-    // We attempt to send the last message, this prevents the inspector from coming up blank
-    if (this._lastMessage) {
-      this._view?.webview.postMessage(this._lastMessage);
-    }
+    // if (this._view && !forceFocus) {
+    //   this._view.show();
+    // } else {
+    //   vscode.commands.executeCommand(`${DataInspectorView.viewType}.focus`);
+    // }
+    // // We attempt to send the last message, this prevents the inspector from coming up blank
+    // if (this._lastMessage) {
+    //   this._view?.webview.postMessage(this._lastMessage);
+    // }
   }
 
   private _getWebviewHTML(webview: vscode.Webview): string {

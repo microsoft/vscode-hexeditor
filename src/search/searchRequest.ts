@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { HexDocument } from "./hexDocument";
+import { HexDocument } from "../editor/hexDocument";
 
 // This is the same interface in the webviews search handler, we just currently do not share interfaces across the exthost and webview
 interface SearchOptions {

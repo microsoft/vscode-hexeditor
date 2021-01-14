@@ -2,9 +2,9 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import { Disposable } from "./dispose";
+import { Disposable } from "../dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
-import { SearchProvider } from "./searchProvider";
+import { SearchProvider } from "../search/searchProvider";
 
 /**
  * @description Helper function to compare two arrays

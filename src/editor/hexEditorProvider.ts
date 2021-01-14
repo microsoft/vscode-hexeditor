@@ -3,13 +3,13 @@
 
 import * as vscode from "vscode";
 import { HexDocument, HexDocumentEdit } from "./hexDocument";
-import { disposeAll } from "./dispose";
-import { WebviewCollection } from "./webViewCollection";
+import { disposeAll } from "../dispose";
+import { WebviewCollection } from "../webViewCollection";
 import path = require("path");
-import { getNonce } from "./util";
+import { getNonce } from "../util";
 import TelemetryReporter from "vscode-extension-telemetry";
-import { SearchResults } from "./searchRequest";
-import { DataInspectorView } from "./dataInspectorView";
+import { SearchResults } from "../search/searchRequest";
+import { DataInspectorView } from "../data_inspector/dataInspectorView";
 
 interface PacketRequest {
 	initialOffset: number;

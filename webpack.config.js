@@ -3,7 +3,8 @@ const path = require('path');
 module.exports = {
   entry: {
     editor: './media/editor/hexEdit.ts',
-    inspector: '/media/data_inspector/inspector.ts'
+    inspector: '/media/data_inspector/inspector.ts',
+    search: '/media/search/searchWidget.ts'
   },
   devtool: 'inline-source-map',
   mode: 'development',

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { HexDocument } from "./hexDocument";
+import { HexDocument } from "../editor/hexDocument";
 import { SearchRequest } from "./searchRequest";
 
 /***
