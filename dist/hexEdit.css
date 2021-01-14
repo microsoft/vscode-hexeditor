@@ -159,10 +159,6 @@ select:not(.inline-select) {
     padding-top: 20px;
 }
 
-.endian-select {
-    padding-top: 10px;
-}
-
 .rowwrapper {
     position: relative;
     width: 100%;
@@ -225,10 +221,6 @@ select:not(.inline-select) {
 .vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .edited {
     background-color: rgb(255, 208, 0);
     color: rgb(0, 0, 0);
-}
-
-#data-inspector {
-    transform: translate3d(0px, 0px, 0px);
 }
 
 button {

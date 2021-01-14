@@ -191,7 +191,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const styleUri = webview.asWebviewUri(vscode.Uri.file(
 			path.join(this._context.extensionPath, "dist", "hexEdit.css")
 		));
-
+		console.log(`Extension Path: ${this._context.extensionPath}`);
 		const codiconsUri = webview.asWebviewUri(vscode.Uri.file(
 			path.join(this._context.extensionPath, "node_modules", "vscode-codicons", "dist", "codicon.css")
 		));

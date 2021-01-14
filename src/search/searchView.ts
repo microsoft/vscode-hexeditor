@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+import path = require("path");
 import * as vscode from "vscode";
 import { getNonce } from "../util";
 
@@ -56,6 +57,13 @@ export class SearchView implements vscode.WebviewViewProvider {
   private _getWebviewHTML(webview: vscode.Webview): string {
     const scriptURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "search.js"));
     const styleURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "search.css"));
+    // const codiconsUri = webview.asWebviewUri(vscode.Uri.file(
+		// 	path.join(this._extensionURI.fsPath, "node_modules", "vscode-codicons", "dist", "codicon.css")
+		// ));
+		
+		// const codiconsFontUri = webview.asWebviewUri(vscode.Uri.file(
+		// 	path.join(this._extensionURI.fsPath, "node_modules", "vscode-codicons", "dist", "codicon.ttf")
+		// ));
     const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "node_modules", "vscode-codicons", "dist", "codicon.css"));
 		const codiconsFontUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "node_modules", "vscode-codicons", "dist", "codicon.ttf"));
     
@@ -70,9 +78,10 @@ export class SearchView implements vscode.WebviewViewProvider {
               -->
               <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} blob:; font-src ${codiconsFontUri}; style-src ${webview.cspSource} ${codiconsUri}; script-src 'nonce-${nonce}';">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <link href="${codiconsUri}" rel="stylesheet" />
               <link href="${styleURI}" rel="stylesheet">
               
-              <title>Data Inspector</title>
+              <title>Search Widget</title>
             </head>
             <body>
               <div id="search-container">

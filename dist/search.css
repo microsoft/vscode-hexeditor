@@ -1,0 +1,157 @@
+:root {
+  --input-glyph-padding: 0px;
+}
+
+:focus {
+  outline-color: var(--vscode-focusBorder) !important;
+}
+
+input {
+  padding-left: 4px;
+  padding-right: 4px;
+  font-family: var(--vscode-editor-font-family);
+  background-color: var(--vscode-input-background);
+  border-width: 0;
+  width: 170px;
+  color: var(--vscode-input-foreground);
+}
+
+.header {
+  position: sticky;
+  top: 0px;
+  font-weight: bold;
+  line-height: var(--vscode-editor-font-size);
+  color: var(--vscode-editorLineNumber-activeForeground);
+  z-index: 10;
+  border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+  font-family: var(--vscode-font-family);
+}
+
+.codicon {
+  cursor: pointer;
+  color: var(--vscode-icon-foreground);
+}
+
+.disabled {
+  cursor: default;
+  opacity: 40%;
+}
+
+.input-warning {
+  background-color: var(--vscode-inputValidation-warningBackground);
+  color: var(--vscode-inputValidation-warningForeground);
+  padding-top: 3px;
+  padding-bottom: 3px;
+  padding-left: 3px;
+  /* 100% - the padding */
+  width: calc(100% - 3px);
+  height: 60%;
+}
+
+.input-error {
+  background-color: var(--vscode-inputValidation-errorBackground);
+  padding-top: 3px;
+  padding-bottom: 3px;
+  padding-left: 3px;
+  color: var(--vscode-inputValidation-errorForeground);
+  height: 60%;
+  /* 100% - the padding */
+  width: calc(100% - 3px);
+}
+
+input.warning-border {
+  outline: none !important;
+  border: 1px solid var(--vscode-inputValidation-warningBorder);
+}
+input.error-border {
+  outline: none !important;
+  border: 1px solid var(--vscode-inputValidation-errorBorder);
+}
+
+.input-warning.warning-border {
+  outline: none !important;
+  border: 1px solid var(--vscode-inputValidation-warningBorder);
+  /* So we don't get a double thick border betweent the boxes */
+  border-top: 0px;
+}
+
+.input-error.error-border {
+  outline: none !important;
+  border: 1px solid var(--vscode-inputValidation-errorBorder);
+  /* So we don't get a double thick border betweent the boxes */
+  border-top: 0px;
+}
+
+button {
+  width: 100%;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-color: var(--vscode-button-background);
+}
+
+button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+button:disabled {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border-color: var(--vscode-button-secondaryBackground);
+}
+
+.toggled {
+  background-color: var(--vscode-editor-selectionBackground);
+  color: var(--vscode-editor-selectionForeground);
+}
+
+.bar {
+  position: relative;
+  display: flex;
+}
+
+.input-glyph-group {
+  position: relative;
+  height: 100%;
+  flex: 1;
+}
+
+.bar > .input-glyph-group > input {
+  height: 24px;
+  padding: 0px var(--input-glyph-padding) 0px 3px;
+  /* -3px takes off the added length due to the left padding */
+  width: calc(100% - var(--input-glyph-padding) - 3px);
+}
+
+.bar-glyphs {
+  position: absolute;
+  right: 0px;
+  top: 12%;
+}
+
+#case-sensitive {
+  position: relative;
+}
+
+#preserve-case {
+  position: relative;
+  top: 2px;
+  right: 2px;
+}
+
+.icon-group {
+  transform: translateX(10px);
+}
+
+.search-widget {
+  margin-top: 10px;
+}
+
+.find-bar {
+  padding-bottom: 10px;
+}
+
+select {
+  background-color: var(--vscode-dropdown-background);
+  border: var(--vscode-dropdown-border);
+  color: var(--vscode-dropdown-foreground)
+}
