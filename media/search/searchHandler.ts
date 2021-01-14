@@ -2,8 +2,7 @@
 // Licensed under the MIT license.
 
 import { MessageHandler } from "../common/messageHandler";
-import { messageHandler } from "../editor/hexEdit";
-import { clearEditorSelection } from "./editorActions";
+import { clearEditorSelection, editorFindNext, editorFindPrev } from "./editorActions";
 
 /**
  * @description Converts a hex query to a string array ignoring spaces, if not evenly divisible we append a leading 0 
@@ -27,10 +26,13 @@ function hexQueryToArray(query: string): string[] {
     }
     return queryArray;
 }
+
+// The possible message types the search widget will send
 enum SearchMessageTypes {
     CANCEL = "cancel",
     SEARCH = "search",
-    REPLACE = "replace"
+    REPLACE = "replace",
+    REPLACE_ALL = "replaceAll"
 }
 
 interface SearchOptions {
@@ -38,11 +40,19 @@ interface SearchOptions {
     caseSensitive: boolean;
 }
 
+/**
+ * These are what the widget knows about the returned search results.
+ * The actual search results are stored in the exthost and streamed to the editor
+*/ 
+interface LiteSearchResults {
+    numResults: number;
+    partial: boolean;
+}
+
 export class SearchHandler {
-    private searchResults: number[][];
+    private searchResults: LiteSearchResults;
     private searchType: "hex" | "ascii" = "hex";
     private searchOptions: SearchOptions;
-    private resultIndex = 0;
     private findTextBox: HTMLInputElement;
     private replaceTextBox: HTMLInputElement;
     private replaceButton: HTMLSpanElement;
@@ -53,7 +63,10 @@ export class SearchHandler {
     private stopSearchButton: HTMLSpanElement;
 
     constructor(private _messageHandler: MessageHandler) {
-        this.searchResults = [];
+        this.searchResults = {
+            numResults: 0,
+            partial: false
+        };
         this.searchOptions = {
             regex: false,
             caseSensitive: false
@@ -131,8 +144,7 @@ export class SearchHandler {
         // This gets called to cancel any searches that might be going on now
         this.cancelSearch();
         // We are starting a new search so we should clear the current selection on the editor
-        clearEditorSelection();
-        this.searchResults = [];
+        clearEditorSelection(this._messageHandler);
         this.updateReplaceButtons();
         this.findNextButton.classList.add("disabled");
         this.findPreviousButton.classList.add("disabled");
@@ -165,32 +177,20 @@ export class SearchHandler {
         this.removeInputMessage("find");
         // This is wrapped in a try catch because if the message handler gets backed up this will reject
         try {
-            // results = (await messageHandler.postMessageWithResponse("search", {
-            //     query: query,
-            //     type: this.searchType,
-            //     options: this.searchOptions
-            // }) as { results: SearchResults}).results;
+            this.searchResults = (await this._messageHandler.postMessageWithResponse(SearchMessageTypes.SEARCH, {
+                query: query,
+                type: this.searchType,
+                options: this.searchOptions
+            }) as { results: LiteSearchResults}).results;
         } catch(err) {
             this.stopSearchButton.classList.add("disabled");
             this.addInputMessage("find", "Search returned an error!", "error");
             return;
         }
-        // if (results.partial) {
-        //     this.addInputMessage("find", "Partial results returned, try\n narrowing your query.", "warning");
-        // }
-        this.stopSearchButton.classList.add("disabled");
-        this.resultIndex = 0;
-        // this.searchResults = results.result;
-        // If we got results then we select the first result and unlock the buttons
-        if (this.searchResults.length !== 0) {
-            // await virtualHexDocument.scrollDocumentToOffset(this.searchResults[this.resultIndex][0]);
-            // virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
-            // If there's more than one search result we unlock the find next button
-            if (this.resultIndex + 1 < this.searchResults.length) {
-                this.findNextButton.classList.remove("disabled");
-            }
-            this.updateReplaceButtons();
+        if (this.searchResults.partial) {
+            this.addInputMessage("find", "Partial results returned, try\n narrowing your query.", "warning");
         }
+        this.stopSearchButton.classList.add("disabled");
     }
 
     /**
@@ -200,17 +200,15 @@ export class SearchHandler {
     private async findNext(focus: boolean): Promise<void> {
         // If the button is disabled then this function shouldn't work
         if (this.findNextButton.classList.contains("disabled")) return;
-        // await virtualHexDocument.scrollDocumentToOffset(this.searchResults[++this.resultIndex][0]);
-        // virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
-        // if (focus) SelectHandler.focusSelection(this.searchType);
+        const currentResultIndex = await editorFindNext(this._messageHandler, focus);
         // If there's more than one search result we unlock the find next button
-        if (this.resultIndex < this.searchResults.length - 1) {
+        if (currentResultIndex < this.searchResults.numResults - 1) {
             this.findNextButton.classList.remove("disabled");
         } else {
             this.findNextButton.classList.add("disabled");
         }
         // We also unlock the find previous button if there is a previous
-        if (this.resultIndex != 0) {
+        if (currentResultIndex != 0) {
             this.findPreviousButton.classList.remove("disabled");
         }
     }
@@ -222,13 +220,11 @@ export class SearchHandler {
     private async findPrevious(focus: boolean): Promise<void> {
         // If the button is disabled then this function shouldn't work
         if (this.findPreviousButton.classList.contains("disabled")) return;
-        // await virtualHexDocument.scrollDocumentToOffset(this.searchResults[--this.resultIndex][0]);
-        // virtualHexDocument.setSelection(this.searchResults[this.resultIndex]);
-        // if (focus) SelectHandler.focusSelection(this.searchType);
+        const currentResultIndex = await editorFindPrev(this._messageHandler, focus);
         // If they pressed previous, they can always go next therefore we always unlock the next button
         this.findNextButton.classList.remove("disabled");
         // We lock the find previous if there isn't a previous anymore
-        if (this.resultIndex == 0) {
+        if (currentResultIndex == 0) {
             this.findPreviousButton.classList.add("disabled");
         }
     }
@@ -310,7 +306,7 @@ export class SearchHandler {
         // We don't want the user to keep executing this, so we disable the button after the first time they click cancel
         this.stopSearchButton.classList.add("disabled");
         // We send a cancellation message to the exthost, to stop processing the current search results
-        messageHandler.postMessage(SearchMessageTypes.CANCEL);
+        this._messageHandler.postMessage(SearchMessageTypes.CANCEL);
 
     }
 
@@ -330,7 +326,7 @@ export class SearchHandler {
         }
         const replaceQuery = this.replaceTextBox.value;
         const replaceArray = this.searchType === "hex" ? hexQueryToArray(replaceQuery) : Array.from(replaceQuery);
-        if (this.searchResults.length !== 0 && replaceArray.length !== 0) {
+        if (this.searchResults.numResults !== 0 && replaceArray.length !== 0) {
             this.replaceAllButton.classList.remove("disabled");
             this.replaceButton.classList.remove("disabled");
         } else {
@@ -355,17 +351,12 @@ export class SearchHandler {
             replaceBits = replaceArray.map(val => val.charCodeAt(0));
         }
 
-        let offsets: number[][] = [];
-        if (all) {
-            offsets = this.searchResults;
-        } else {
-            offsets = [this.searchResults[this.resultIndex]];
-        }
-        this._messageHandler.postMessage("replace",{
+        const searchRequestMethod = all ? SearchMessageTypes.REPLACE_ALL : SearchMessageTypes.REPLACE;
+        this._messageHandler.postMessage(searchRequestMethod, {
             query: replaceBits,
-            offsets: offsets,
             preserveCase: this.preserveCase
         });
+
         this.findNext(true);
     }
 
