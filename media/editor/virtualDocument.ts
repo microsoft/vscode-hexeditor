@@ -508,10 +508,10 @@ export class VirtualDocument {
     }
 
     /***
-     * @description Populates the inspector data with the currently focused element.
+     * @description Populates the inspector data with the currently selected element.
      */
     private updateInspector(): void {
-        const offset = this.selectHandler.getFocused();
+        const offset = this.selectHandler.getSelectionStart();
         if (offset !== undefined) {
             const elements = getElementsWithGivenOffset(offset);
             const byte_obj = retrieveSelectedByteObject(elements)!;
@@ -535,6 +535,7 @@ export class VirtualDocument {
         const elements = getElementsWithGivenOffset(offset);
         if (elements.length != 2) return;
         this.selectHandler.setSelected([offset], offset);
+        this.updateInspector();
         // If an ascii element is currently focused then we focus that, else we focus hex
         if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
             elements[1].focus();

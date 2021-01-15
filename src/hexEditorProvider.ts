@@ -28,6 +28,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
     }
 
     private static readonly viewType = "hexEditor.hexedit";
+		public static currentWebview?: vscode.Webview;
 
     private readonly webviews = new WebviewCollection();
 
@@ -118,6 +119,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	): Promise<void> {
 		// Add the webview to our internal set of active webviews
 		this.webviews.add(document.uri, webviewPanel);
+		HexEditorProvider.currentWebview = webviewPanel.webview;
 
 		// Setup initial content for the webview
 		webviewPanel.webview.options = {
@@ -128,7 +130,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel.onDidChangeViewState(e => 	{
 			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible);
 			if (e.webviewPanel.visible) {
+				HexEditorProvider.currentWebview = e.webviewPanel.webview;
 				this._dataInspectorView.show(true);
+			} else {
+				HexEditorProvider.currentWebview = undefined;
 			}
 		});
 		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(webviewPanel, document, e));
