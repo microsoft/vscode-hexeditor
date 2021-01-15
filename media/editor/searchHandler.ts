@@ -15,10 +15,13 @@ interface SearchResults {
     partial: boolean;
 }
 
+// All the logic for the search widget
+// May want to refactor in the future to separate the view and the data model
 export class SearchHandler {
     private searchResults: number[][];
     private searchType: "hex" | "ascii" = "hex";
     private searchOptions: SearchOptions;
+    private searchContainer: HTMLDivElement;
     private resultIndex = 0;
     private findTextBox: HTMLInputElement;
     private replaceTextBox: HTMLInputElement;
@@ -28,8 +31,59 @@ export class SearchHandler {
     private findPreviousButton: HTMLSpanElement;
     private findNextButton: HTMLSpanElement;
     private stopSearchButton: HTMLSpanElement;
+    
+    /**
+     * @description The HTML for the search widget, CSS is taken from dist/hexEdit.css
+     */
+    public static getSearchWidgetHTML(): string {
+        return `
+        <div class="header">
+            SEARCH IN
+            <span>
+                <select id="data-type" class="inline-select">
+                    <option value="hex">Hex</option>
+                    <option value="ascii">Text</option>
+                </select>
+            </span>
+        </div>
+        <div class="search-widget">
+            <div class="bar find-bar">
+                <span class="input-glyph-group">
+                    <input type="text" autocomplete="off" spellcheck="off" name="find" id="find" placeholder="Find"/>
+                    <span class="bar-glyphs">
+                        <span class="codicon codicon-case-sensitive" id="case-sensitive" title="Match Case"></span>
+                        <span class="codicon codicon-regex" id="regex-icon" title="Use Regular Expression"></span>
+                    </span>
+                    <div id="find-message-box">
+                    </div>
+                </span>
+                <span class="icon-group">
+                    <span class="codicon codicon-search-stop disabled" id="search-stop" title="Cancel Search"></span>
+                    <span class="codicon codicon-arrow-up disabled" id="find-previous" title="Previous Match"></span>
+                    <span class="codicon codicon-arrow-down disabled" id="find-next" title="Next Match"></span>
+                </span>
+            </div>
+            <div class="bar replace-bar">
+                <span class="input-glyph-group">
+                    <input type="text" autocomplete="off" spellcheck="off" name="replace" id="replace" placeholder="Replace"/>
+                    <span class="bar-glyphs">
+                        <span class="codicon codicon-preserve-case" id="preserve-case" title="Preserve Case"></span>
+                    </span>
+                    <div id="replace-message-box">
+                        </div>
+                </span>
+                <span class="icon-group">
+                    <span class="codicon codicon-replace disabled" id="replace-btn" title="Replace"></span>
+                    <span class="codicon codicon-replace-all disabled" id="replace-all" title="Replace All"></span>
+                </span>
+            </div>
+        </div>`;
+    }
 
     constructor() {
+        this.searchContainer = document.getElementById("search-container") as HTMLDivElement;
+        // Populate the contianer with the widget and then hide the widget
+        this.searchContainer.innerHTML = SearchHandler.getSearchWidgetHTML();
         this.searchResults = [];
         this.searchOptions = {
             regex: false,
@@ -64,6 +118,7 @@ export class SearchHandler {
             } else if (event.key === "Enter" || event.key === "F3") {
                 this.findNext(false);
             } else if (event.key === "Escape") {
+                this.hideWidget();
                 // Pressing escape returns focus to the editor
                 const selected = document.getElementsByClassName(`selected ${this.searchType}`)[0] as HTMLSpanElement | undefined;
                 if (selected !== undefined) {
@@ -354,6 +409,7 @@ export class SearchHandler {
      * @description Function responsible for handling when the user presses cmd / ctrl + f updating the widget and focusing it
      */
     public searchKeybindingHandler(): void {
+        this.showWidget();
         this.searchType = document.activeElement?.classList.contains("ascii") ? "ascii" : "hex";
         const dataTypeSelect = (document.getElementById("data-type") as HTMLSelectElement);
         dataTypeSelect.value = this.searchType;
@@ -398,5 +454,37 @@ export class SearchHandler {
         inputBox.classList.remove("error-border", "warning-border");
         errorMessageBox.classList.remove("error-border", "warning-border", "input-warning", "input-error");
         if (skipHiding !== true) errorMessageBox.hidden = true;
+    }
+
+    /**
+     * @description Reveals the find widget, similar to how the default editor does it
+     */
+    private showWidget(): void {
+        this.searchContainer.style.display = "block";
+        let currentTop = -85;
+        const frameInterval = setInterval(() => {
+            if (currentTop === 0) {
+                clearInterval(frameInterval);
+            } else {
+                currentTop++;
+                this.searchContainer.style.top = `${currentTop}px`;
+            }
+        }, 3);
+    }
+
+    /**
+     * @description Hides the find widget, similar to how the default editor does it
+     */
+    private hideWidget(): void {
+        let currentTop = 0;
+        const frameInterval = setInterval(() => {
+            if (currentTop === -85) {
+                this.searchContainer.style.display = "none";
+                clearInterval(frameInterval);
+            } else {
+                currentTop--;
+                this.searchContainer.style.top = `${currentTop}px`;
+            }
+        }, 3);
     }
 }

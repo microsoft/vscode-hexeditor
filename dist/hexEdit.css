@@ -156,7 +156,14 @@ select:not(.inline-select) {
 }
 
 #search-container {
-    padding-top: 20px;
+    position: absolute;
+    display: none;
+    height: 100px;
+    width: 300px;
+    top: -85px;
+    padding: 2px 2px 2px 2px;
+    right: 4%;
+    background-color: var(--vscode-editor-background);
 }
 
 .endian-select {
@@ -299,7 +306,8 @@ button:disabled {
     padding-bottom: 10px;
 }
 
-#search-container > .header, #data-inspector > .header {
+#search-container > .header {
+    position: relative;
     font-weight: bold;
     font-family: var(--vscode-font-family);
     

@@ -253,50 +253,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				</div>
 			</div>
 		</div>
-		<div class="column">
-			<div id="search-container">
-				<div class="header">
-					SEARCH IN
-					<span>
-						<select id="data-type" class="inline-select">
-							<option value="hex">Hex</option>
-							<option value="ascii">Text</option>
-						</select>
-					</span>
-				</div>
-				<div class="search-widget">
-					<div class="bar find-bar">
-						<span class="input-glyph-group">
-							<input type="text" autocomplete="off" spellcheck="off" name="find" id="find" placeholder="Find"/>
-							<span class="bar-glyphs">
-								<span class="codicon codicon-case-sensitive" id="case-sensitive" title="Match Case"></span>
-								<span class="codicon codicon-regex" id="regex-icon" title="Use Regular Expression"></span>
-							</span>
-							<div id="find-message-box">
-							</div>
-						</span>
-						<span class="icon-group">
-							<span class="codicon codicon-search-stop disabled" id="search-stop" title="Cancel Search"></span>
-							<span class="codicon codicon-arrow-up disabled" id="find-previous" title="Previous Match"></span>
-							<span class="codicon codicon-arrow-down disabled" id="find-next" title="Next Match"></span>
-						</span>
-					</div>
-					<div class="bar replace-bar">
-						<span class="input-glyph-group">
-							<input type="text" autocomplete="off" spellcheck="off" name="replace" id="replace" placeholder="Replace"/>
-							<span class="bar-glyphs">
-								<span class="codicon codicon-preserve-case" id="preserve-case" title="Preserve Case"></span>
-							</span>
-							<div id="replace-message-box">
-					  		</div>
-						</span>
-						<span class="icon-group">
-							<span class="codicon codicon-replace disabled" id="replace-btn" title="Replace"></span>
-							<span class="codicon codicon-replace-all disabled" id="replace-all" title="Replace All"></span>
-						</span>
-					</div>
-				</div>
-			</div>
+		<div id="search-container">
 		</div>
 		`;
 	}
