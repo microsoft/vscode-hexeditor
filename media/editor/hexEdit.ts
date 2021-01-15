@@ -29,52 +29,54 @@ function openAnyway(): void {
 		const { type, body } = e.data;
 		switch (type) {
 			case "init":
-				{
-					// Loads the html body sent over
-					if (body.html !== undefined) {
-						document.getElementsByTagName("body")[0].innerHTML = body.html;
-						virtualHexDocument = new VirtualDocument(body.fileSize, body.baseAddress);
-						// We initially load 4 chunks below the viewport (normally we buffer 2 above as well, but there is no above at the start)
-						chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
-							topBufferSize: 0,
-							bottomBufferSize: 5
-						});
-					}
-					if (body.fileSize != 0 && body.html === undefined) {
-						document.getElementsByTagName("body")[0].innerHTML = 
-						`
-							<div>
-							<p>Opening this large file may cause instability. <a id="open-anyway" href="#">Open anyways</a></p>
-							</div>
-                        `;
-            // We construct the element right above this so it is definitely never null
-						document.getElementById("open-anyway")!.addEventListener("click", openAnyway);
-						return;
-					}
+				// Loads the html body sent over
+				if (body.html !== undefined) {
+					document.getElementsByTagName("body")[0].innerHTML = body.html;
+					virtualHexDocument = new VirtualDocument(body.fileSize, body.baseAddress);
+					// We initially load 4 chunks below the viewport (normally we buffer 2 above as well, but there is no above at the start)
+					chunkHandler.ensureBuffer(virtualHexDocument.topOffset(), {
+						topBufferSize: 0,
+						bottomBufferSize: 5
+					});
+				}
+				if (body.fileSize != 0 && body.html === undefined) {
+					document.getElementsByTagName("body")[0].innerHTML = 
+					`
+						<div>
+						<p>Opening this large file may cause instability. <a id="open-anyway" href="#">Open anyways</a></p>
+						</div>
+											`;
+					// We construct the element right above this so it is definitely never null
+					document.getElementById("open-anyway")!.addEventListener("click", openAnyway);
 					return;
 				}
+				return;
 			case "update":
-				{
-					if (body.type === "undo") {
-						virtualHexDocument.undo(body.edits, body.fileSize);
-					} else if (body.type === "redo") {
-						virtualHexDocument.redo(body.edits, body.fileSize);
-					} else {
-						virtualHexDocument.revert(body.fileSize);
-					}
-					return;
+				if (body.type === "undo") {
+					virtualHexDocument.undo(body.edits, body.fileSize);
+				} else if (body.type === "redo") {
+					virtualHexDocument.redo(body.edits, body.fileSize);
+				} else {
+					virtualHexDocument.revert(body.fileSize);
 				}
+				return;
 			case "save":
-				{
-					const dirtyCells = Array.from(document.getElementsByClassName("edited"));
-					dirtyCells.map(cell => cell.classList.remove("edited"));
-					return;
-				}
+				const dirtyCells = Array.from(document.getElementsByClassName("edited"));
+				dirtyCells.map(cell => cell.classList.remove("edited"));
+				return;
+			case "goToOffset":
+				// Convert the hex offset given to base 10
+				const offset = parseInt(body.offset, 16);
+				// Scroll to the offset and focus the cell
+				virtualHexDocument.scrollDocumentToOffset(offset).then(() => {
+					// Have to have a 10ms delay or the focus border doesn't set correctly
+					// My hypothesis is this is caused by the input box closing at the same time as we set focus
+					setTimeout(() => virtualHexDocument.focusElementWithGivenOffset(offset), 10);
+				});
+				return;
 			default:
-				{
-					messageHandler.incomingMessageHandler(e.data);
-					return;
-				}
+				messageHandler.incomingMessageHandler(e.data);
+				return;
 		}
 	});
 
