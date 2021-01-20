@@ -391,6 +391,7 @@ export class VirtualDocument {
         const onMouseUp = (): void => {
             this.editorContainer.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseup", onMouseUp);
+            this.updateInspector();
         };
 
         this.editorContainer.addEventListener("mousemove", onMouseMove);

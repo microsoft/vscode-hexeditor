@@ -67,8 +67,8 @@ export class SelectHandler {
     public setSelected(offsets: number[], start?: number, forceRender = false): void {
         const oldSelection = this._selection;
 
-        this._selectionStart = start;
         this._selection = [...offsets].sort((a: number, b: number) => a - b);
+        this._selectionStart = this._selection[0];
         WebViewStateManager.setProperty("selected_offsets", this._selection);
 
         // Need to call renderSelection with the least number of offsets to avoid querying the DOM
