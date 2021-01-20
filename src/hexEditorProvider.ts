@@ -5,7 +5,6 @@ import * as vscode from "vscode";
 import { HexDocument, HexDocumentEdit } from "./hexDocument";
 import { disposeAll } from "./dispose";
 import { WebviewCollection } from "./webViewCollection";
-import path = require("path");
 import { getNonce } from "./util";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { SearchResults } from "./searchRequest";
@@ -28,6 +27,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
     }
 
     private static readonly viewType = "hexEditor.hexedit";
+		public static currentWebview?: vscode.Webview;
 
     private readonly webviews = new WebviewCollection();
 
@@ -118,6 +118,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	): Promise<void> {
 		// Add the webview to our internal set of active webviews
 		this.webviews.add(document.uri, webviewPanel);
+		HexEditorProvider.currentWebview = webviewPanel.webview;
 
 		// Setup initial content for the webview
 		webviewPanel.webview.options = {
@@ -128,7 +129,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel.onDidChangeViewState(e => 	{
 			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible);
 			if (e.webviewPanel.visible) {
+				HexEditorProvider.currentWebview = e.webviewPanel.webview;
 				this._dataInspectorView.show(true);
+			} else {
+				HexEditorProvider.currentWebview = undefined;
 			}
 		});
 		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(webviewPanel, document, e));
@@ -179,26 +183,15 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		return document.backup(context.destination, cancellation);
 	}
 
-    /**
+  /**
 	 * Get the static HTML used for in our editor's webviews.
-	 * Document size is needed to decide if the document is being opened
 	*/
 	private getHtmlForWebview(webview: vscode.Webview): string {
-		// Local path to script and css for the webview
-		const scriptUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "dist", "editor.js")
-		));
-		const styleUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "dist", "hexEdit.css")
-		));
-
-		const codiconsUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "node_modules", "vscode-codicons", "dist", "codicon.css")
-		));
-		
-		const codiconsFontUri = webview.asWebviewUri(vscode.Uri.file(
-			path.join(this._context.extensionPath, "node_modules", "vscode-codicons", "dist", "codicon.ttf")
-		));
+		// Convert the styles and scripts for the webview into webview URIs
+		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.js"));
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "hexEdit.css"));
+		const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "node_modules", "vscode-codicons", "dist", "codicon.css"));
+		const codiconsFontUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "node_modules", "vscode-codicons", "dist", "codicon.ttf"));
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = getNonce();

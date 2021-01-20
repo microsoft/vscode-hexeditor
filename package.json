@@ -56,6 +56,10 @@
 			{
 				"command": "hexEditor.openFile",
 				"title": "Hex Editor: Open file"
+			},
+			{
+				"command": "hexEditor.goToOffset",
+				"title": "Hex Editor: Go To Offset"
 			}
 		],
 		"viewsContainers": {
@@ -74,6 +78,14 @@
 					"type": "webview",
 					"id": "hexEditor.dataInpsectorView",
 					"name": "Data Inspector",
+					"when": "hexEditor:openEditor"
+				}
+			]
+		},
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "hexEditor.goToOffset",
 					"when": "hexEditor:openEditor"
 				}
 			]

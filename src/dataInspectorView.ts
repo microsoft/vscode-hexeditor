@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { throws } from "assert";
 import * as vscode from "vscode";
 import { getNonce } from "./util";
 
