@@ -69,7 +69,7 @@ export class SelectHandler {
 
         this._selection = [...offsets].sort((a: number, b: number) => a - b);
         this._selectionStart = this._selection[0];
-        WebViewStateManager.setProperty("selected_offsets", this._selection);
+        WebviewStateManager.setProperty("selected_offsets", this._selection);
 
         // Need to call renderSelection with the least number of offsets to avoid querying the DOM
         // as much as possible, if not rendering large selections becomes laggy as we dont hold references
