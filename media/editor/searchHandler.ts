@@ -158,8 +158,11 @@ export class SearchHandler {
      * @description Sends a search request to the exthost
      */
     private async search(): Promise<void> {
-        // If the box is empty no need to display any warnings
-        if (this.findTextBox.value === "") this.removeInputMessage("find");
+        // If the box is empty no need to display any warnings or execute a search
+        if (this.findTextBox.value === "") {
+            this.removeInputMessage("find");
+            return;
+        }
         // This gets called to cancel any searches that might be going on now
         this.cancelSearch();
         virtualHexDocument.setSelection([]);
