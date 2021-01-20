@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import { getElementsWithGivenOffset, relativeComplement, binarySearch, disjunction } from "./util";
-import { WebViewStateManager } from "./webviewStateManager";
+import { WebviewStateManager } from "./webviewStateManager";
 
 export class SelectHandler {
     private _focus: number | undefined;
@@ -54,7 +54,7 @@ export class SelectHandler {
      * @returns {number[]} The offsets of the elements currently selected
      */
     public getSelected(): number[] {
-        return WebViewStateManager.getProperty("selected_offsets") ?? [];
+        return WebviewStateManager.getProperty("selected_offsets") ?? [];
     }
 
     /***

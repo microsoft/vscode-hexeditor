@@ -7,7 +7,7 @@ import { toggleHover } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
-import { WebViewStateManager } from "./webviewStateManager";
+import { WebviewStateManager } from "./webviewStateManager";
 import { SelectHandler } from "./selectHandler";
 import { SearchHandler } from "./searchHandler";
 import { DataInspectorHandler } from "./dataInspectorHandler";
@@ -97,14 +97,14 @@ export class VirtualDocument {
         document.getElementById("hexbody")?.appendChild(hexFragment);
         document.getElementById("ascii")?.appendChild(asciiFragment);
 
-        if (WebViewStateManager.getState()) {
+        if (WebviewStateManager.getState()) {
             const selectedOffsets = this.selectHandler.getSelected();
             if (selectedOffsets.length > 0) {
                 this.selectHandler.setSelected(selectedOffsets, selectedOffsets[0], true);
             }
             // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
             // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load
-            const savedScrollTop = WebViewStateManager.getState().scroll_top;
+            const savedScrollTop = WebviewStateManager.getState().scroll_top;
             if (savedScrollTop && savedScrollTop !== this.scrollBarHandler.virtualScrollTop) {
                 this.scrollBarHandler.resyncScrollPosition();
             }
