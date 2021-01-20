@@ -413,6 +413,7 @@ export class SearchHandler {
         this.searchType = document.activeElement?.classList.contains("ascii") ? "ascii" : "hex";
         const dataTypeSelect = (document.getElementById("data-type") as HTMLSelectElement);
         dataTypeSelect.value = this.searchType;
+        // We have to get and then set the state as this dispatch event appears to clear the webview state
         dataTypeSelect.dispatchEvent(new Event("change"));
         this.findTextBox.focus();
     }
@@ -460,10 +461,12 @@ export class SearchHandler {
      * @description Reveals the find widget, similar to how the default editor does it
      */
     private showWidget(): void {
+        // Don't trigger the show animation again if it's already shown
+        if (this.searchContainer.style.display === "block") return;
         this.searchContainer.style.display = "block";
         let currentTop = -85;
         const frameInterval = setInterval(() => {
-            if (currentTop === 0) {
+            if (currentTop === -4) {
                 clearInterval(frameInterval);
             } else {
                 currentTop++;
@@ -476,7 +479,7 @@ export class SearchHandler {
      * @description Hides the find widget, similar to how the default editor does it
      */
     private hideWidget(): void {
-        let currentTop = 0;
+        let currentTop = -4;
         const frameInterval = setInterval(() => {
             if (currentTop === -85) {
                 this.searchContainer.style.display = "none";

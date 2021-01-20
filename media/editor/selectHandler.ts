@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import { getElementsWithGivenOffset, relativeComplement, binarySearch, disjunction } from "./util";
-import { WebViewStateManager } from "./webviewStateManager";
+import { WebviewStateManager } from "./webviewStateManager";
 
 export class SelectHandler {
     private _focus: number | undefined;
@@ -54,7 +54,7 @@ export class SelectHandler {
      * @returns {number[]} The offsets of the elements currently selected
      */
     public getSelected(): number[] {
-        return WebViewStateManager.getProperty("selected_offsets") ?? [];
+        return WebviewStateManager.getProperty("selected_offsets") ?? [];
     }
 
     /***
@@ -69,7 +69,7 @@ export class SelectHandler {
 
         this._selectionStart = start;
         this._selection = [...offsets].sort((a: number, b: number) => a - b);
-        WebViewStateManager.setProperty("selected_offsets", this._selection);
+        WebviewStateManager.setProperty("selected_offsets", this._selection);
 
         // Need to call renderSelection with the least number of offsets to avoid querying the DOM
         // as much as possible, if not rendering large selections becomes laggy as we dont hold references

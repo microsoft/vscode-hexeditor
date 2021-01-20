@@ -2,7 +2,7 @@
 // Licensed under the MIT license
 
 import { virtualHexDocument } from "./hexEdit";
-import { WebViewStateManager } from "./webviewStateManager";
+import { WebviewStateManager } from "./webviewStateManager";
 
 export class ScrollBarHandler {
     private scrollBar: HTMLDivElement;
@@ -161,7 +161,7 @@ export class ScrollBarHandler {
         this.scrollTop = Math.max(0, newScrollTop);
         newScrollTop = this.scrollTop;
         this.scrollTop = Math.min(newScrollTop, ((this.scrollBarHeight - this.scrollThumbHeight) * this.scrollJump) + this.rowHeight);
-        WebViewStateManager.setProperty("scroll_top", this.scrollTop);
+        WebviewStateManager.setProperty("scroll_top", this.scrollTop);
     }
 
     /**
@@ -177,8 +177,8 @@ export class ScrollBarHandler {
      */
     public resyncScrollPosition(): void {
         // If we had a previously saved state when creating the scrollbar we should restore the scroll position
-        if (WebViewStateManager.getState() && WebViewStateManager.getState().scroll_top) {
-            this.updateVirtualScrollTop(WebViewStateManager.getState().scroll_top);
+        if (WebviewStateManager.getState() && WebviewStateManager.getState().scroll_top) {
+            this.updateVirtualScrollTop(WebviewStateManager.getState().scroll_top);
             this.updateScrolledPosition();
         }
     }

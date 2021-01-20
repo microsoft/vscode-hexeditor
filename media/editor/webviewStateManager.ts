@@ -7,7 +7,7 @@ import { vscode } from "./hexEdit";
  * Simple static class which handles setting and clearing the webviews state
  * We use this over the default .setState as it implements a setState which doesn't override the entire object just the given property
  */
-export class WebViewStateManager {
+export class WebviewStateManager {
 
     /**
      * @description Given a property and a value either updates or adds it to the state
@@ -15,7 +15,7 @@ export class WebViewStateManager {
      * @param {any} propertyValue The value to store for the property
      */
     static setProperty(propertyName: string, propertyValue: any): void {
-        let currentState = WebViewStateManager.getState();
+        let currentState = WebviewStateManager.getState();
         if (currentState === undefined) {
             currentState = { };
         }
@@ -38,11 +38,19 @@ export class WebViewStateManager {
     }
 
     /**
+     * @description Sets the state of the webview to whatever object is passed in, completely overriding it
+     * @param state The state object
+     */
+    static setState(state: any): void {
+        vscode.setState(state);
+    }
+
+    /**
      * @description Retrieves a property on the state object
      * @param {string} propertyName The name of the property to retrieve the value of
      */
     static getProperty(propertyName: string): any {
-        const state =  WebViewStateManager.getState();
+        const state =  WebviewStateManager.getState();
         return state[propertyName];
     }
 }
