@@ -406,21 +406,21 @@ export class VirtualDocument {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         const modifierKeyPressed = event.metaKey || event.altKey || event.ctrlKey;
-        if ((event.keyCode >= 37 && event.keyCode <= 40 /*Arrows*/)
-            || ((event.keyCode === 35 /*End*/ || event.keyCode === 36 /*Home*/) && !event.ctrlKey)) {
-            this.navigateByKey(event.keyCode, targetElement, event.shiftKey);
+        if (new RegExp(/ArrowLeft|ArrowRight|ArrowUp|ArrowDown/gm).test(event.key)
+            || ((event.key === "End" || event.key === "Home") && !event.ctrlKey)) {
+            this.navigateByKey(event.key, targetElement, event.shiftKey);
             event.preventDefault();
         } else if (!modifierKeyPressed && targetElement.classList.contains("hex")) {
             await this.editHandler.editHex(targetElement, event.key);
             // If this cell has been edited
             if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
                 targetElement.classList.remove("editing");
-                this.navigateByKey(39, targetElement, false);
+                this.navigateByKey("ArrowRight", targetElement, false);
             }
         } else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("ascii")) {
             await this.editHandler.editAscii(targetElement, event.key);
             targetElement.classList.remove("editing");
-            this.navigateByKey(39, targetElement, false);
+            this.navigateByKey("ArrowRight", targetElement, false);
         }
         await this.editHandler.completePendingEdits();
     }
@@ -434,13 +434,13 @@ export class VirtualDocument {
         if ((event.metaKey || event.ctrlKey) && event.key === "f") {
             // If the user presses ctrl / cmd + f we focus the search box and change the dropdown
             this.searchHandler.searchKeybindingHandler();
-        } else if ((event.keyCode == 36 || event.keyCode == 35) && event.ctrlKey) {
+        } else if ((event.key == "Home" || event.key == "End") && event.ctrlKey) {
             // If the user pressed CTRL + Home or CTRL + End we scroll the whole document
-            event.keyCode == 36 ? this.scrollBarHandler.scrollToTop() : this.scrollBarHandler.scrollToBottom();
-        } else if (event.keyCode == 33) {
+            event.key == "Home" ? this.scrollBarHandler.scrollToTop() : this.scrollBarHandler.scrollToBottom();
+        } else if (event.key == "PageUp") {
             // PG Up
             this.scrollBarHandler.page(this.viewPortHeight, "up");
-        } else if (event.keyCode == 34) {
+        } else if (event.key == "PageDown") {
             // PG Down
             this.scrollBarHandler.page(this.viewPortHeight, "down");
         }
@@ -448,37 +448,37 @@ export class VirtualDocument {
 
     /**
      * @description Handles when the user uses the arrow keys, Home or End to navigate the editor
-     * @param {number} keyCode The keyCode of the key pressed
+     * @param keyName the name of the key being pressed (comes from .key)
      * @param {HTMLElement} targetElement The element
      * @param {boolean} isRangeSelection If we are selecting a range (shift key pressed)
      */
-    private navigateByKey(keyCode: number, targetElement: HTMLElement, isRangeSelection: boolean): void {
+    private navigateByKey(keyName: string, targetElement: HTMLElement, isRangeSelection: boolean): void {
         let next: HTMLElement | undefined;
-        switch (keyCode) {
-            case 35:
+        switch (keyName) {
+            case "End":
                 // If the user presses End we go to the end of the line
                 const parentChildren = targetElement.parentElement!.children;
                 next = parentChildren[parentChildren.length - 1] as HTMLElement;
                 break;
-            case 36:
+            case "Home":
                 // If the user presses Home we go to the front of the line
                 next = targetElement.parentElement!.children[0] as HTMLElement;
                 break;
-            case 37:
+            case "ArrowLeft":
                 // left
                 next = (targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
                 break;
-            case 38:
+            case "ArrowUp":
                 // up
                 const elements_above = getElementsWithGivenOffset(getElementsOffset(targetElement) - 16);
                 if (elements_above.length === 0) break;
                 next = targetElement.classList.contains("hex") ? elements_above[0] : elements_above[1];
                 break;
-            case 39:
+            case "ArrowRight":
                 // right
                 next = (targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
                 break;
-            case 40:
+            case "ArrowDown":
                 // down
                 const elements_below = getElementsWithGivenOffset(Math.min(getElementsOffset(targetElement) + 16, this.fileSize - 1));
                 if (elements_below.length === 0) break;
