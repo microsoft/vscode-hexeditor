@@ -64,7 +64,7 @@ export class SelectHandler {
      * @param {boolean} forceRender Wheter to force rendering of all elements whose
      * selected stated will change
      */
-    public setSelected(offsets: number[], start?: number, forceRender = false): void {
+    public setSelected(offsets: number[], forceRender = false): void {
         const oldSelection = this._selection;
 
         this._selection = [...offsets].sort((a: number, b: number) => a - b);

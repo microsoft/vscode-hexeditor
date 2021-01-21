@@ -100,7 +100,7 @@ export class VirtualDocument {
         if (WebviewStateManager.getState()) {
             const selectedOffsets = this.selectHandler.getSelected();
             if (selectedOffsets.length > 0) {
-                this.selectHandler.setSelected(selectedOffsets, selectedOffsets[0], true);
+                this.selectHandler.setSelected(selectedOffsets, true);
             }
             // This isn't the best place for this, but it can't go in the constructor due to the document not being instantiated yet
             // This ensures that the srollTop is the same as in the state object, should only be out of sync on initial webview load
@@ -323,11 +323,12 @@ export class VirtualDocument {
         const offset = getElementsOffset(target);
         if (event.shiftKey) {
             const startSelection = this.selectHandler.getSelectionStart();
+            const currentSelection = this.selectHandler.getSelected();
             if (startSelection !== undefined) {
                 this.selectHandler.setFocused(offset);
                 const min = Math.min(startSelection, offset);
-                const max = Math.max(startSelection, offset);
-                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
+                const max = Math.max(offset, currentSelection[currentSelection.length - 1]);
+                this.selectHandler.setSelected(createOffsetRange(min, max));
                 target.focus({ preventScroll: true });
             }
         } else {
@@ -336,12 +337,12 @@ export class VirtualDocument {
                 const selection = this.selectHandler.getSelected();
                 const newSelection = selection.filter(i => i !== offset);
                 if (selection.length === newSelection.length) {
-                    this.selectHandler.setSelected([...newSelection, offset], offset);
+                    this.selectHandler.setSelected([...newSelection, offset]);
                 } else {
-                    this.selectHandler.setSelected(newSelection, offset);
+                    this.selectHandler.setSelected(newSelection);
                 }
             } else {
-                this.selectHandler.setSelected([offset], offset);
+                this.selectHandler.setSelected([offset]);
             }
             this.updateInspector();
             target.focus({ preventScroll: true });
@@ -383,7 +384,7 @@ export class VirtualDocument {
                 this.selectHandler.setFocused(offset);
                 const min = Math.min(startSelection, offset);
                 const max = Math.max(startSelection, offset);
-                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
+                this.selectHandler.setSelected(createOffsetRange(min, max));
                 target.focus({ preventScroll: true });
             }
         };
@@ -496,12 +497,13 @@ export class VirtualDocument {
             const offset = getElementsOffset(next);
             this.selectHandler.setFocused(offset);
             const startSelection = this.selectHandler.getSelectionStart();
+            const currentSelection = this.selectHandler.getSelected();
             if (isRangeSelection && startSelection !== undefined) {
                 const min = Math.min(startSelection, offset);
-                const max = Math.max(startSelection, offset);
-                this.selectHandler.setSelected(createOffsetRange(min, max), startSelection);
+                const max = Math.max(offset, currentSelection[currentSelection.length - 1]);
+                this.selectHandler.setSelected(createOffsetRange(min, max));
             } else {
-                this.selectHandler.setSelected([offset], offset);
+                this.selectHandler.setSelected([offset]);
                 this.updateInspector();
             }
             next.focus({ preventScroll: true });
@@ -525,7 +527,7 @@ export class VirtualDocument {
      * @param {number[]} offsets The offsets of the elements you want to select
      */
     public setSelection(offsets: number[]): void {
-        this.selectHandler.setSelected(offsets, offsets.length > 0 ? offsets[0] : undefined);
+        this.selectHandler.setSelected(offsets);
     }
 
     /***
@@ -535,7 +537,7 @@ export class VirtualDocument {
     public focusElementWithGivenOffset(offset: number): void {
         const elements = getElementsWithGivenOffset(offset);
         if (elements.length != 2) return;
-        this.selectHandler.setSelected([offset], offset);
+        this.selectHandler.setSelected([offset]);
         this.updateInspector();
         // If an ascii element is currently focused then we focus that, else we focus hex
         if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
