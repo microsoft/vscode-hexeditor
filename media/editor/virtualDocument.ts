@@ -621,8 +621,10 @@ export class VirtualDocument {
             this.rows[2].delete(plusCellOffset.toString());
             this.scrollBarHandler.updateScrollBar((plusCellOffset - 1) / 16);
         } else {
+            // Weirdly enough after the first is removed the next one slides over so we just
+            // call remove on the first element twice to remove both pluses
             lastCells[0].remove();
-            lastCells[1].remove();
+            lastCells[0].remove();
         }
         secondToLastCells[0].innerText = "+";
         secondToLastCells[0].classList.add("add-cell");
