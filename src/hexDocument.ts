@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { SearchProvider } from "./searchProvider";
+import { FileSystemAdaptor } from "./fileSystemAdaptor";
 
 /**
  * @description Helper function to compare two arrays
@@ -42,7 +43,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// If we have a backup, read that. Otherwise read the resource from the workspace
 		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
 		const unsavedEditURI = typeof backupId === "string" ? vscode.Uri.parse(backupId + ".json") : undefined;
-		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
+		const fileSize = await FileSystemAdaptor.getFileSize(uri);
 		const queries = HexDocument.parseQuery(uri.query);
 		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
 		/* __GDPR__
@@ -58,7 +59,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		if (fileSize > maxFileSize && !backupId) {
 			fileData = new Uint8Array();
 		} else {
-			fileData = await vscode.workspace.fs.readFile(dataFile);
+			fileData = await FileSystemAdaptor.readFile(dataFile);
 			if (unsavedEditURI) {
 				const jsonData = await vscode.workspace.fs.readFile(unsavedEditURI);
 				unsavedEdits = JSON.parse(Buffer.from(jsonData).toString("utf-8"));
