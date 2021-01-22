@@ -268,23 +268,23 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * Called by VS Code when the user saves the document.
 	 */
 	async save(cancellation?: vscode.CancellationToken): Promise<void> {
-		// The document data is now the document data with edits appplied
-		this._documentData = new Uint8Array(this.documentDataWithEdits);
-		this._bytesize = this.documentData.length;
 		await this.saveAs(this.uri, cancellation);
-		this.lastSave = Date.now();
-		this._unsavedEdits = [];
 	}
 
 	/**
 	 * Called by VS Code when the user saves the document to a new location.
 	 */
 	async saveAs(targetResource: vscode.Uri, cancellation?: vscode.CancellationToken): Promise<void> {
+		// The document data is now the document data with edits appplied
+		this._documentData = new Uint8Array(this.documentDataWithEdits);
+		this._bytesize = this.documentData.length;
 		const fileData = this.documentData;
 		if (cancellation && cancellation.isCancellationRequested) {
 			return;
 		}
 		await vscode.workspace.fs.writeFile(targetResource, fileData);
+		this.lastSave = Date.now();
+		this._unsavedEdits = [];
 	}
 
 	/**
