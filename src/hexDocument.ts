@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { SearchProvider } from "./searchProvider";
+import { FileSystemAdaptor } from "./fileSystemAdaptor";
 
 /**
  * @description Helper function to compare two arrays
@@ -42,7 +43,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// If we have a backup, read that. Otherwise read the resource from the workspace
 		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
 		const unsavedEditURI = typeof backupId === "string" ? vscode.Uri.parse(backupId + ".json") : undefined;
-		const fileSize = (await vscode.workspace.fs.stat(dataFile)).size;
+		const fileSize = await FileSystemAdaptor.getFileSize(uri);
 		const queries = HexDocument.parseQuery(uri.query);
 		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
 		/* __GDPR__
@@ -58,7 +59,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		if (fileSize > maxFileSize && !backupId) {
 			fileData = new Uint8Array();
 		} else {
-			fileData = await vscode.workspace.fs.readFile(dataFile);
+			fileData = await FileSystemAdaptor.readFile(dataFile);
 			if (unsavedEditURI) {
 				const jsonData = await vscode.workspace.fs.readFile(unsavedEditURI);
 				unsavedEdits = JSON.parse(Buffer.from(jsonData).toString("utf-8"));
@@ -267,23 +268,23 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * Called by VS Code when the user saves the document.
 	 */
 	async save(cancellation?: vscode.CancellationToken): Promise<void> {
-		// The document data is now the document data with edits appplied
-		this._documentData = new Uint8Array(this.documentDataWithEdits);
-		this._bytesize = this.documentData.length;
 		await this.saveAs(this.uri, cancellation);
-		this.lastSave = Date.now();
-		this._unsavedEdits = [];
 	}
 
 	/**
 	 * Called by VS Code when the user saves the document to a new location.
 	 */
 	async saveAs(targetResource: vscode.Uri, cancellation?: vscode.CancellationToken): Promise<void> {
+		// The document data is now the document data with edits appplied
+		this._documentData = new Uint8Array(this.documentDataWithEdits);
+		this._bytesize = this.documentData.length;
 		const fileData = this.documentData;
 		if (cancellation && cancellation.isCancellationRequested) {
 			return;
 		}
 		await vscode.workspace.fs.writeFile(targetResource, fileData);
+		this.lastSave = Date.now();
+		this._unsavedEdits = [];
 	}
 
 	/**
