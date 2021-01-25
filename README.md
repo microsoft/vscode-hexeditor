@@ -1,6 +1,6 @@
 # VS Code Hexeditor
 
-This an extension for Visual Studio Code 1.46+ which utilizes the custom editor API to allow viewing files as hex within VS Code.
+This an extension for Visual Studio Code which utilizes the custom editor API to allow viewing files as hex within VS Code.
 
 ## Features
 
@@ -13,10 +13,6 @@ This an extension for Visual Studio Code 1.46+ which utilizes the custom editor 
 ![Navigating a file](hex-editor.gif)
 
 ![Editing a file](hex-editor-editing.gif)
-
-## Requirements
-
-- Visual Studio Code 1.46+
 
 ## How to Use
 There are three ways to open a file as hex
