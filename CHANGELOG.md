@@ -4,6 +4,7 @@
 - Move data inspector to its own hex panel
 - Restyle search to look more like the normal VS Code widget
 - Add preliminary support for untitled files
+- Fixed a bug with selections not updating the data inspector
 
 ## 1.3.0 — September 8, 2020
 - Allow extensions to configure the starting address for a file. See https://github.com/microsoft/vscode-hexeditor/pull/170 for details.
