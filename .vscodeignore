@@ -11,3 +11,4 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 webpack.config.js
+*.gif
