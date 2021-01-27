@@ -55,7 +55,7 @@
 		"commands": [
 			{
 				"command": "hexEditor.openFile",
-				"title": "Hex Editor: Open file"
+				"title": "Hex Editor: Open Active File in Hex Editor"
 			},
 			{
 				"command": "hexEditor.goToOffset",
@@ -66,7 +66,7 @@
 			"activitybar": [
 				{
 					"id": "hexExplorer",
-					"title": "Hex Editor",
+					"title": "Hex Editor Panel",
 					"icon": "icon.png",
 					"when": "hexEditor:openEditor"
 				}
