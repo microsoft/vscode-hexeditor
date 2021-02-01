@@ -2,7 +2,7 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset, getElementsColumn } from "./util";
 import { toggleHover } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
@@ -407,7 +407,12 @@ export class VirtualDocument {
         if (!event || !event.target) return;
         const targetElement = event.target as HTMLElement;
         const modifierKeyPressed = event.metaKey || event.altKey || event.ctrlKey;
-        if (new RegExp(/ArrowLeft|ArrowRight|ArrowUp|ArrowDown/gm).test(event.key)
+        if (event.key === "Tab") {
+            const currentOffset = getElementsOffset(targetElement);
+            const columnToFocus = getElementsColumn(targetElement) === "hex" ? "ascii" : "hex";
+            this.focusElementWithGivenOffset(currentOffset, columnToFocus);
+            event.preventDefault();
+        } else if (new RegExp(/ArrowLeft|ArrowRight|ArrowUp|ArrowDown/gm).test(event.key)
             || ((event.key === "End" || event.key === "Home") && !event.ctrlKey)) {
             this.navigateByKey(event.key, targetElement, event.shiftKey);
             event.preventDefault();
@@ -533,14 +538,15 @@ export class VirtualDocument {
     /***
      * @description Given an offset, selects the elements and focuses the element in the same column as previous focus. Defaults to hex.
      * @param {number} offset The offset of the elements you want to select and focus
+     * @param column Optional column can be provided to force focus to that column
      */
-    public focusElementWithGivenOffset(offset: number): void {
+    public focusElementWithGivenOffset(offset: number, column?: "hex" | "ascii"): void {
         const elements = getElementsWithGivenOffset(offset);
         if (elements.length != 2) return;
         this.selectHandler.setSelected([offset]);
         this.updateInspector();
         // If an ascii element is currently focused then we focus that, else we focus hex
-        if (document.activeElement?.parentElement?.parentElement?.parentElement?.classList.contains("right")) {
+        if ((!column && document.activeElement && getElementsColumn(document.activeElement) === "ascii") || column === "ascii") {
             elements[1].focus();
         } else {
             elements[0].focus();

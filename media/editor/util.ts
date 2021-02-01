@@ -94,6 +94,16 @@ export function getElementsOffset(element: Element): number {
 }
 
 /**
+ * @description Given an element trys to discern whether it belongs to the hex or ascii column, else returns undefined
+ * @param element The element who's column you want to know about
+ */
+export function getElementsColumn(element: Element): "ascii" | "hex" | undefined {
+    if (element.classList.contains("hex")) return "hex";
+    if (element.classList.contains("ascii")) return "ascii";
+    return;
+}
+
+/**
  * @description Returns the elements with the same offset as the one clicked
  * @param {MouseEvent} event The event which is handed to a mouse event listener
  * @returns {HTMLCollectionOf<Element> | Array<Element>} The elements with the same offset as the clicked element, or undefined if none could be retrieved
