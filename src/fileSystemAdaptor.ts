@@ -17,10 +17,8 @@ export abstract class FileSystemAdaptor {
     if (uri.scheme === "untitled") {
       const document = FileSystemAdaptor.findMatchingTextDocument(uri);
       return document ? document.getText().length : 0;
-    } else if (uri.scheme === "file") {
-      return (await vscode.workspace.fs.stat(uri)).size;
     } else {
-      throw `Unsupported URI scheme ${uri.scheme}`;
+      return (await vscode.workspace.fs.stat(uri)).size;
     }
   }
 
@@ -29,10 +27,8 @@ export abstract class FileSystemAdaptor {
       const document = FileSystemAdaptor.findMatchingTextDocument(uri);
       // Conver the document text to bytes and return it
       return document ? new TextEncoder().encode(document.getText()) : new Uint8Array();
-    } else if (uri.scheme === "file") {
-      return vscode.workspace.fs.readFile(uri);
     } else {
-      throw `Unsupported URI scheme ${uri.scheme}`;
+      return vscode.workspace.fs.readFile(uri);
     }
   }
 
