@@ -36,6 +36,12 @@
 						"minimum": 0,
 						"default": 10,
 						"description": "The max file size (in MB) that the editor will try to open before warning you."
+					},
+					"hexeditor.defaultEndianness": {
+						"type": "string",
+						"default": "little",
+						"enum": ["little", "big"],
+						"description": "The endianness selected when loading the editor"
 					}
 				}
 			}

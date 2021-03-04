@@ -73,6 +73,7 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
   }
 
   private _getWebviewHTML(webview: vscode.Webview): string {
+    const endianness = vscode.workspace.getConfiguration().get("hexeditor.defaultEndianness") as string;
     const scriptURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.js"));
     const styleURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.css"));
     const nonce = getNonce();
@@ -189,8 +190,8 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
                   </div>
                   <div class="grid-item endian-select">
                     <select id="endianness">
-                      <option value="little">Little Endian</option>
-                      <option value="big">Big Endian</option>
+                      <option value="little" ${endianness === "little" ? "selected" : ""}>Little Endian</option>
+                      <option value="big" ${endianness === "big" ? "selected" : ""}>Big Endian</option>
                     </select>
                   </div>
                 </div>
