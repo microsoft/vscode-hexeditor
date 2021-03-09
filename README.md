@@ -10,9 +10,9 @@ This an extension for Visual Studio Code which utilizes the custom editor API to
 - Simple editing with undo, redo, copy, and paste support
 - Find and Replace support
 
-![Navigating a file](hex-editor.gif)
+![Navigating a file](https://raw.githubusercontent.com/microsoft/vscode-hexeditor/main/hex-editor.gif)
 
-![Editing a file](hex-editor-editing.gif)
+![Editing a file](https://raw.githubusercontent.com/microsoft/vscode-hexeditor/main/hex-editor-editing.gif)
 
 ## How to Use
 There are three ways to open a file as hex
