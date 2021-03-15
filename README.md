@@ -41,6 +41,7 @@ For example, this would associate all files with .hex or .ini to open by default
 This extension contributes the following settings:
 
 * `hexeditor.maxFileSize`: How many MB you want the editor to try to open before warning you with the open anyways message
+* `hexeditor.defaultEndianness`: The default endianness to use for interpreting multi-byte sequences
 
 ## Known Issues
 
