@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 interface ByteDataMessage {
-	decimal: number;
+	decimal: number | null;
 	adjacentBytes: ByteDataMessage[];
 }
 
@@ -16,10 +16,10 @@ export class ByteData {
 	 * @param message The message from the editor
 	 */
 	public static constructFromMessage(message: ByteDataMessage): ByteData {
-		// The message protocol converts NaN to Null so we convert it back here
-		const byteObj = new ByteData(message.decimal ? message.decimal : NaN);
+		// The message protocol converts NaN to null so we convert it back here
+		const byteObj = new ByteData(message.decimal !== null ? message.decimal : NaN);
 		for (const adjacentBytes of message.adjacentBytes) {
-			const current = new ByteData(adjacentBytes.decimal ? adjacentBytes.decimal : NaN);
+			const current = new ByteData(adjacentBytes.decimal !== null ? adjacentBytes.decimal : NaN);
 			byteObj.addAdjacentByte(current);
 		}
 		return byteObj;
