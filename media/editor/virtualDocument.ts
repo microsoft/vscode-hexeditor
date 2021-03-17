@@ -461,32 +461,12 @@ export class VirtualDocument {
 	private navigateByKey(keyName: string, targetElement: HTMLElement, isRangeSelection: boolean, event?: KeyboardEvent): void {
 		let next: HTMLElement | undefined;
 		switch (keyName) {
-			case "End":
-				next = this._getEndOfLineCell(targetElement);
-				break;
-			case "Home":
-				next = this._getStartOfLineCell(targetElement);
-				break;
-			case "ArrowLeft":
-				if (isMac && event?.metaKey) {
-					next = this._getStartOfLineCell(targetElement);
-				} else {
-					next = this._getPreviousCell(targetElement);
-				}
-				break;
-			case "ArrowUp":
-				next = this._getCellAbove(targetElement);
-				break;
-			case "ArrowRight":
-				if (isMac && event?.metaKey) {
-					next = this._getEndOfLineCell(targetElement);
-				} else {
-					next = this._getNextCell(targetElement);
-				}
-				break;
-			case "ArrowDown":
-				next = this._getCellBelow(targetElement);
-				break;
+			case "ArrowLeft": next = ((isMac && event?.metaKey) ? this._getStartOfLineCell : this._getPreviousCell)(targetElement); break;
+			case "ArrowRight": next = ((isMac && event?.metaKey) ? this._getEndOfLineCell : this._getNextCell)(targetElement); break ;
+			case "ArrowUp": next = this._getCellAbove(targetElement); break;
+			case "ArrowDown": next = this._getCellBelow(targetElement); break;
+			case "End": next = this._getEndOfLineCell(targetElement); break;
+			case "Home": next = this._getStartOfLineCell(targetElement); break;
 		}
 		if (next?.tagName === "SPAN") {
 			const nextRect = next.getBoundingClientRect();
