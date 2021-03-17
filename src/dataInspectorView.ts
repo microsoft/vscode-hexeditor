@@ -92,7 +92,6 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
             </head>
             <body>
               <div id="data-inspector">
-              <div class="header">DATA INSPECTOR</div>
                 <div class="grid-container">
                   <div class="grid-item">
                     <label for="binary8">8 bit Binary</label>

@@ -66,9 +66,8 @@
 			"activitybar": [
 				{
 					"id": "hexExplorer",
-					"title": "Hex Editor Panel",
-					"icon": "panel-icon.svg",
-					"when": "hexEditor:openEditor"
+					"title": "Hex Editor",
+					"icon": "panel-icon.svg"
 				}
 			]
 		},
