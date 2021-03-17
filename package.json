@@ -36,6 +36,11 @@
 						"minimum": 0,
 						"default": 10,
 						"description": "The max file size (in MB) that the editor will try to open before warning you."
+					},
+					"hexeditor.dataInspector.autoReveal": {
+						"type": "boolean",
+						"default": true,
+						"description": "Whether to auto reveal the data inspector when the hex editor is opened."
 					}
 				}
 			}
@@ -68,7 +73,7 @@
 					"id": "hexExplorer",
 					"title": "Hex Editor",
 					"icon": "panel-icon.svg",
-          "when": "hexEditor:openEditor"
+					"when": "hexEditor:openEditor"
 				}
 			]
 		},
