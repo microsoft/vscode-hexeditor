@@ -290,7 +290,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	/**
 	 * Called by VS Code when the user calls `revert` on a document.
 	 */
-	async revert(_cancellation?: vscode.CancellationToken): Promise<void> {
+	async revert(_token?: vscode.CancellationToken): Promise<void> {
 		const diskContent = await vscode.workspace.fs.readFile(this.uri);
 		this._bytesize = diskContent.length;
 		this._documentData = diskContent;
