@@ -38,6 +38,10 @@ body {
 .grid-item:nth-child(2n) {
 	padding-left: 15px;
 	min-width: 100px; /* Prevent scroll bar unless really small */
+
+	/* Prevent special characters shifting the input around */
+	line-height: 1;
+	vertical-align: middle;
 }
 
 .header {
