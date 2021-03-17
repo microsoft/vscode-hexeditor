@@ -33,11 +33,12 @@ body {
 .grid-item {
 	text-align: left;
 	margin-bottom: -1px;
-	min-width: 100px;
+	white-space: nowrap;
 }
 
 .grid-item:nth-child(2n) {
 	padding-left: 15px;
+	min-width: 100px; /* Prevent scroll bar unless really small */
 }
 
 .header {
