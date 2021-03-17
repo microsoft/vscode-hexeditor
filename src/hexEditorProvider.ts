@@ -40,7 +40,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	async openCustomDocument(
 		uri: vscode.Uri,
 		openContext: vscode.CustomDocumentOpenContext,
-		token: vscode.CancellationToken
+		_token: vscode.CancellationToken
 	): Promise<HexDocument> {
 		const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
