@@ -1,369 +1,371 @@
 /* Copyright (c) Microsoft Corporation.
 Licensed under the MIT license. */
+
 :root {
-    --input-glyph-padding: 0px;
+	--input-glyph-padding: 0px;
 }
 
 body {
-    min-width: 1224px;
-    color: var(--vscode-editor-foreground);
-    overflow-y: hidden;
-    overflow-x: scroll;
-    font-size: var(--vscode-editor-font-size);
+	min-width: 1224px;
+	color: var(--vscode-editor-foreground);
+	overflow-y: hidden;
+	overflow-x: scroll;
+	font-size: var(--vscode-editor-font-size);
 }
 
 /* Disable selection color because select is different in the custom editor */
+
 :not(input)::selection {
-    color: none;
-    background: none;
+	color: none;
+	background: none;
 }
 
 .column {
-    cursor: default;
-    float: left;
-    padding-right: 10px;
-    height: 500000px;
+	cursor: default;
+	float: left;
+	padding-right: 10px;
+	height: 500000px;
 }
 
 #editor-container {
-    font-family: var(--vscode-editor-font-family);
-    font-weight: var(--vscode-editor-font-weight);
+	font-family: var(--vscode-editor-font-family);
+	font-weight: var(--vscode-editor-font-weight);
 }
 
 body:not(#editor-container) {
-    font-family: var(--vscode-font-family);
-    font-weight: var(--vscode-editor-font-weight);
+	font-family: var(--vscode-font-family);
+	font-weight: var(--vscode-editor-font-weight);
 }
 
 .grid-container {
-    position: sticky;
-    top: 20px;
-    display: grid;
-    grid-template-columns: auto auto;
-    padding-top: 3px;
-    align-items: center;
+	position: sticky;
+	top: 20px;
+	display: grid;
+	grid-template-columns: auto auto;
+	padding-top: 3px;
+	align-items: center;
 }
 
 .grid-item {
-    text-align: left;
-    margin-bottom: -1px;
+	text-align: left;
+	margin-bottom: -1px;
 }
 
 .grid-item:nth-child(2n) {
-    padding-left: 15px;
+	padding-left: 15px;
 }
-  
+
 .left {
-    font-family: var(--vscode-editor-font-family);
-    font-weight: var(--vscode-editor-font-weight);
-    text-align: right;
-}
-.left > .rowwrapper {
-    background-color: var(--vscode-editorGutter-background);
-    color: var(--vscode-editorLineNumber-foreground);
+	font-family: var(--vscode-editor-font-family);
+	font-weight: var(--vscode-editor-font-weight);
+	text-align: right;
 }
 
-.left > .header {
-    border-bottom: none;
-    margin-bottom: 7px;
+.left>.rowwrapper {
+	background-color: var(--vscode-editorGutter-background);
+	color: var(--vscode-editorLineNumber-foreground);
 }
 
-#editor-container > .column > .header {
-    margin-bottom: 7px;
+.left>.header {
+	border-bottom: none;
+	margin-bottom: 7px;
 }
 
-#hexbody > .row > span {
-    padding: 4px;
-    white-space: pre;
+#editor-container>.column>.header {
+	margin-bottom: 7px;
 }
 
+#hexbody>.row>span {
+	padding: 4px;
+	white-space: pre;
+}
 
-#ascii > .row > span {
-    padding: 4px;
-    text-align: right;
-    white-space: pre;
+#ascii>.row>span {
+	padding: 4px;
+	text-align: right;
+	white-space: pre;
 }
 
 .header {
-    position: sticky;
-    top: 0px;
-    font-weight: bold;
-    line-height: var(--vscode-editor-font-size);
-    background-color: var(--vscode-editor-background);
-    color: var(--vscode-editorLineNumber-activeForeground);
-    z-index: 10;
-    border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+	position: sticky;
+	top: 0px;
+	font-weight: bold;
+	line-height: var(--vscode-editor-font-size);
+	background-color: var(--vscode-editor-background);
+	color: var(--vscode-editorLineNumber-activeForeground);
+	z-index: 10;
+	border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
 }
 
-.vscode-high-contrast > .column > .header {
-    border: 1px solid;
-    border-color: var(--vscode-contrastActiveBorder);
+.vscode-high-contrast>.column>.header {
+	border: 1px solid;
+	border-color: var(--vscode-contrastActiveBorder);
 }
 
-.vscode-high-contrast > #editor-container > .column > .header {
-    border: 1px solid;
-    border-color: var(--vscode-contrastActiveBorder);
+.vscode-high-contrast>#editor-container>.column>.header {
+	border: 1px solid;
+	border-color: var(--vscode-contrastActiveBorder);
 }
 
-.header > span {
-    padding: 4px;
+.header>span {
+	padding: 4px;
 }
 
-.right > .header {
-    font-family: var(--vscode-font-family);
-    font-weight: bold;
-    padding-left: 5px;
+.right>.header {
+	font-family: var(--vscode-font-family);
+	font-weight: bold;
+	padding-left: 5px;
 }
 
 .hover {
-    background-color: var(--vscode-editor-hoverHighlightBackground);
+	background-color: var(--vscode-editor-hoverHighlightBackground);
 }
 
 .selected {
-    background-color: var(--vscode-editor-selectionBackground);
-    color: var(--vscode-editor-selectionForeground);
+	background-color: var(--vscode-editor-selectionBackground);
+	color: var(--vscode-editor-selectionForeground);
 }
 
 input {
-    padding-left: 4px;
-    padding-right: 4px;
-    font-family: var(--vscode-editor-font-family);
-    background-color: var(--vscode-input-background);
-    border-width: 0;
-    width: 170px;
-    color: var(--vscode-input-foreground);
+	padding-left: 4px;
+	padding-right: 4px;
+	font-family: var(--vscode-editor-font-family);
+	background-color: var(--vscode-input-background);
+	border-width: 0;
+	width: 170px;
+	color: var(--vscode-input-foreground);
 }
 
 :focus {
-    outline-color: var(--vscode-focusBorder) !important;
+	outline-color: var(--vscode-focusBorder) !important;
 }
 
 span:focus {
-    position: relative;
-    z-index: 2;
-    outline-offset: 1px;
-    outline: 2px solid;
+	position: relative;
+	z-index: 2;
+	outline-offset: 1px;
+	outline: 2px solid;
 }
 
 select {
-    background-color: var(--vscode-dropdown-background);
-    border: var(--vscode-dropdown-border);
-    color: var(--vscode-dropdown-foreground)
+	background-color: var(--vscode-dropdown-background);
+	border: var(--vscode-dropdown-border);
+	color: var(--vscode-dropdown-foreground)
 }
 
 select:not(.inline-select) {
-    width: 100%;
+	width: 100%;
 }
 
 #search-container {
-    position: absolute;
-    display: none;
-    height: 100px;
-    width: 300px;
-    top: -85px;
-    padding: 2px 2px 2px 2px;
-    right: 4%;
-    background-color: var(--vscode-editor-background);
+	position: absolute;
+	display: none;
+	height: 100px;
+	width: 300px;
+	top: -85px;
+	padding: 2px 2px 2px 2px;
+	right: 4%;
+	background-color: var(--vscode-editor-background);
 }
 
 .endian-select {
-    padding-top: 10px;
+	padding-top: 10px;
 }
 
 .rowwrapper {
-    position: relative;
-    width: 100%;
-    height: 100%;
+	position: relative;
+	width: 100%;
+	height: 100%;
 }
 
 .row {
-    position: absolute;
+	position: absolute;
 }
 
 .nongraphic {
-    color: var(--vscode-tab-unfocusedInactiveForeground);
+	color: var(--vscode-tab-unfocusedInactiveForeground);
 }
 
 #scrollbar {
-    padding: 0, 0, 0, 0;
-    position: fixed;
-    right: 0px;
-    height: 100%;
-    width: 16px;
-    border-left: 1px solid;
-    border-color: var(--vscode-editorLineNumber-foreground);
-    background-color: transparent
+	padding: 0, 0, 0, 0;
+	position: fixed;
+	right: 0px;
+	height: 100%;
+	width: 16px;
+	border-left: 1px solid;
+	border-color: var(--vscode-editorLineNumber-foreground);
+	background-color: transparent
 }
 
 #scroll-thumb {
-    padding: 0, 0, 0, 0;
-    background-color: var(--vscode-scrollbarSlider-background);
+	padding: 0, 0, 0, 0;
+	background-color: var(--vscode-scrollbarSlider-background);
 }
 
 .scrolling {
-    background-color: var(--vscode-scrollbarSlider-activeBackground) !important;
+	background-color: var(--vscode-scrollbarSlider-activeBackground) !important;
 }
 
-.vscode-dark > #editor-container > .column > .rowwrapper > .row > .editing {
-    background-color: rgb(201, 165, 8);
-    color: rgb(0, 0, 0);
+.vscode-dark>#editor-container>.column>.rowwrapper>.row>.editing {
+	background-color: rgb(201, 165, 8);
+	color: rgb(0, 0, 0);
 }
 
-.vscode-dark > #editor-container > .column > .rowwrapper > .row > .edited {
-    background-color: rgb(248, 203, 0);
-    color: rgb(0, 0, 0);
+.vscode-dark>#editor-container>.column>.rowwrapper>.row>.edited {
+	background-color: rgb(248, 203, 0);
+	color: rgb(0, 0, 0);
 }
 
-.vscode-light > #editor-container > .column > .rowwrapper > .row > .edited {
-    background-color: rgb(247, 150, 6);
-    color: rgb(0, 0, 0);
+.vscode-light>#editor-container>.column>.rowwrapper>.row>.edited {
+	background-color: rgb(247, 150, 6);
+	color: rgb(0, 0, 0);
 }
 
-.vscode-light > #editor-container > .column > .rowwrapper > .row > .editing {
-    background-color: rgb(145, 102, 9);
-    color: rgb(0, 0, 0);
+.vscode-light>#editor-container>.column>.rowwrapper>.row>.editing {
+	background-color: rgb(145, 102, 9);
+	color: rgb(0, 0, 0);
 }
 
-.vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .editing {
-    background-color: rgb(255, 238, 0);
-    color: rgb(0, 0, 0);
+.vscode-high-contrast>#editor-container>.column>.rowwrapper>.row>.editing {
+	background-color: rgb(255, 238, 0);
+	color: rgb(0, 0, 0);
 }
 
-.vscode-high-contrast > #editor-container > .column > .rowwrapper > .row > .edited {
-    background-color: rgb(255, 208, 0);
-    color: rgb(0, 0, 0);
+.vscode-high-contrast>#editor-container>.column>.rowwrapper>.row>.edited {
+	background-color: rgb(255, 208, 0);
+	color: rgb(0, 0, 0);
 }
 
 #data-inspector {
-    transform: translate3d(0px, 0px, 0px);
+	transform: translate3d(0px, 0px, 0px);
 }
 
 button {
-    width: 100%;
-    background-color: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    border-color: var(--vscode-button-background);
+	width: 100%;
+	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border-color: var(--vscode-button-background);
 }
 
 button:hover {
-    background-color: var(--vscode-button-hoverBackground);
+	background-color: var(--vscode-button-hoverBackground);
 }
 
 button:disabled {
-    background-color: var(--vscode-button-secondaryBackground);
-    color: var(--vscode-button-secondaryForeground);
-    border-color: var(--vscode-button-secondaryBackground);
+	background-color: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+	border-color: var(--vscode-button-secondaryBackground);
 }
 
 .toggled {
-    background-color: var(--vscode-editor-selectionBackground);
-    color: var(--vscode-editor-selectionForeground);
+	background-color: var(--vscode-editor-selectionBackground);
+	color: var(--vscode-editor-selectionForeground);
 }
 
 .bar {
-    position: relative;
-    display: flex;
+	position: relative;
+	display: flex;
 }
 
 .input-glyph-group {
-    position: relative;
-    height: 100%;
-    flex: 1;
+	position: relative;
+	height: 100%;
+	flex: 1;
 }
 
-.bar > .input-glyph-group > input {
-    height: 24px;
-    padding: 0px var(--input-glyph-padding) 0px 3px;
-    /* -3px takes off the added length due to the left padding */
-    width: calc(100% - var(--input-glyph-padding) - 3px);
+.bar>.input-glyph-group>input {
+	height: 24px;
+	padding: 0px var(--input-glyph-padding) 0px 3px;
+	/* -3px takes off the added length due to the left padding */
+	width: calc(100% - var(--input-glyph-padding) - 3px);
 }
 
 .bar-glyphs {
-    position: absolute;
-    right: 0px;
-    top: 12%;
+	position: absolute;
+	right: 0px;
+	top: 12%;
 }
 
 #case-sensitive {
-    position: relative;
+	position: relative;
 }
 
 #preserve-case {
-    position: relative;
-    top: 2px;
-    right: 2px;
+	position: relative;
+	top: 2px;
+	right: 2px;
 }
 
 .icon-group {
-    transform: translateX(10px);
+	transform: translateX(10px);
 }
 
 .search-widget {
-    margin-top: 10px;
+	margin-top: 10px;
 }
 
 .find-bar {
-    padding-bottom: 10px;
+	padding-bottom: 10px;
 }
 
-#search-container > .header {
-    position: relative;
-    font-weight: bold;
-    font-family: var(--vscode-font-family);
-    
+#search-container>.header {
+	position: relative;
+	font-weight: bold;
+	font-family: var(--vscode-font-family);
 }
 
 .codicon {
-    cursor: pointer;
-    color: var(--vscode-icon-foreground);
+	cursor: pointer;
+	color: var(--vscode-icon-foreground);
 }
 
 .disabled {
-    cursor: default;
-    opacity: 40%;
+	cursor: default;
+	opacity: 40%;
 }
 
 .input-warning {
-    background-color: var(--vscode-inputValidation-warningBackground);
-    color: var(--vscode-inputValidation-warningForeground);
-    padding-top: 3px;
-    padding-bottom: 3px;
-    padding-left: 3px;
-    /* 100% - the padding */
-    width: calc(100% - 3px);
-    height: 60%;
+	background-color: var(--vscode-inputValidation-warningBackground);
+	color: var(--vscode-inputValidation-warningForeground);
+	padding-top: 3px;
+	padding-bottom: 3px;
+	padding-left: 3px;
+	/* 100% - the padding */
+	width: calc(100% - 3px);
+	height: 60%;
 }
 
 .input-error {
-    background-color: var(--vscode-inputValidation-errorBackground);
-    padding-top: 3px;
-    padding-bottom: 3px;
-    padding-left: 3px;
-    color: var(--vscode-inputValidation-errorForeground);
-    height: 60%;
-    /* 100% - the padding */
-    width: calc(100% - 3px);
+	background-color: var(--vscode-inputValidation-errorBackground);
+	padding-top: 3px;
+	padding-bottom: 3px;
+	padding-left: 3px;
+	color: var(--vscode-inputValidation-errorForeground);
+	height: 60%;
+	/* 100% - the padding */
+	width: calc(100% - 3px);
 }
 
 input.warning-border {
-    outline: none !important;
-    border: 1px solid var(--vscode-inputValidation-warningBorder);
+	outline: none !important;
+	border: 1px solid var(--vscode-inputValidation-warningBorder);
 }
+
 input.error-border {
-    outline: none !important;
-    border: 1px solid var(--vscode-inputValidation-errorBorder);
+	outline: none !important;
+	border: 1px solid var(--vscode-inputValidation-errorBorder);
 }
 
 .input-warning.warning-border {
-    outline: none !important;
-    border: 1px solid var(--vscode-inputValidation-warningBorder);
-    /* So we don't get a double thick border betweent the boxes */
-    border-top: 0px;
+	outline: none !important;
+	border: 1px solid var(--vscode-inputValidation-warningBorder);
+	/* So we don't get a double thick border betweent the boxes */
+	border-top: 0px;
 }
 
 .input-error.error-border {
-    outline: none !important;
-    border: 1px solid var(--vscode-inputValidation-errorBorder);
-    /* So we don't get a double thick border betweent the boxes */
-    border-top: 0px;
+	outline: none !important;
+	border: 1px solid var(--vscode-inputValidation-errorBorder);
+	/* So we don't get a double thick border betweent the boxes */
+	border-top: 0px;
 }

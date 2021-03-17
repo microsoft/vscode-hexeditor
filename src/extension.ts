@@ -4,7 +4,7 @@
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { DataInspectorView } from "./dataInspectorView";
-const { name, version, aiKey } = require("./../../package.json") as {name: string; version: string; aiKey: string};
+const { name, version, aiKey } = require("./../../package.json") as { name: string; version: string; aiKey: string };
 import { HexEditorProvider } from "./hexEditorProvider";
 import { openOffsetInput } from "./util";
 
