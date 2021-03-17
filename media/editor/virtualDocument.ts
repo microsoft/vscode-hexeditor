@@ -2,7 +2,7 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset, getElementsColumn } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset, getElementsColumn, isMac } from "./util";
 import { toggleHover } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
@@ -414,19 +414,19 @@ export class VirtualDocument {
 			event.preventDefault();
 		} else if (new RegExp(/ArrowLeft|ArrowRight|ArrowUp|ArrowDown/gm).test(event.key)
 			|| ((event.key === "End" || event.key === "Home") && !event.ctrlKey)) {
-			this.navigateByKey(event.key, targetElement, event.shiftKey);
+			this.navigateByKey(event.key, targetElement, event.shiftKey, event.metaKey);
 			event.preventDefault();
 		} else if (!modifierKeyPressed && targetElement.classList.contains("hex")) {
 			await this.editHandler.editHex(targetElement, event.key);
 			// If this cell has been edited
 			if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
 				targetElement.classList.remove("editing");
-				this.navigateByKey("ArrowRight", targetElement, false);
+				this.navigateByKey("ArrowRight", targetElement, false, false);
 			}
 		} else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("ascii")) {
 			await this.editHandler.editAscii(targetElement, event.key);
 			targetElement.classList.remove("editing");
-			this.navigateByKey("ArrowRight", targetElement, false);
+			this.navigateByKey("ArrowRight", targetElement, false, false);
 		}
 		await this.editHandler.completePendingEdits();
 	}
@@ -458,40 +458,17 @@ export class VirtualDocument {
 	 * @param {HTMLElement} targetElement The element
 	 * @param {boolean} isRangeSelection If we are selecting a range (shift key pressed)
 	 */
-	private navigateByKey(keyName: string, targetElement: HTMLElement, isRangeSelection: boolean): void {
+	private navigateByKey(keyName: string, targetElement: HTMLElement, isRangeSelection: boolean, metaKey: boolean): void {
 		let next: HTMLElement | undefined;
 		switch (keyName) {
-			case "End":
-				// If the user presses End we go to the end of the line
-				const parentChildren = targetElement.parentElement!.children;
-				next = parentChildren[parentChildren.length - 1] as HTMLElement;
-				break;
-			case "Home":
-				// If the user presses Home we go to the front of the line
-				next = targetElement.parentElement!.children[0] as HTMLElement;
-				break;
-			case "ArrowLeft":
-				// left
-				next = (targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
-				break;
-			case "ArrowUp":
-				// up
-				const elements_above = getElementsWithGivenOffset(getElementsOffset(targetElement) - 16);
-				if (elements_above.length === 0) break;
-				next = targetElement.classList.contains("hex") ? elements_above[0] : elements_above[1];
-				break;
-			case "ArrowRight":
-				// right
-				next = (targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
-				break;
-			case "ArrowDown":
-				// down
-				const elements_below = getElementsWithGivenOffset(Math.min(getElementsOffset(targetElement) + 16, this.fileSize - 1));
-				if (elements_below.length === 0) break;
-				next = targetElement.classList.contains("hex") ? elements_below[0] : elements_below[1];
-				break;
+			case "ArrowLeft": next = ((isMac && metaKey) ? this._getStartOfLineCell : this._getPreviousCell)(targetElement); break;
+			case "ArrowRight": next = ((isMac && metaKey) ? this._getEndOfLineCell : this._getNextCell)(targetElement); break ;
+			case "ArrowUp": next = this._getCellAbove(targetElement); break;
+			case "ArrowDown": next = this._getCellBelow(targetElement); break;
+			case "End": next = this._getEndOfLineCell(targetElement); break;
+			case "Home": next = this._getStartOfLineCell(targetElement); break;
 		}
-		if (next && next.tagName === "SPAN") {
+		if (next?.tagName === "SPAN") {
 			const nextRect = next.getBoundingClientRect();
 			if (this.viewPortHeight <= nextRect.bottom) {
 				this.scrollBarHandler.scrollDocument(1, "down");
@@ -513,6 +490,39 @@ export class VirtualDocument {
 			}
 			next.focus({ preventScroll: true });
 		}
+	}
+
+	private _getPreviousCell(currentCell: HTMLElement): HTMLElement {
+		return (currentCell.previousElementSibling || currentCell.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
+	}
+
+	private _getNextCell(currentCell: HTMLElement): HTMLElement {
+		return (currentCell.nextElementSibling || currentCell.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
+	}
+
+	private _getStartOfLineCell(currentCell: HTMLElement): HTMLElement {
+		return currentCell.parentElement!.children[0] as HTMLElement;
+	}
+
+	private _getEndOfLineCell(currentCell: HTMLElement): HTMLElement {
+		const parentChildren = currentCell.parentElement!.children;
+		return parentChildren[parentChildren.length - 1] as HTMLElement;
+	}
+
+	private _getCellAbove(currentCell: HTMLElement): HTMLElement | undefined {
+		const elements_above = getElementsWithGivenOffset(getElementsOffset(currentCell) - 16);
+		if (elements_above.length === 0) {
+			return undefined;
+		}
+		return currentCell.classList.contains("hex") ? elements_above[0] : elements_above[1];
+	}
+
+	private _getCellBelow(currentCell: HTMLElement): HTMLElement | undefined {
+		const elements_below = getElementsWithGivenOffset(Math.min(getElementsOffset(currentCell) + 16, this.fileSize - 1));
+		if (elements_below.length === 0) {
+			return undefined;
+		}
+		return currentCell.classList.contains("hex") ? elements_below[0] : elements_below[1];
 	}
 
 	/***

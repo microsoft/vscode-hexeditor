@@ -5,6 +5,8 @@ import { ByteData } from "./byteData";
 
 // Assorted helper functions
 
+export const isMac = navigator.userAgent.indexOf("Mac OS X") >= 0;
+
 /**
  * @description Class which represents a range of numbers
  */
