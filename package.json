@@ -67,7 +67,7 @@
 				{
 					"id": "hexExplorer",
 					"title": "Hex Editor Panel",
-					"icon": "icon.png",
+					"icon": "panel-icon.svg",
 					"when": "hexEditor:openEditor"
 				}
 			]
