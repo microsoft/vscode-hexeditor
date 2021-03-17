@@ -56,10 +56,12 @@ export class VirtualDocument {
 		}
 
 		// The leftmost column is a little special so we set it up a little differently
-		// We remove the text from the header to make it look like it's not there
+		// Since each row is set absolutely they are pulled out of the flow of the page. The
+		// header's text (inaccessible) is "00000000" to match the monospace length of the whole
+		// column, so that this can be used to set the column's width regardless of configured zoom
+		// level or font size
 		const headerHeight = (document.getElementsByClassName("header")[0] as HTMLElement).offsetHeight;
-		(document.getElementsByClassName("header")[0] as HTMLElement).innerText = "";
-		(document.getElementsByClassName("header")[0] as HTMLElement).style.width = "4rem";
+		(document.getElementsByClassName("header")[0] as HTMLElement).style.visibility = "hidden";
 		// The plus one is to account for all other headers having borders
 		(document.getElementsByClassName("header")[0] as HTMLElement).style.height = `${headerHeight + 1}px`;
 
