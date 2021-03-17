@@ -44,17 +44,6 @@ body {
 	vertical-align: middle;
 }
 
-.header {
-	position: sticky;
-	top: 0px;
-	font-weight: bold;
-	line-height: var(--vscode-editor-font-size);
-	color: var(--vscode-editorLineNumber-activeForeground);
-	z-index: 10;
-	border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
-	font-family: var(--vscode-font-family);
-}
-
 select {
 	background-color: var(--vscode-dropdown-background);
 	border: var(--vscode-dropdown-border);
