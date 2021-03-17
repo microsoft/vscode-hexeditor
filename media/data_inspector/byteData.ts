@@ -8,8 +8,8 @@ interface ByteDataMessage {
 
 export class ByteData {
 
-  private decimal: number;
-  private adjacentBytes: ByteData[];
+	private decimal: number;
+	private adjacentBytes: ByteData[];
 
 	/**
 	 * @description Constructs a bytedata object from a message sent over by the editor
@@ -24,7 +24,7 @@ export class ByteData {
 		}
 		return byteObj;
 	}
-	
+
 	/**
 	 * @description Creates a ByteData object which acts as the datalayer for a single hex value
 	 * @param uint8num The 8bit number from the file to be represented
@@ -35,7 +35,7 @@ export class ByteData {
 	}
 
 	/**
-	 * @description Adds a given ByteData object as adjancent to the current one (utilized for higher than 8bit calculations) 
+	 * @description Adds a given ByteData object as adjancent to the current one (utilized for higher than 8bit calculations)
 	 * @param {ByteData} byte_obj The ByteData obvject to add to the array
 	 */
 	addAdjacentByte(byte_obj: ByteData): void {
@@ -56,7 +56,7 @@ export class ByteData {
 	 */
 	toBinary(): string {
 		if (isNaN(this.decimal)) return "End of File";
-		return ("00000000"+ this.decimal.toString(2)).slice(-8);
+		return ("00000000" + this.decimal.toString(2)).slice(-8);
 	}
 
 	/**
@@ -116,7 +116,7 @@ export class ByteData {
 	 */
 	byteConverter(numBits: number, signed: boolean, littleEndian: boolean, float = false): number | bigint {
 		if (numBits % 8 != 0) {
-			throw new Error ("Bits must be a multiple of 8!");
+			throw new Error("Bits must be a multiple of 8!");
 		}
 		if (this.adjacentBytes.length < (numBits / 8) - 1) return NaN;
 		const bytes = [];
@@ -138,8 +138,8 @@ export class ByteData {
 			return dataview.getInt32(0, littleEndian);
 		} else if (numBits == 32 && !signed) {
 			return dataview.getUint32(0, littleEndian);
-        // 24 bit isn't supported by default so we must add it
-        // It's safe to cast here as the only numbits that produces a big int is 64.
+			// 24 bit isn't supported by default so we must add it
+			// It's safe to cast here as the only numbits that produces a big int is 64.
 		} else if (numBits == 24 && signed) {
 			const first8 = (this.adjacentBytes[1].byteConverter(8, signed, littleEndian) as number) << 16;
 			return first8 | this.byteConverter(16, signed, littleEndian) as number;
@@ -154,7 +154,7 @@ export class ByteData {
 			return dataview.getInt8(0);
 		} else if (numBits == 8 && !signed) {
 			return this.decimal;
-        }
-        return NaN;
+		}
+		return NaN;
 	}
 }
