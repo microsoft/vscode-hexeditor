@@ -60,12 +60,18 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
 	 * @description Function to reveal the view panel
 	 * @param forceFocus Whether or not to force focus of the panel
 	 */
-	public show(forceFocus?: boolean): void {
-		if (this._view && !forceFocus) {
+	public show(options?: { forceFocus?: boolean; autoReveal?: boolean }): void {
+		// Don't reveal the panel if configured not to
+		if (options?.autoReveal && !vscode.workspace.getConfiguration("hexeditor.dataInspector").get("autoReveal", false)) {
+			return;
+		}
+
+		if (this._view && !options?.forceFocus) {
 			this._view.show();
 		} else {
 			vscode.commands.executeCommand(`${DataInspectorView.viewType}.focus`);
 		}
+
 		// We attempt to send the last message, this prevents the inspector from coming up blank
 		if (this._lastMessage) {
 			this._view?.webview.postMessage(this._lastMessage);
