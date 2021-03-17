@@ -414,19 +414,19 @@ export class VirtualDocument {
 			event.preventDefault();
 		} else if (new RegExp(/ArrowLeft|ArrowRight|ArrowUp|ArrowDown/gm).test(event.key)
 			|| ((event.key === "End" || event.key === "Home") && !event.ctrlKey)) {
-			this.navigateByKey(event.key, targetElement, event.shiftKey, event);
+			this.navigateByKey(event.key, targetElement, event.shiftKey, event.metaKey);
 			event.preventDefault();
 		} else if (!modifierKeyPressed && targetElement.classList.contains("hex")) {
 			await this.editHandler.editHex(targetElement, event.key);
 			// If this cell has been edited
 			if (targetElement.innerText.trimRight().length == 2 && targetElement.classList.contains("editing")) {
 				targetElement.classList.remove("editing");
-				this.navigateByKey("ArrowRight", targetElement, false);
+				this.navigateByKey("ArrowRight", targetElement, false, false);
 			}
 		} else if (!modifierKeyPressed && event.key.length === 1 && targetElement.classList.contains("ascii")) {
 			await this.editHandler.editAscii(targetElement, event.key);
 			targetElement.classList.remove("editing");
-			this.navigateByKey("ArrowRight", targetElement, false);
+			this.navigateByKey("ArrowRight", targetElement, false, false);
 		}
 		await this.editHandler.completePendingEdits();
 	}
@@ -458,11 +458,11 @@ export class VirtualDocument {
 	 * @param {HTMLElement} targetElement The element
 	 * @param {boolean} isRangeSelection If we are selecting a range (shift key pressed)
 	 */
-	private navigateByKey(keyName: string, targetElement: HTMLElement, isRangeSelection: boolean, event?: KeyboardEvent): void {
+	private navigateByKey(keyName: string, targetElement: HTMLElement, isRangeSelection: boolean, metaKey: boolean): void {
 		let next: HTMLElement | undefined;
 		switch (keyName) {
-			case "ArrowLeft": next = ((isMac && event?.metaKey) ? this._getStartOfLineCell : this._getPreviousCell)(targetElement); break;
-			case "ArrowRight": next = ((isMac && event?.metaKey) ? this._getEndOfLineCell : this._getNextCell)(targetElement); break ;
+			case "ArrowLeft": next = ((isMac && metaKey) ? this._getStartOfLineCell : this._getPreviousCell)(targetElement); break;
+			case "ArrowRight": next = ((isMac && metaKey) ? this._getEndOfLineCell : this._getNextCell)(targetElement); break ;
 			case "ArrowUp": next = this._getCellAbove(targetElement); break;
 			case "ArrowDown": next = this._getCellBelow(targetElement); break;
 			case "End": next = this._getEndOfLineCell(targetElement); break;
