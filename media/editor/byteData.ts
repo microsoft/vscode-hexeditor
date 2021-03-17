@@ -2,8 +2,8 @@
 // Licensed under the MIT license.
 
 export class ByteData {
-    private decimal: number;
-    private adjacentBytes: ByteData[];
+	private decimal: number;
+	private adjacentBytes: ByteData[];
 
 	/**
 	 * @description Creates a ByteData object which acts as the datalayer for a single hex value
@@ -15,7 +15,7 @@ export class ByteData {
 	}
 
 	/**
-	 * @description Adds a given ByteData object as adjancent to the current one (utilized for higher than 8bit calculations) 
+	 * @description Adds a given ByteData object as adjancent to the current one (utilized for higher than 8bit calculations)
 	 * @param {ByteData} byte_obj The ByteData obvject to add to the array
 	 */
 	addAdjacentByte(byte_obj: ByteData): void {
