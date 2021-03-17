@@ -462,43 +462,33 @@ export class VirtualDocument {
 		let next: HTMLElement | undefined;
 		switch (keyName) {
 			case "End":
-				// If the user presses End we go to the end of the line
-				const parentChildren = targetElement.parentElement!.children;
-				next = parentChildren[parentChildren.length - 1] as HTMLElement;
+				next = this._getEndOfLineCell(targetElement);
 				break;
 			case "Home":
-				// If the user presses Home we go to the front of the line
-				next = targetElement.parentElement!.children[0] as HTMLElement;
+				next = this._getStartOfLineCell(targetElement);
 				break;
 			case "ArrowLeft":
 				if (isMac && event?.metaKey) {
-					// Cmd+left: Go to start of line
-					next = targetElement.parentElement!.children[0] as HTMLElement;
+					next = this._getStartOfLineCell(targetElement);
 				} else {
-					next = (targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
+					next = this._getPreviousCell(targetElement);
 				}
 				break;
 			case "ArrowUp":
-				const elements_above = getElementsWithGivenOffset(getElementsOffset(targetElement) - 16);
-				if (elements_above.length === 0) break;
-				next = targetElement.classList.contains("hex") ? elements_above[0] : elements_above[1];
+				next = this._getCellAbove(targetElement);
 				break;
 			case "ArrowRight":
 				if (isMac && event?.metaKey) {
-					// Cmd+right: Go to end of line
-					const parentChildren = targetElement.parentElement!.children;
-					next = parentChildren[parentChildren.length - 1] as HTMLElement;
+					next = this._getEndOfLineCell(targetElement);
 				} else {
-					next = (targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
+					next = this._getNextCell(targetElement);
 				}
 				break;
 			case "ArrowDown":
-				const elements_below = getElementsWithGivenOffset(Math.min(getElementsOffset(targetElement) + 16, this.fileSize - 1));
-				if (elements_below.length === 0) break;
-				next = targetElement.classList.contains("hex") ? elements_below[0] : elements_below[1];
+				next = this._getCellBelow(targetElement);
 				break;
 		}
-		if (next && next.tagName === "SPAN") {
+		if (next?.tagName === "SPAN") {
 			const nextRect = next.getBoundingClientRect();
 			if (this.viewPortHeight <= nextRect.bottom) {
 				this.scrollBarHandler.scrollDocument(1, "down");
@@ -520,6 +510,39 @@ export class VirtualDocument {
 			}
 			next.focus({ preventScroll: true });
 		}
+	}
+
+	private _getPreviousCell(currentCell: HTMLElement): HTMLElement {
+		return (currentCell.previousElementSibling || currentCell.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
+	}
+
+	private _getNextCell(currentCell: HTMLElement): HTMLElement {
+		return (currentCell.nextElementSibling || currentCell.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
+	}
+
+	private _getStartOfLineCell(currentCell: HTMLElement): HTMLElement {
+		return currentCell.parentElement!.children[0] as HTMLElement;
+	}
+
+	private _getEndOfLineCell(currentCell: HTMLElement): HTMLElement {
+		const parentChildren = currentCell.parentElement!.children;
+		return parentChildren[parentChildren.length - 1] as HTMLElement;
+	}
+
+	private _getCellAbove(currentCell: HTMLElement): HTMLElement | undefined {
+		const elements_above = getElementsWithGivenOffset(getElementsOffset(currentCell) - 16);
+		if (elements_above.length === 0) {
+			return undefined;
+		}
+		return currentCell.classList.contains("hex") ? elements_above[0] : elements_above[1];
+	}
+
+	private _getCellBelow(currentCell: HTMLElement): HTMLElement | undefined {
+		const elements_below = getElementsWithGivenOffset(Math.min(getElementsOffset(currentCell) + 16, this.fileSize - 1));
+		if (elements_below.length === 0) {
+			return undefined;
+		}
+		return currentCell.classList.contains("hex") ? elements_below[0] : elements_below[1];
 	}
 
 	/***
