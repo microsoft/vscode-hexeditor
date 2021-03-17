@@ -2,7 +2,7 @@
 // Licensed under the MIT license
 
 import { ByteData } from "./byteData";
-import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset, getElementsColumn } from "./util";
+import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset, getElementsColumn, isMac } from "./util";
 import { toggleHover } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
 import { ScrollBarHandler } from "./srollBarHandler";
@@ -414,7 +414,7 @@ export class VirtualDocument {
 			event.preventDefault();
 		} else if (new RegExp(/ArrowLeft|ArrowRight|ArrowUp|ArrowDown/gm).test(event.key)
 			|| ((event.key === "End" || event.key === "Home") && !event.ctrlKey)) {
-			this.navigateByKey(event.key, targetElement, event.shiftKey);
+			this.navigateByKey(event.key, targetElement, event.shiftKey, event);
 			event.preventDefault();
 		} else if (!modifierKeyPressed && targetElement.classList.contains("hex")) {
 			await this.editHandler.editHex(targetElement, event.key);
@@ -458,7 +458,7 @@ export class VirtualDocument {
 	 * @param {HTMLElement} targetElement The element
 	 * @param {boolean} isRangeSelection If we are selecting a range (shift key pressed)
 	 */
-	private navigateByKey(keyName: string, targetElement: HTMLElement, isRangeSelection: boolean): void {
+	private navigateByKey(keyName: string, targetElement: HTMLElement, isRangeSelection: boolean, event?: KeyboardEvent): void {
 		let next: HTMLElement | undefined;
 		switch (keyName) {
 			case "End":
@@ -471,21 +471,28 @@ export class VirtualDocument {
 				next = targetElement.parentElement!.children[0] as HTMLElement;
 				break;
 			case "ArrowLeft":
-				// left
-				next = (targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
+				if (isMac && event?.metaKey) {
+					// Cmd+left: Go to start of line
+					next = targetElement.parentElement!.children[0] as HTMLElement;
+				} else {
+					next = (targetElement.previousElementSibling || targetElement.parentElement?.previousElementSibling?.children[15]) as HTMLElement;
+				}
 				break;
 			case "ArrowUp":
-				// up
 				const elements_above = getElementsWithGivenOffset(getElementsOffset(targetElement) - 16);
 				if (elements_above.length === 0) break;
 				next = targetElement.classList.contains("hex") ? elements_above[0] : elements_above[1];
 				break;
 			case "ArrowRight":
-				// right
-				next = (targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
+				if (isMac && event?.metaKey) {
+					// Cmd+right: Go to end of line
+					const parentChildren = targetElement.parentElement!.children;
+					next = parentChildren[parentChildren.length - 1] as HTMLElement;
+				} else {
+					next = (targetElement.nextElementSibling || targetElement.parentElement?.nextElementSibling?.children[0]) as HTMLElement;
+				}
 				break;
 			case "ArrowDown":
-				// down
 				const elements_below = getElementsWithGivenOffset(Math.min(getElementsOffset(targetElement) + 16, this.fileSize - 1));
 				if (elements_below.length === 0) break;
 				next = targetElement.classList.contains("hex") ? elements_below[0] : elements_below[1];
