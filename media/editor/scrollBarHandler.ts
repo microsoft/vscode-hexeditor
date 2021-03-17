@@ -100,7 +100,7 @@ export class ScrollBarHandler {
 	private onMouseWheel(event: MouseWheelEvent): void {
 		// if these are equal it means the document is too short to scroll anyways
 		if (this.scrollBarHeight === this.scrollThumbHeight) return;
-		if (Math.abs(event.deltaX) !== 0 || event.shiftKey) return;
+		if (event.deltaY === 0 || event.shiftKey) return;
 		if (event.deltaY > 0) {
 			this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
 		} else {
