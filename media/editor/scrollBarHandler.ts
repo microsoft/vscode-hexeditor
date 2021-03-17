@@ -101,10 +101,17 @@ export class ScrollBarHandler {
 		// if these are equal it means the document is too short to scroll anyways
 		if (this.scrollBarHeight === this.scrollThumbHeight) return;
 		if (event.deltaY === 0 || event.shiftKey) return;
-		if (event.deltaY > 0) {
-			this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
-		} else {
-			this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
+		switch (event.deltaMode) {
+			case WheelEvent.DOM_DELTA_LINE:
+				if (event.deltaY > 0) {
+					this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
+				} else {
+					this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
+				}
+				break;
+			case WheelEvent.DOM_DELTA_PIXEL:
+			default: // Fallback to pixel
+				this.updateVirtualScrollTop(this.scrollTop + event.deltaY);
 		}
 
 		this.updateScrolledPosition();
