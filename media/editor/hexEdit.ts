@@ -4,6 +4,7 @@
 import { VirtualDocument } from "./virtualDocument";
 import { ChunkHandler } from "./chunkHandler";
 import { MessageHandler } from "./messageHandler";
+import { DataInspectorHandler } from "./dataInspectorHandler";
 
 declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
@@ -29,6 +30,8 @@ function openAnyway(): void {
 		const { type, body } = e.data;
 		switch (type) {
 			case "init":
+				// Clear the data inspector when a new file is loaded
+				DataInspectorHandler.clearInspector();
 				// Loads the html body sent over
 				if (body.html !== undefined) {
 					document.getElementsByTagName("body")[0].innerHTML = body.html;

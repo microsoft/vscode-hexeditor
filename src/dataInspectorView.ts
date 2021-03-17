@@ -66,10 +66,6 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
 		} else {
 			vscode.commands.executeCommand(`${DataInspectorView.viewType}.focus`);
 		}
-		// We attempt to send the last message, this prevents the inspector from coming up blank
-		if (this._lastMessage) {
-			this._view?.webview.postMessage(this._lastMessage);
-		}
 	}
 
 	private _getWebviewHTML(webview: vscode.Webview): string {
