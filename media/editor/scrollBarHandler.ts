@@ -13,6 +13,7 @@ export class ScrollBarHandler {
 	private rowHeight: number;
 	private scrollTop: number;
 	private isDragging: boolean;
+	private isTouchEvent: boolean;
 	/**
 	 * Given a scrollbar element instantiates a handler which handles the scrolling behavior in the editor
 	 * @param {string} scrollBarId the id of the scrollbar element on the DOM
@@ -21,6 +22,7 @@ export class ScrollBarHandler {
 	constructor(scrollBarId: string, numRows: number, rowHeight: number) {
 		this.scrollTop = 0;
 		this.isDragging = false;
+		this.isTouchEvent = false;
 		// If the scrollbar isn't on the DOM for some reason there's nothing we can do besides create an empty handler and throw an error
 		if (document.getElementById(scrollBarId)) {
 			this.scrollBar = document.getElementById(scrollBarId)! as HTMLDivElement;
@@ -30,6 +32,8 @@ export class ScrollBarHandler {
 			this.scrollThumb = document.createElement("div");
 			throw "Invalid scrollbar id!";
 		}
+		window.addEventListener("touchstart", () => this.isTouchEvent = true);
+		window.addEventListener("touchend", () => this.isTouchEvent = true);
 		window.addEventListener("wheel", this.onMouseWheel.bind(this));
 		this.scrollBar.addEventListener("mousedown", () => {
 			this.scrollThumb.classList.add("scrolling");
@@ -101,17 +105,26 @@ export class ScrollBarHandler {
 		// if these are equal it means the document is too short to scroll anyways
 		if (this.scrollBarHeight === this.scrollThumbHeight) return;
 		if (event.deltaY === 0 || event.shiftKey) return;
-		switch (event.deltaMode) {
-			case WheelEvent.DOM_DELTA_LINE:
-				if (event.deltaY > 0) {
-					this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
-				} else {
-					this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
-				}
-				break;
-			case WheelEvent.DOM_DELTA_PIXEL:
-			default: // Fallback to pixel
-				this.updateVirtualScrollTop(this.scrollTop + event.deltaY);
+		if (this.isTouchEvent) {
+			switch (event.deltaMode) {
+				case WheelEvent.DOM_DELTA_LINE:
+					if (event.deltaY > 0) {
+						this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
+					} else {
+						this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
+					}
+					break;
+				case WheelEvent.DOM_DELTA_PIXEL:
+				default: // Fallback to pixel
+					this.updateVirtualScrollTop(this.scrollTop + event.deltaY);
+			}
+		} else {
+			// Scroll 1 line at a time when using a mouse
+			if (event.deltaY > 0) {
+				this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
+			} else {
+				this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
+			}
 		}
 
 		this.updateScrolledPosition();
