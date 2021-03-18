@@ -5,7 +5,7 @@ import { ByteData } from "./byteData";
 import { getElementsWithGivenOffset, updateAsciiValue, pad, createOffsetRange, retrieveSelectedByteObject, getElementsOffset, getElementsColumn, isMac } from "./util";
 import { toggleHover } from "./eventHandlers";
 import { chunkHandler, virtualHexDocument } from "./hexEdit";
-import { ScrollBarHandler } from "./srollBarHandler";
+import { ScrollBarHandler } from "./scrollBarHandler";
 import { EditHandler, EditMessage } from "./editHandler";
 import { WebviewStateManager } from "./webviewStateManager";
 import { SelectHandler } from "./selectHandler";

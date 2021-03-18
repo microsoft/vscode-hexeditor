@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 import { virtualHexDocument } from "./hexEdit";
+import { isMac } from "./util";
 import { WebviewStateManager } from "./webviewStateManager";
 
 export class ScrollBarHandler {
@@ -95,16 +96,35 @@ export class ScrollBarHandler {
 
 	/**
 	 * @description Handles the user scrolling with their mouse wheel
-	 * @param {MouseWheelEvent} event The event containing information about the scroll passed to the event handler
+	 * @param {WheelEvent} event The event containing information about the scroll passed to the event handler
 	 */
-	private onMouseWheel(event: MouseWheelEvent): void {
+	private onMouseWheel(event: WheelEvent): void {
 		// if these are equal it means the document is too short to scroll anyways
 		if (this.scrollBarHeight === this.scrollThumbHeight) return;
-		if (Math.abs(event.deltaX) !== 0 || event.shiftKey) return;
-		if (event.deltaY > 0) {
-			this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
+		if (event.deltaY === 0 || event.shiftKey) return;
+		// HACK: If on mac and the deltaY is not 120 (typical mouse wheel value), treat it as a
+		// touch scroll. This isn't perfect and won't work on Windows but unblocks good scrolling on
+		// macOS.
+		if (isMac && Math.abs(event.deltaY) !== 120) {
+			switch (event.deltaMode) {
+				case WheelEvent.DOM_DELTA_LINE:
+					if (event.deltaY > 0) {
+						this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
+					} else {
+						this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
+					}
+					break;
+				case WheelEvent.DOM_DELTA_PIXEL:
+				default: // Fallback to pixel
+					this.updateVirtualScrollTop(this.scrollTop + event.deltaY);
+			}
 		} else {
-			this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
+			// Scroll 1 line at a time when using a mouse
+			if (event.deltaY > 0) {
+				this.updateVirtualScrollTop(this.scrollTop + this.rowHeight);
+			} else {
+				this.updateVirtualScrollTop(this.scrollTop - this.rowHeight);
+			}
 		}
 
 		this.updateScrolledPosition();
