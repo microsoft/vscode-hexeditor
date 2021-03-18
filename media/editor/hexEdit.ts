@@ -23,8 +23,8 @@ function openAnyway(): void {
 
 // Self executing anonymous function
 // This is the main entry point
-((): void=> {
-    // Handle messages from the extension
+((): void => {
+	// Handle messages from the extension
 	window.addEventListener("message", async e => {
 		const { type, body } = e.data;
 		switch (type) {
@@ -40,8 +40,8 @@ function openAnyway(): void {
 					});
 				}
 				if (body.fileSize != 0 && body.html === undefined) {
-					document.getElementsByTagName("body")[0].innerHTML = 
-					`
+					document.getElementsByTagName("body")[0].innerHTML =
+						`
 						<div>
 						<p>Opening this large file may cause instability. <a id="open-anyway" href="#">Open anyways</a></p>
 						</div>

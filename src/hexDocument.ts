@@ -35,11 +35,11 @@ export interface HexDocumentEdit {
 }
 
 export class HexDocument extends Disposable implements vscode.CustomDocument {
-    static async create(
+	static async create(
 		uri: vscode.Uri,
 		backupId: string | undefined,
 		telemetryReporter: TelemetryReporter,
-	): Promise<HexDocument | PromiseLike<HexDocument> > {
+	): Promise<HexDocument | PromiseLike<HexDocument>> {
 		// If we have a backup, read that. Otherwise read the resource from the workspace
 		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
 		const unsavedEditURI = typeof backupId === "string" ? vscode.Uri.parse(backupId + ".json") : undefined;
@@ -53,7 +53,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		*/
 		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
 		let fileData: Uint8Array;
-		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number ) * 1000000;
+		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
 		let unsavedEdits: HexDocumentEdit[][] = [];
 		// If there's a backup the user already hit open anyways so we will open it even if above max file size
 		if (fileSize > maxFileSize && !backupId) {
@@ -98,17 +98,17 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// If we don't do this Array.from casting then both will reference the same array causing bad behavior
 		this._edits = Array.from(unsavedEdits);
 		this.searchProvider = new SearchProvider(this);
-    }
-    
+	}
+
 	public get uri(): vscode.Uri { return this._uri; }
-	
-	public get filesize(): number  {
+
+	public get filesize(): number {
 		let numAdditions = 0;
 		// We add the extra unsaved cells to the size of the file
 		this.unsavedEdits.flat().forEach(edit => {
 			if (edit.newValue !== undefined && edit.oldValue === undefined) {
 				numAdditions++;
-			} else if(edit.oldValue !== undefined && edit.newValue === undefined && edit.offset < this._bytesize) {
+			} else if (edit.oldValue !== undefined && edit.newValue === undefined && edit.offset < this._bytesize) {
 				numAdditions--;
 			}
 		});
@@ -129,7 +129,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		for (const edit of unsavedEdits) {
 			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
 				documentArray[edit.offset] = edit.newValue;
-			} else if (edit.oldValue === undefined && edit.newValue !== undefined){
+			} else if (edit.oldValue === undefined && edit.newValue !== undefined) {
 				documentArray.push(edit.newValue);
 			} else {
 				removals.push(edit.offset);
@@ -143,19 +143,19 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		return documentArray;
 	}
 
-    private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
-    /*
-        Fires when the document is disposed of
-    */
-    public readonly onDidDispose = this._onDidDispose.event;
+	private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
+	/*
+		Fires when the document is disposed of
+	*/
+	public readonly onDidDispose = this._onDidDispose.event;
 
-    dispose(): void {
-        // Notify subsribers to the custom document we are disposing of it
-        this._onDidDispose.fire();
-        // Disposes of all the events attached to the custom document
-        super.dispose();
+	dispose(): void {
+		// Notify subsribers to the custom document we are disposing of it
+		this._onDidDispose.fire();
+		// Disposes of all the events attached to the custom document
+		super.dispose();
 	}
-	
+
 	// Opens the file overriding any filesize restrictions
 	// This doesn't update the fileSize so we don't need to change that
 	async openAnyways(): Promise<void> {
@@ -183,21 +183,21 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	/**
 	 * Fired to tell VS Code that an edit has occured in the document.
-	 * 
+	 *
 	 * This updates the document's dirty indicator.
 	 */
 	public readonly onDidChange = this._onDidChange.event;
 
 	/**
 	 * Called when the user edits the document in a webview.
-	 * 
+	 *
 	 * This fires an event to notify VS Code that the document has been edited.
 	 */
 	makeEdit(edits: HexDocumentEdit[]): void {
 		edits.forEach(e => e.sameOnDisk = false);
 		this._edits.push(edits);
 		this._unsavedEdits.push(edits);
-		
+
 		this._onDidChange.fire({
 			undo: async () => {
 				const undoneEdits = this._edits.pop();
@@ -222,7 +222,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 						});
 					}
 				}
-				if (unsavedEdits.length !== 0)	this._unsavedEdits.push(unsavedEdits);
+				if (unsavedEdits.length !== 0) this._unsavedEdits.push(unsavedEdits);
 				this._onDidChangeDocument.fire({
 					fileSize: this.filesize,
 					baseAddress: this.baseAddress,
@@ -290,7 +290,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	/**
 	 * Called by VS Code when the user calls `revert` on a document.
 	 */
-	async revert(_cancellation?: vscode.CancellationToken): Promise<void> {
+	async revert(_token?: vscode.CancellationToken): Promise<void> {
 		const diskContent = await vscode.workspace.fs.readFile(this.uri);
 		this._bytesize = diskContent.length;
 		this._documentData = diskContent;
@@ -308,7 +308,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	/**
 	 * Called by VS Code to backup the edited document.
-	 * 
+	 *
 	 * These backups are used to implement hot exit.
 	 */
 	async backup(destination: vscode.Uri, cancellation: vscode.CancellationToken): Promise<vscode.CustomDocumentBackup> {
@@ -329,9 +329,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	/**
 	 * @description Handles replacement within the document when the user clicks the replace / replace all button
-	 * @param {number[]} replacement The new values which will be replacing the old 
-	 * @param {number[][]} replaceOffsets The offsets to replace with replacement 
-	 * @param {boolean} preserveCase Whether or not to preserve case 
+	 * @param {number[]} replacement The new values which will be replacing the old
+	 * @param {number[][]} replaceOffsets The offsets to replace with replacement
+	 * @param {boolean} preserveCase Whether or not to preserve case
 	 * @returns {HexDocumentEdit[]} the new edits so we can send them back to the webview for application
 	 */
 	public replace(replacement: number[], replaceOffsets: number[][], preserveCase: boolean): HexDocumentEdit[] {
@@ -350,7 +350,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 					// We need to check that the inverse isn't true because things like numbers return true for both
 					if (currentDocumentChar.toUpperCase() === currentDocumentChar && currentDocumentChar.toLowerCase() != currentDocumentChar) {
 						replacement[i] = replacementChar.toUpperCase().charCodeAt(0);
-					} else if(currentDocumentChar.toLowerCase() === currentDocumentChar && currentDocumentChar.toUpperCase() != currentDocumentChar) {
+					} else if (currentDocumentChar.toLowerCase() === currentDocumentChar && currentDocumentChar.toUpperCase() != currentDocumentChar) {
 						replacement[i] = replacementChar.toLowerCase().charCodeAt(0);
 					}
 				}

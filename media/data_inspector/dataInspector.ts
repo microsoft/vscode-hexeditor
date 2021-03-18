@@ -7,14 +7,14 @@ import { ByteData } from "./byteData";
  * @description Clears the data inspector back to its default state
  */
 export function clearDataInspector(): void {
-    // This function only gets called when these elements exist so these casts are safe
+	// This function only gets called when these elements exist so these casts are safe
 	(document.getElementById("binary8") as HTMLInputElement).value = "";
 	(document.getElementById("binary8") as HTMLInputElement).disabled = true;
 	for (let i = 0; i < 4; i++) {
 		const numBits = (i + 1) * 8;
 		(document.getElementById(`int${numBits}`) as HTMLInputElement).disabled = true;
 		(document.getElementById(`int${numBits}`) as HTMLInputElement).value = "";
-		
+
 		(document.getElementById(`uint${numBits}`) as HTMLInputElement).disabled = true;
 		(document.getElementById(`uint${numBits}`) as HTMLInputElement).value = "";
 	}
@@ -44,7 +44,7 @@ export function populateDataInspector(byte_obj: ByteData, littleEndian: boolean)
 		const numBits = (i + 1) * 8;
 		const signed = byte_obj.byteConverter(numBits, true, littleEndian);
 		const unsigned = byte_obj.byteConverter(numBits, false, littleEndian);
-	
+
 		(document.getElementById(`int${numBits}`) as HTMLInputElement).value = isNaN(Number(signed)) ? "End of File" : signed.toString();
 		(document.getElementById(`int${numBits}`) as HTMLInputElement).disabled = false;
 		(document.getElementById(`uint${numBits}`) as HTMLInputElement).value = isNaN(Number(unsigned)) ? "End of File" : unsigned.toString();
@@ -73,7 +73,7 @@ export function populateDataInspector(byte_obj: ByteData, littleEndian: boolean)
 
 // This is bound to the on change event for the select which decides to render big or little endian
 /**
- * @description Handles when the user changes the dropdown for whether they want little or big endianness 
+ * @description Handles when the user changes the dropdown for whether they want little or big endianness
  * @param byte_obj The bytedata object representing the selected bytes
  */
 export function changeEndianness(byte_obj: ByteData): void {

@@ -16,8 +16,8 @@ Occasionally you will want to merge changes in the upstream repository (the offi
 
 ```
 cd vscode-hexeditor
-git checkout master
-git pull https://github.com/microsoft/vscode-hexeditor.git master
+git checkout main
+git pull https://github.com/microsoft/vscode-hexeditor.git main
 ```
 
 Manage any merge conflicts, commit them, and then push them to your fork.

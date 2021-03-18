@@ -12,15 +12,15 @@ let currentByteData: ByteData;
 
 // Self executing anonymous function
 // This is the main entry point
-((): void=> {
+((): void => {
 
-  // Handle messages which are sent to the inspector
+	// Handle messages which are sent to the inspector
 	window.addEventListener("message", async e => {
 		switch (e.data.method) {
 			case "update":
 				if (e.data.byteData)
 					currentByteData = ByteData.constructFromMessage(e.data.byteData);
-					populateDataInspector(currentByteData, (document.getElementById("endianness") as HTMLSelectElement).value === "little");
+				populateDataInspector(currentByteData, (document.getElementById("endianness") as HTMLSelectElement).value === "little");
 				return;
 			case "clear":
 				clearDataInspector();
@@ -33,6 +33,6 @@ let currentByteData: ByteData;
 	vscode.postMessage({ type: "ready" });
 })();
 
-// Bind an event listener to detect when the user changes the endinaness 
+// Bind an event listener to detect when the user changes the endinaness
 document.getElementById("endianness")?.addEventListener("change", () => changeEndianness(currentByteData));
 

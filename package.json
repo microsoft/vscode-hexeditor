@@ -1,7 +1,7 @@
 {
 	"name": "hexeditor",
 	"displayName": "Hex Editor",
-	"description": "Allows Hex Editing inside VS Code",
+	"description": "Allows viewing and editing files in a hex editor",
 	"version": "1.4.0",
 	"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
 	"publisher": "ms-vscode",
@@ -37,11 +37,16 @@
 						"default": 10,
 						"description": "The max file size (in MB) that the editor will try to open before warning you."
 					},
+					"hexeditor.dataInspector.autoReveal": {
+						"type": "boolean",
+						"default": true,
+						"description": "Whether to auto reveal the data inspector when the hex editor is opened."
+					},
 					"hexeditor.defaultEndianness": {
 						"type": "string",
 						"default": "little",
 						"enum": ["little", "big"],
-						"description": "The endianness selected when loading the editor"
+						"description": "The endianness selected when loading the editor."
 					}
 				}
 			}
@@ -72,8 +77,8 @@
 			"activitybar": [
 				{
 					"id": "hexExplorer",
-					"title": "Hex Editor Panel",
-					"icon": "icon.png",
+					"title": "Hex Editor",
+					"icon": "panel-icon.svg",
 					"when": "hexEditor:openEditor"
 				}
 			]
@@ -117,7 +122,7 @@
 		"glob": "^7.1.6",
 		"mocha": "^7.2.0",
 		"ts-loader": "^7.0.5",
-		"typescript": "^3.9.7",
+		"typescript": "^4.2.3",
 		"vscode-test": "^1.4.1",
 		"webpack": "^4.46.0",
 		"webpack-cli": "^3.3.12"
