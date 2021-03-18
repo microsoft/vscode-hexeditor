@@ -229,7 +229,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private getBodyHTML(): string {
 		return `
 		<div class="column left">
-			<div class="header">00000000</div>
+			<div class="header" aria-hidden="true">00000000</div>
 			<div class="rowwrapper" id="hexaddr">
 			</div>
 		</div>
