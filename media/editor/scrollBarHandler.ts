@@ -2,6 +2,7 @@
 // Licensed under the MIT license
 
 import { virtualHexDocument } from "./hexEdit";
+import { isMac } from "./util";
 import { WebviewStateManager } from "./webviewStateManager";
 
 export class ScrollBarHandler {
@@ -13,7 +14,6 @@ export class ScrollBarHandler {
 	private rowHeight: number;
 	private scrollTop: number;
 	private isDragging: boolean;
-	private isTouchEvent: boolean;
 	/**
 	 * Given a scrollbar element instantiates a handler which handles the scrolling behavior in the editor
 	 * @param {string} scrollBarId the id of the scrollbar element on the DOM
@@ -22,7 +22,6 @@ export class ScrollBarHandler {
 	constructor(scrollBarId: string, numRows: number, rowHeight: number) {
 		this.scrollTop = 0;
 		this.isDragging = false;
-		this.isTouchEvent = false;
 		// If the scrollbar isn't on the DOM for some reason there's nothing we can do besides create an empty handler and throw an error
 		if (document.getElementById(scrollBarId)) {
 			this.scrollBar = document.getElementById(scrollBarId)! as HTMLDivElement;
@@ -32,8 +31,6 @@ export class ScrollBarHandler {
 			this.scrollThumb = document.createElement("div");
 			throw "Invalid scrollbar id!";
 		}
-		window.addEventListener("touchstart", () => this.isTouchEvent = true);
-		window.addEventListener("touchend", () => this.isTouchEvent = true);
 		window.addEventListener("wheel", this.onMouseWheel.bind(this));
 		this.scrollBar.addEventListener("mousedown", () => {
 			this.scrollThumb.classList.add("scrolling");
@@ -99,13 +96,16 @@ export class ScrollBarHandler {
 
 	/**
 	 * @description Handles the user scrolling with their mouse wheel
-	 * @param {MouseWheelEvent} event The event containing information about the scroll passed to the event handler
+	 * @param {WheelEvent} event The event containing information about the scroll passed to the event handler
 	 */
-	private onMouseWheel(event: MouseWheelEvent): void {
+	private onMouseWheel(event: WheelEvent): void {
 		// if these are equal it means the document is too short to scroll anyways
 		if (this.scrollBarHeight === this.scrollThumbHeight) return;
 		if (event.deltaY === 0 || event.shiftKey) return;
-		if (this.isTouchEvent) {
+		// HACK: If on mac and the deltaY is not 120 (typical mouse wheel value), treat it as a
+		// touch scroll. This isn't perfect and won't work on Windows but unblocks good scrolling on
+		// macOS.
+		if (isMac && Math.abs(event.deltaY) !== 120) {
 			switch (event.deltaMode) {
 				case WheelEvent.DOM_DELTA_LINE:
 					if (event.deltaY > 0) {
