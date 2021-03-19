@@ -41,6 +41,12 @@
 						"type": "boolean",
 						"default": true,
 						"description": "Whether to auto reveal the data inspector when the hex editor is opened."
+					},
+					"hexeditor.defaultEndianness": {
+						"type": "string",
+						"default": "little",
+						"enum": ["little", "big"],
+						"description": "The endianness selected when loading the editor."
 					}
 				}
 			}
