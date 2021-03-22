@@ -1,6 +1,12 @@
 ## Release Notes
 
-## 1.4.0
+## 1.5.0
+- Better trackpad scrolling
+- New hex editor panel icon
+- Tidying up of data inspector UI
+- Additional setting to define default endianness, thanks to [@natecraddock via #215](https://github.com/microsoft/vscode-hexeditor/pull/215)
+
+## 1.4.0 - February 4, 2021
 - Move data inspector to its own hex panel
 - Restyle search to look more like the normal VS Code widget
 - Add preliminary support for untitled files
