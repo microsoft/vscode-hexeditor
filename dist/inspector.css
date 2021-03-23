@@ -1,4 +1,5 @@
 input {
+	border-radius: 0;
 	padding-left: 4px;
 	padding-right: 4px;
 	font-family: var(--vscode-editor-font-family);
