@@ -42,7 +42,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		openContext: vscode.CustomDocumentOpenContext,
 		_token: vscode.CancellationToken
 	): Promise<HexDocument> {
-		const document = await HexDocument.create(uri, openContext.backupId, this._telemetryReporter);
+		const document = await HexDocument.create(uri, openContext, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
 		// Set the hex editor activity panel to be visible
 		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", true);

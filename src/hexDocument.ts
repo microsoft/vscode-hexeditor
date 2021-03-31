@@ -37,13 +37,14 @@ export interface HexDocumentEdit {
 export class HexDocument extends Disposable implements vscode.CustomDocument {
 	static async create(
 		uri: vscode.Uri,
-		backupId: string | undefined,
+		openContext: vscode.CustomDocumentOpenContext,
 		telemetryReporter: TelemetryReporter,
 	): Promise<HexDocument | PromiseLike<HexDocument>> {
+		const backupId = openContext.backupId;
 		// If we have a backup, read that. Otherwise read the resource from the workspace
 		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
 		const unsavedEditURI = typeof backupId === "string" ? vscode.Uri.parse(backupId + ".json") : undefined;
-		const fileSize = await FileSystemAdaptor.getFileSize(uri);
+		const fileSize = await FileSystemAdaptor.getFileSize(uri, openContext.untitledDocumentData);
 		const queries = HexDocument.parseQuery(uri.query);
 		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
 		/* __GDPR__
@@ -59,7 +60,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		if (fileSize > maxFileSize && !backupId) {
 			fileData = new Uint8Array();
 		} else {
-			fileData = await FileSystemAdaptor.readFile(dataFile);
+			fileData = await FileSystemAdaptor.readFile(dataFile, openContext.untitledDocumentData);
 			if (unsavedEditURI) {
 				const jsonData = await vscode.workspace.fs.readFile(unsavedEditURI);
 				unsavedEdits = JSON.parse(Buffer.from(jsonData).toString("utf-8"));

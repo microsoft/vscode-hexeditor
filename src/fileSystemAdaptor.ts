@@ -13,34 +13,20 @@ export abstract class FileSystemAdaptor {
 	 * @param uri The uri
 	 * @returns The file size
 	 */
-	public static async getFileSize(uri: vscode.Uri): Promise<number> {
+	public static async getFileSize(uri: vscode.Uri, untitledDocumentData?: Uint8Array): Promise<number> {
 		if (uri.scheme === "untitled") {
-			const document = FileSystemAdaptor.findMatchingTextDocument(uri);
-			return document ? document.getText().length : 0;
+			return untitledDocumentData?.length ?? 0;
 		} else {
 			return (await vscode.workspace.fs.stat(uri)).size;
 		}
 	}
 
-	public static async readFile(uri: vscode.Uri): Promise<Uint8Array> {
+	public static async readFile(uri: vscode.Uri, untitledDocumentData?: Uint8Array): Promise<Uint8Array> {
 		if (uri.scheme === "untitled") {
-			const document = FileSystemAdaptor.findMatchingTextDocument(uri);
-			// Conver the document text to bytes and return it
-			return document ? new TextEncoder().encode(document.getText()) : new Uint8Array();
+			// We have the bytes so we return them
+			return untitledDocumentData ?? new Uint8Array();
 		} else {
 			return vscode.workspace.fs.readFile(uri);
 		}
-	}
-
-	/**
-	 * @description Given a uri finds a text document associated with that URI, returns undefined if none is found
-	 * @param uri The uri of the text document
-	 */
-	private static findMatchingTextDocument(uri: vscode.Uri): vscode.TextDocument | undefined {
-		const textDocuments = vscode.workspace.textDocuments;
-		for (const document of textDocuments) {
-			if (uri.scheme === document.uri.scheme && uri.path === document.uri.path) return document;
-		}
-		return;
 	}
 }
