@@ -44,11 +44,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	): Promise<HexDocument> {
 		const document = await HexDocument.create(uri, openContext, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
-		// Set the hex editor activity panel to be visible
-		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", true);
-		this._dataInspectorView.show({
-			autoReveal: true
-		});
+
 		listeners.push(document.onDidChange(e => {
 			// Tell VS Code that the document has been edited by the user.
 			this._onDidChangeCustomDocument.fire({
@@ -121,6 +117,12 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		// Add the webview to our internal set of active webviews
 		this.webviews.add(document.uri, webviewPanel);
 		HexEditorProvider.currentWebview = webviewPanel.webview;
+
+		// Set the hex editor activity panel to be visible
+		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", true);
+		this._dataInspectorView.show({
+			autoReveal: true
+		});
 
 		// Setup initial content for the webview
 		webviewPanel.webview.options = {
