@@ -26,6 +26,9 @@
 		"onCommand:hexEditor.openFile"
 	],
 	"main": "./out/src/extension.js",
+  "workspaceTrust": {
+    "request": "never"
+  },
 	"contributes": {
 		"configuration": [
 			{
