@@ -95,15 +95,18 @@ export class EditHandler {
 	public async editAscii(element: HTMLSpanElement, keyPressed: string): Promise<void> {
 		// We don't want to do anything if the user presses a key such as home etc which will register as greater than 1 char
 		if (keyPressed.length != 1) return;
-		// No need to call it edited if it's the same value
-		if (element.innerText === keyPressed) return;
 		const offset: number = getElementsOffset(element);
 		const hexElement = getElementsWithGivenOffset(offset)[0];
+		const newValueHex = keyPressed.charCodeAt(0).toString(16).toUpperCase();
+		// No need to call it edited if it's the same value. The comparison is done on hex values because '+' and '.' have additional meaning on ASCII panel
+		if(hexElement.innerText === newValueHex){
+			return;
+		}
 		// We store all pending edits as hex as ascii isn't always representative due to control characters
 		this.pendingEdit = {
 			offset: offset,
 			previousValue: hexElement.innerText === "+" ? undefined : hexElement.innerText,
-			newValue: keyPressed.charCodeAt(0).toString(16).toUpperCase(),
+			newValue: newValueHex,
 			element: element
 		};
 		element.classList.remove("add-cell");
