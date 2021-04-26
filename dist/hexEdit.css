@@ -162,10 +162,11 @@ select:not(.inline-select) {
 	position: absolute;
 	display: none;
 	height: 100px;
-	width: 300px;
+	width: 350px;
 	top: -85px;
 	padding: 2px 2px 2px 2px;
 	right: 4%;
+	outline: 3px solid var(--vscode-dropdown-border);
 	background-color: var(--vscode-editor-background);
 }
 
@@ -298,7 +299,7 @@ button:disabled {
 }
 
 .icon-group {
-	transform: translateX(10px);
+	margin-left: 10px;
 }
 
 .search-widget {
@@ -311,6 +312,7 @@ button:disabled {
 
 #search-container>.header {
 	position: relative;
+	top: -2px;
 	font-weight: bold;
 	font-family: var(--vscode-font-family);
 }

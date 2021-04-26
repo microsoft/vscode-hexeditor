@@ -61,6 +61,7 @@ export class SearchHandler {
                     <span class="codicon codicon-search-stop disabled" id="search-stop" title="Cancel Search"></span>
                     <span class="codicon codicon-arrow-up disabled" id="find-previous" title="Previous Match"></span>
                     <span class="codicon codicon-arrow-down disabled" id="find-next" title="Next Match"></span>
+										<span class ="codicon codicon-close" id="close" title="Close (Escape)"></span>
                 </span>
             </div>
             <div class="bar replace-bar">
@@ -96,6 +97,7 @@ export class SearchHandler {
 		this.findPreviousButton = document.getElementById("find-previous") as HTMLSpanElement;
 		this.findNextButton = document.getElementById("find-next") as HTMLSpanElement;
 		this.stopSearchButton = document.getElementById("search-stop") as HTMLSpanElement;
+		const closeButton = document.getElementById("close") as HTMLSpanElement;
 		this.findNextButton.addEventListener("click", () => this.findNext(true));
 		this.findPreviousButton.addEventListener("click", () => this.findPrevious(true));
 		this.updateInputGlyphs();
@@ -148,6 +150,7 @@ export class SearchHandler {
 		this.replaceButton.addEventListener("click", () => this.replace(false));
 		this.replaceAllButton.addEventListener("click", () => this.replace(true));
 		this.stopSearchButton.addEventListener("click", this.cancelSearch.bind(this));
+		closeButton.addEventListener("click", () => this.hideWidget());
 		// Hide the message boxes for now as at first we have no messages to display
 		document.getElementById("find-message-box")!.hidden = true;
 		document.getElementById("replace-message-box")!.hidden = true;
