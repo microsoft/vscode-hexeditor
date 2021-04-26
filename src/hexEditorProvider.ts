@@ -149,6 +149,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			if (e.type === "ready") {
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
+					editorFontSize: vscode.workspace.getConfiguration("editor").get("fontSize"),
 					baseAddress: document.baseAddress,
 					html: document.documentData.length === document.filesize || document.unsavedEdits.length != 0 ? this.getBodyHTML() : undefined
 				});

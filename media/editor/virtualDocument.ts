@@ -37,7 +37,7 @@ export class VirtualDocument {
 	 * @description Constructs a VirtualDocument for a file of a given size. Also handles the initial DOM layout
 	 * @param {number} fileSize The size, in bytes, of the file which is being displayed
 	 */
-	constructor(fileSize: number, baseAddress = 0) {
+	constructor(fileSize: number, editorFontSize: number, baseAddress = 0) {
 		this.fileSize = fileSize;
 		this.baseAddress = baseAddress;
 		this.editHandler = new EditHandler();
@@ -45,7 +45,8 @@ export class VirtualDocument {
 		this.searchHandler = new SearchHandler();
 		// Create a reference to the editor container. This is useful for event listeners
 		this.editorContainer = document.getElementById("editor-container")!;
-		this.rowHeight = 24;
+		// The height of each row must respect the font size setting to scale nicely
+		this.rowHeight = editorFontSize * 2;
 		(document.getElementsByClassName("header")[2] as HTMLElement).style.width = "16rem";
 		this.documentHeight = 500000;
 		this.rows = [];
