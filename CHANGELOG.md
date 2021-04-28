@@ -1,6 +1,12 @@
 ## Release Notes
 
-## 1.5.0
+## 1.6.0 - April 28, 2021
+- Improved find widget UI
+- Fix scaling issues with larger font sizes
+- Adoption of workspace trust API
+- Fixed bug regarding place holder characters, thanks to [@whpac via #282](https://github.com/microsoft/vscode-hexeditor/pull/282)
+
+## 1.5.0 - April 5, 2021
 - Better trackpad scrolling
 - New hex editor panel icon
 - Tidying up of data inspector UI

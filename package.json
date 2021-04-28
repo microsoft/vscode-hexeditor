@@ -2,7 +2,7 @@
 	"name": "hexeditor",
 	"displayName": "Hex Editor",
 	"description": "Allows viewing and editing files in a hex editor",
-	"version": "1.5.0",
+	"version": "1.6.0",
 	"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
 	"publisher": "ms-vscode",
 	"repository": {
