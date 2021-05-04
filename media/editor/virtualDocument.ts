@@ -328,7 +328,10 @@ export class VirtualDocument {
 			const startSelection = this.selectHandler.getSelectionStart();
 			if (startSelection !== undefined) {
 				this.selectHandler.setFocused(offset);
-				const selectionAnchor = this.selectHandler.getAnchor() || offset;
+				let selectionAnchor = this.selectHandler.getAnchor();
+				if (selectionAnchor === undefined) {
+					selectionAnchor = offset;
+				}
 				const min = Math.min(selectionAnchor, offset);
 				const max = Math.max(offset, selectionAnchor);
 				this.selectHandler.setSelected(createOffsetRange(min, max));
