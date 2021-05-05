@@ -26,10 +26,12 @@
 		"onCommand:hexEditor.openFile"
 	],
 	"main": "./out/src/extension.js",
-  "workspaceTrust": {
-    "request": "never"
-  },
 	"contributes": {
+    "capabilities": {
+      "untrustedWorkspaces": {
+        "supported": true
+      }
+    },
 		"configuration": [
 			{
 				"title": "Hex Editor",
