@@ -26,13 +26,13 @@
 		"onCommand:hexEditor.openFile"
 	],
 	"main": "./out/src/extension.js",
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": true
+		},
+		"virtualWorkspaces": true
+	},
 	"contributes": {
-    "capabilities": {
-      "untrustedWorkspaces": {
-        "supported": true
-      },
-      "virtualWorkspaces": true
-    },
 		"configuration": [
 			{
 				"title": "Hex Editor",
