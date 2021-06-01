@@ -49,7 +49,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
 		/* __GDPR__
 			"fileOpen" : {
-				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
+				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true }
 			}
 		*/
 		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
