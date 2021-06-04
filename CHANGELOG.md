@@ -1,5 +1,11 @@
 ## Release Notes
 
+## 1.7.0 - June 4, 2021
+- Support virtual workspaces
+- Support untrusted workspaces
+- Fixed invalid content security policy preventing codicon loading
+- Updated to latest node modules
+
 ## 1.6.0 - April 28, 2021
 - Improved find widget UI
 - Fix scaling issues with larger font sizes
