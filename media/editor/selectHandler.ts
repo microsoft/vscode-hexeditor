@@ -79,6 +79,24 @@ export class SelectHandler {
 	}
 
 	/***
+	 * @description Returns the offset of the anchor cell that is used for
+	 * expanding the selection using Shift+Click.
+	 * @returns {number} The offset of the anchor cell
+	 */
+	public getAnchor(): number | undefined {
+		return WebviewStateManager.getProperty("selection_anchor");
+	}
+
+	/***
+	 * @description Set the offset of the anchor cell that is used for expanding
+	 * the selection using Shift+Click.
+	 * @param {number} offset The offset of the anchor cell
+	 */
+	public setAnchor(offset: number): void {
+		WebviewStateManager.setProperty("selection_anchor", offset);
+	}
+
+	/***
 	 * @description Renders the updated selection state of selected/unselected elements
 	 * @param {number[]} offsets The offsets of the elements to render
 	 */

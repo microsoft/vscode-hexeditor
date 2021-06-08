@@ -326,15 +326,19 @@ export class VirtualDocument {
 		const offset = getElementsOffset(target);
 		if (event.shiftKey) {
 			const startSelection = this.selectHandler.getSelectionStart();
-			const currentSelection = this.selectHandler.getSelected();
 			if (startSelection !== undefined) {
 				this.selectHandler.setFocused(offset);
-				const min = Math.min(startSelection, offset);
-				const max = Math.max(offset, currentSelection[currentSelection.length - 1]);
+				let selectionAnchor = this.selectHandler.getAnchor();
+				if (selectionAnchor === undefined) {
+					selectionAnchor = offset;
+				}
+				const min = Math.min(selectionAnchor, offset);
+				const max = Math.max(offset, selectionAnchor);
 				this.selectHandler.setSelected(createOffsetRange(min, max));
 				target.focus({ preventScroll: true });
 			}
 		} else {
+			this.selectHandler.setAnchor(offset);
 			this.selectHandler.setFocused(offset);
 			if (event.ctrlKey) {
 				const selection = this.selectHandler.getSelected();
