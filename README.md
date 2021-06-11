@@ -7,9 +7,7 @@ A custom editor extension for Visual Studio Code which provides a hex editor for
 - Editing with undo, redo, copy, and paste support
 - Find and replace
 
-![Navigating a file](https://raw.githubusercontent.com/microsoft/vscode-hexeditor/main/hex-editor.gif)
-
-![Editing a file](https://raw.githubusercontent.com/microsoft/vscode-hexeditor/main/hex-editor-editing.gif)
+![User opens a text file named release.txt and switches to the hex editor via command palette. The user then navigates and edits the document](https://raw.githubusercontent.com/microsoft/vscode-hexeditor/main/hex-editor.gif)
 
 ## How to Use
 
