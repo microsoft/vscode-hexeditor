@@ -457,7 +457,6 @@ export class VirtualDocument {
 			// PG Down
 			this.scrollBarHandler.page(this.viewPortHeight, "down");
 		}
-		event.preventDefault();
 	}
 
 	/**
