@@ -1,5 +1,8 @@
 ## Release Notes
 
+## 1.7.1 - June 18, 2021
+- Fix bug preventing search from working
+
 ## 1.7.0 - June 4, 2021
 - Support virtual workspaces
 - Support untrusted workspaces
