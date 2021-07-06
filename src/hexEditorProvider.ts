@@ -161,6 +161,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				await document.openAnyways();
 				this.postMessage(webviewPanel, "init", {
 					fileSize: document.filesize,
+					editorFontSize: vscode.workspace.getConfiguration("editor").get("fontSize"),
 					baseAddress: document.baseAddress,
 					html: this.getBodyHTML()
 				});
