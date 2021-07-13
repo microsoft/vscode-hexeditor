@@ -68,7 +68,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const watcher = vscode.workspace.createFileSystemWatcher(uri.fsPath);
 		listeners.push(watcher);
 		listeners.push(watcher.onDidChange(e => {
-			if (e.toString() === uri.toString()) {
+			if (e.fsPath === uri.fsPath) {
 				if (document.unsavedEdits.length > 0) {
 					const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
 					vscode.window.showWarningMessage(message, "Overwrite", "Revert").then((selected) => {
