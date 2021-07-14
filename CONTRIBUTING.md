@@ -48,7 +48,7 @@ To lint the source as you make changes you can install the [eslint extension](ht
 Even if you have push rights on the Microsoft/vscode-hexeditor repository, you should create a personal fork and create feature branches there when you need them. This keeps the main repository clean and your personal workflow cruft out of sight.
 
 ## Pull Requests
-Before we can accept a pull request from you, you'll need to sign a [[Contributor License Agreement (CLA)|Contributor-License-Agreement]]. It is an automated process and you only need to do it once.
+Before we can accept a pull request from you, you'll need to sign a [Contributor License Agreement (CLA)|Contributor-License-Agreement](https://cla.opensource.microsoft.com/microsoft/vscode-hexeditor). It is an automated process and you only need to do it once.
 
 To enable us to quickly review and accept your pull requests, always create one pull request per issue and [link the issue in the pull request](https://github.com/blog/957-introducing-issue-mentions). Never merge multiple requests in one unless they have the same root cause. Be sure to keep code changes as small as possible. Avoid pure formatting changes to code that has not been modified otherwise. Pull requests should contain tests whenever possible.
 
