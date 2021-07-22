@@ -15,4 +15,4 @@ vsc-extension-quickstart.md
 build
 
 # We need the codicon node module included for the fonts + icons to work
-!node_modules/@vscode/codicons
+!node_modules/@vscode/codicons/dist
