@@ -1,7 +1,7 @@
 .vscode/**
 .vscode-test/**
-out/test/**
-out/media/**
+node_modules/**
+out
 media/**
 src/**
 .gitignore
@@ -10,6 +10,6 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
-webpack.config.js
+.esbuild.config.js
 *.gif
 build

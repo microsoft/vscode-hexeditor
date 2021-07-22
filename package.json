@@ -2,7 +2,7 @@
   "name": "hexeditor",
   "displayName": "Hex Editor",
   "description": "Allows viewing and editing files in a hex editor",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
   "publisher": "ms-vscode",
   "repository": {
@@ -25,7 +25,7 @@
     "onCustomEditor:hexEditor.hexedit",
     "onCommand:hexEditor.openFile"
   ],
-  "main": "./out/src/extension.js",
+  "main": "./dist/extension.js",
   "browser": "./dist/web/extension.js",
   "capabilities": {
     "untrustedWorkspaces": {
@@ -114,31 +114,21 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && webpack",
+    "compile": "tsc && node .esbuild.config.js",
     "lint": "eslint src --ext ts",
-    "webpack-watch": "webpack --watch",
-    "watch": "tsc -watch -p ./",
-    "compile-web": "webpack --config ./build/web-extension.webpack.config.js",
-    "watch-web": "webpack --watch --config ./build/web-extension.webpack.config.js",
-    "package-web": "webpack --mode production --devtool hidden-source-map --config ./build/web-extension.webpack.config.js"
+    "watch": "tsc -noEmit -watch"
   },
   "devDependencies": {
-    "@types/glob": "^7.1.3",
-    "@types/mocha": "^8.2.2",
     "@types/node": "^15.6.2",
     "@types/vscode": "^1.56.0",
     "@types/webpack-env": "^1.16.0",
     "@typescript-eslint/eslint-plugin": "^4.26.0",
     "@typescript-eslint/parser": "^4.26.0",
+    "esbuild": "^0.12.15",
     "eslint": "^7.27.0",
-    "glob": "^7.1.7",
     "mocha": "^8.4.0",
-    "process": "^0.11.10",
     "ts-loader": "^8.0.14",
-    "typescript": "^4.3.2",
-    "vscode-test": "^1.5.2",
-    "webpack": "^5.19.0",
-    "webpack-cli": "^4.4.0"
+    "typescript": "^4.3.2"
   },
   "dependencies": {
     "vscode-codicons": "0.0.17",
