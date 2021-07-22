@@ -1,4 +1,5 @@
 const esbuild = require('esbuild');
+const fs = require('fs');
 
 const watch = process.argv.find(a => a === '--watch') !== undefined;
 
@@ -27,7 +28,7 @@ esbuild.build({
 
 // Build the data inspector
 esbuild.build({
-  entryPoints: ['media/data_inspector/dataInspector.ts'],
+  entryPoints: ['media/data_inspector/inspector.ts'],
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	external: ['vscode'],

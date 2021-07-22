@@ -13,3 +13,6 @@ vsc-extension-quickstart.md
 .esbuild.config.js
 *.gif
 build
+
+# We need the codicon node module included for the fonts + icons to work
+!node_modules/@vscode/codicons

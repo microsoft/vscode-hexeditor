@@ -40,7 +40,7 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
 			}
 		});
 
-		// Send the last message to the inspector so it preserves state upon hiding and shwoing
+		// Send the last message to the inspector so it preserves state upon hiding and showing
 		if (this._lastMessage) {
 			webviewView.webview.postMessage(this._lastMessage);
 		}
