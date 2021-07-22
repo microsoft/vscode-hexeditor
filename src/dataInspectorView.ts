@@ -5,7 +5,7 @@ import * as vscode from "vscode";
 import { getNonce } from "./util";
 
 export class DataInspectorView implements vscode.WebviewViewProvider {
-	public static readonly viewType = "hexEditor.dataInpsectorView";
+	public static readonly viewType = "hexEditor.dataInspectorView";
 	private _view?: vscode.WebviewView;
 	private _lastMessage: any;
 

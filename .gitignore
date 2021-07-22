@@ -4,3 +4,4 @@ node_modules
 *.vsix
 dist/*.js
 .DS_Store
+dist/web
