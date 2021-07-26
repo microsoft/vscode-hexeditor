@@ -1,5 +1,9 @@
 ## Release Notes
 
+## 1.8.1 - July 26, 2021
+- Even smaller bundle size
+- Upgrade telemetry module for transparent telemetry logging in output channel
+
 ## 1.8.0 - July 22, 2021
 - Fix bug preventing opening of large files
 - Switch from webpack -> esbuild
