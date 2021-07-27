@@ -1,5 +1,8 @@
 ## Release Notes
 
+## 1.8.2 - July 27, 2021
+- Fix web compatibility due to incorrect bundle format
+
 ## 1.8.1 - July 26, 2021
 - Even smaller bundle size
 - Upgrade telemetry module for transparent telemetry logging in output channel
