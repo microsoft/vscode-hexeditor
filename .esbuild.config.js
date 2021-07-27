@@ -19,6 +19,7 @@ esbuild.build({
   entryPoints: ['src/extension.ts'],
 	tsconfig: "./tsconfig.json",
   bundle: true,
+	format: 'cjs',
 	external: ['vscode'],
 	minify: true,
 	watch,
