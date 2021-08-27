@@ -114,7 +114,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc && node .esbuild.config.js",
+    "compile": "tsc -noEmit && node .esbuild.config.js",
     "lint": "eslint src --ext ts",
     "watch": "tsc -noEmit -watch"
   },
@@ -132,6 +132,6 @@
   },
   "dependencies": {
     "@vscode/codicons": "0.0.20",
-    "vscode-extension-telemetry": "^0.3.1"
+    "vscode-extension-telemetry": "0.3.2"
   }
 }

@@ -184,7 +184,7 @@ export class SearchHandler {
 		if (this.searchOptions.regex) {
 			try {
 				new RegExp(query);
-			} catch (err) {
+			} catch (err: any) {
 				// Split up the error message to fit in the box. In the future we might want the box to do word wrapping
 				// So that it's not a manual endeavor
 				const message = (err.message as string).substr(0, 27) + "\n" + (err.message as string).substr(27);

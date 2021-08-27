@@ -1,5 +1,4 @@
 const esbuild = require('esbuild');
-const fs = require('fs');
 
 const watch = process.argv.find(a => a === '--watch') !== undefined;
 
