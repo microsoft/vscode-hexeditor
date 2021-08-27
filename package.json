@@ -132,6 +132,6 @@
   },
   "dependencies": {
     "@vscode/codicons": "0.0.20",
-    "vscode-extension-telemetry": "^0.2.6"
+    "vscode-extension-telemetry": "^0.3.1"
   }
 }
