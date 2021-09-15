@@ -1,0 +1,27 @@
+name: $(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+    - main
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+jobs:
+- job:
+  displayName: Compile
+  steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: "14.x"
+
+  - script: npm install
+    displayName: Install dependencies
+
+  - script: npm run compile
+    displayName: Compile
+
+  - script: npm run lint
+    displayName: Run ESLint
