@@ -2,18 +2,14 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import { HexDocument, HexDocumentEdit } from "./hexDocument";
-import { disposeAll } from "./dispose";
-import { WebviewCollection } from "./webViewCollection";
-import { getNonce } from "./util";
 import TelemetryReporter from "vscode-extension-telemetry";
-import { SearchResults } from "./searchRequest";
+import { ExtensionHostMessageHandler, FromWebviewMessage, MessageHandler, MessageType, ToWebviewMessage } from "../shared/protocol";
 import { DataInspectorView } from "./dataInspectorView";
-
-interface PacketRequest {
-	initialOffset: number;
-	numElements: number;
-}
+import { disposeAll } from "./dispose";
+import { HexDocument } from "./hexDocument";
+import { SearchResults } from "./searchRequest";
+import { getNonce } from "./util";
+import { WebviewCollection } from "./webViewCollection";
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
 	public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView): vscode.Disposable {
@@ -53,15 +49,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			});
 		}));
 
-		listeners.push(document.onDidChangeContent(e => {
+		listeners.push(document.onDidChangeContent(() => {
 			// Update all webviews when the document changes
-			for (const webviewPanel of this.webviews.get(document.uri)) {
-				this.postMessage(webviewPanel, "update", {
-					fileSize: e.fileSize,
-					baseAddress: e.baseAddress,
-					type: e.type,
-					edits: e.edits
-				});
+			for (const { messaging } of this.webviews.get(document.uri)) {
+				messaging.sendEvent({ type: MessageType.Changed });
 			}
 		}));
 
@@ -114,8 +105,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken
 	): Promise<void> {
+		const messageHandler: ExtensionHostMessageHandler = new MessageHandler(
+			message => this.onMessage(document, message),
+			message => webviewPanel.webview.postMessage(message),
+		);
+
 		// Add the webview to our internal set of active webviews
-		this.webviews.add(document.uri, webviewPanel);
+		this.webviews.add(document.uri, messageHandler, webviewPanel);
 		HexEditorProvider.currentWebview = webviewPanel.webview;
 
 		// Set the hex editor activity panel to be visible
@@ -142,31 +138,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				HexEditorProvider.currentWebview = undefined;
 			}
 		});
-		webviewPanel.webview.onDidReceiveMessage(e => this.onMessage(webviewPanel, document, e));
 
-		// Wait for the webview to be properly ready before we init
-		webviewPanel.webview.onDidReceiveMessage(e => {
-			if (e.type === "ready") {
-				this.postMessage(webviewPanel, "init", {
-					fileSize: document.filesize,
-					editorFontSize: vscode.workspace.getConfiguration("editor").get("fontSize"),
-					baseAddress: document.baseAddress,
-					html: document.documentData.length === document.filesize || document.unsavedEdits.length != 0 ? this.getBodyHTML() : undefined
-				});
-			}
-		});
-
-		webviewPanel.webview.onDidReceiveMessage(async e => {
-			if (e.type == "open-anyways") {
-				await document.openAnyways();
-				this.postMessage(webviewPanel, "init", {
-					fileSize: document.filesize,
-					editorFontSize: vscode.workspace.getConfiguration("editor").get("fontSize"),
-					baseAddress: document.baseAddress,
-					html: this.getBodyHTML()
-				});
-			}
-		});
+		webviewPanel.webview.onDidReceiveMessage(e => messageHandler.handleMessage(e));
 	}
 
 	private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<HexDocument>>();
@@ -174,8 +147,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 	public saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Thenable<void> {
 		// Update all webviews that a save has just occured
-		for (const webviewPanel of this.webviews.get(document.uri)) {
-			this.postMessage(webviewPanel, "save", {});
+		for (const { messaging } of this.webviews.get(document.uri)) {
+			messaging.sendEvent({ type: MessageType.Saved });
 		}
 		return document.save(cancellation);
 	}
@@ -269,77 +242,38 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		return p;
 	}
 
-	private postMessage(panel: vscode.WebviewPanel, type: string, body: any): void {
-		panel.webview.postMessage({ type, body });
-	}
-
-	private async onMessage(panel: vscode.WebviewPanel, document: HexDocument, message: any): Promise<void> {
+	private async onMessage(document: HexDocument, message: FromWebviewMessage): Promise<undefined | ToWebviewMessage> {
 		switch (message.type) {
 			// If it's a packet request
-			case "packet":
-				const request = message.body as PacketRequest;
-				// Return the data requested and the offset it was requested for
-				const packet = Array.from(document.documentData.slice(request.initialOffset, request.initialOffset + request.numElements));
-				const edits: HexDocumentEdit[] = [];
-				document.unsavedEdits.flat().forEach((edit) => {
-					if (edit.offset >= request.initialOffset && edit.offset < request.initialOffset + request.numElements) {
-						edits.push(edit);
-						// If it wasn't in the document before we will add it to the disk contents
-						if (edit.oldValue === undefined && edit.newValue !== undefined) {
-							packet.push(edit.newValue);
-						}
-					}
-				});
-				panel.webview.postMessage({
-					type: "packet", requestId: message.requestId, body: {
-						fileSize: document.filesize,
-						baseAddress: document.baseAddress,
-						data: packet,
-						offset: request.initialOffset,
-						edits: edits
-					}
-				});
+			case MessageType.ReadyRequest:
+				return {
+					type: MessageType.ReadyResponse,
+					editorFontSize: vscode.workspace.getConfiguration("editor").get("fontSize") || 13,
+					fileSize: await document.size(),
+					isLargeFile: document.isLargeFile,
+				};
+			case MessageType.ReadRangeRequest:
+				const data = await document.readBufferWithEdits(message.offset, message.bytes);
+				return { type: MessageType.ReadRangeResponse, data };
+			case MessageType.MakeEdits:
+				document.makeEdit(message.edits);
 				return;
-			case "edit":
-				document.makeEdit(message.body);
-				// We respond with the size of the file so that the webview is always in sync with the ext host
-				panel.webview.postMessage({
-					type: "edit", requestId: message.requestId, body: {
-						fileSize: document.filesize,
-						baseAddress: document.baseAddress,
-					}
-				});
+			case MessageType.CancelSearch:
+				document.searchProvider.cancelRequest();
 				return;
-			case "search":
-				// If it's a cancellation request we notify the search provider we want to cancel
-				if (message.body.cancel) {
-					document.searchProvider.cancelRequest();
-					return;
-				}
+			case MessageType.SearchRequest:
 				let results: SearchResults;
-				if (message.body.type === "ascii") {
-					results = await document.searchProvider.createNewRequest().textSearch(message.body.query, message.body.options);
+				if (message.searchType === "ascii") {
+					results = await document.searchProvider.createNewRequest().textSearch(message.query, message.options);
 				} else {
-					results = await document.searchProvider.createNewRequest().hexSearch(message.body.query);
+					results = await document.searchProvider.createNewRequest().hexSearch(message.query);
 				}
-				if (results !== undefined) {
-					panel.webview.postMessage({
-						type: "search", requestId: message.requestId, body: {
-							results: results
-						}
-					});
-				}
+				return { type: MessageType.SearchResponse, results };
+			case MessageType.ReplaceRequest:
+				const edits = await document.replace(message.query, message.offsets, message.preserveCase);
+				return { type: MessageType.ReplaceResponse, edits };
 				return;
-			case "replace":
-				// Trigger a replacement and send the new edits to the webview
-				const replaced: HexDocumentEdit[] = document.replace(message.body.query, message.body.offsets, message.body.preserveCase);
-				panel.webview.postMessage({
-					type: "replace", requestId: message.requestId, body: {
-						edits: replaced
-					}
-				});
-				return;
-			case "dataInspector":
+			case MessageType.DataInspector:
 				// This message was meant for the data inspector view so we forward it there
 				this._dataInspectorView.handleEditorMessage(message.body);
 		}

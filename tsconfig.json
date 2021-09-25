@@ -1,13 +1,14 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
-		"target": "ES2018",
+		"target": "ES2020",
 		"lib": [
 			"ES2020",
 			"DOM",
 			"DOM.Iterable"
 		],
 		"outDir": "out",
+		"esModuleInterop": true,
 		"sourceMap": true,
 		"strict": true   /* enable all strict type-checking options */
 		/* Additional Checks */

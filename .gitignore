@@ -3,5 +3,6 @@ node_modules
 .vscode-test/
 *.vsix
 dist/*.js
+dist/*.js.map
 .DS_Store
 dist/web
