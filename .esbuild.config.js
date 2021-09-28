@@ -9,6 +9,7 @@ esbuild.build({
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	external: ['vscode'],
+	sourcemap: watch,
 	minify: !watch,
 	watch,
 	platform: 'node',
@@ -54,7 +55,7 @@ esbuild.build({
 
 // Build the webview editors
 esbuild.build({
-  entryPoints: ['media/editor/hexEdit.ts'],
+  entryPoints: ['media/editor/hexEdit.tsx'],
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	external: ['vscode'],

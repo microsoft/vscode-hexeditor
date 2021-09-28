@@ -33,15 +33,15 @@ export interface WebviewMessage<T> {
 }
 
 export interface ReadyResponseMessage {
-	type: MessageType.ReadyResponse,
+	type: MessageType.ReadyResponse;
+	initialOffset: number;
 	fileSize: number | undefined;
-	editorFontSize: number;
 	isLargeFile: boolean;
 }
 
 export interface ReadRangeResponseMessage {
 	type: MessageType.ReadRangeResponse;
-	data: Uint8Array;
+	data: ArrayBuffer;
 }
 
 export interface SearchResponseMessage {
@@ -135,7 +135,7 @@ export class MessageHandler<TTo, TFrom> {
 	private readonly pendingMessages = new Map<number, { resolve: (msg: TFrom) => void, reject: (err: Error) => void }>();
 
 	constructor(
-		private readonly messageHandler: (msg: TFrom) => Promise<TTo | undefined>,
+		public messageHandler: (msg: TFrom) => Promise<TTo | undefined>,
 		private readonly postMessage: (msg: WebviewMessage<TTo>) => void,
 	) {}
 

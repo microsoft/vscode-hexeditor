@@ -56,9 +56,7 @@ export interface HexDocumentModelOptions {
 	/** Acessor for the underlying file */
 	accessor: FileAccessor;
 	/** Initial hex document edits. */
-	edits?: HexDocumentEdit[];
-	/** File to use for reading contents, useful if restoring from a backup. */
-	readFile?: FileAccessor;
+	edits?: { unsaved: HexDocumentEdit[]; saved: HexDocumentEdit[] };
 	/** Whether the file length is allowed to be changed. */
 	supportsLengthChanges: boolean;
 	/** Whether the read file is of a finite length. */
@@ -76,17 +74,18 @@ export class HexDocumentModel {
 	public readonly supportsLengthChanges: boolean;
 	public readonly isFiniteSize: boolean;
 	private readonly accessor: FileAccessor;
-	private readAccessor?: FileAccessor;
+	/** First index in the _edits array that's unsaved */
+	private unsavedEditIndex = 0;
 	private generation = 0;
 	private _edits: HexDocumentEdit[];
 	private _editTimeline?: { sizeDelta: number, ranges: readonly Range[] };
 
 	constructor(options: HexDocumentModelOptions) {
-		this._edits = options.edits || [];
+		this._edits = options.edits ? options.edits.saved.concat(options.edits.unsaved) : [];
+		this.unsavedEditIndex = options.edits?.saved.length ?? 0;
 		this.supportsLengthChanges = options.supportsLengthChanges;
 		this.isFiniteSize = options.isFiniteSize;
 		this.accessor = options.accessor;
-		this.readAccessor = options.readFile;
 	}
 
 	/**
@@ -122,6 +121,13 @@ export class HexDocumentModel {
 	}
 
 	/**
+	 * Gets unsaved document edits.
+	 */
+	public get unsavedEdits(): readonly HexDocumentEdit[] {
+		return this._edits.slice(this.unsavedEditIndex);
+	}
+
+	/**
 	 * Gets whether there are unsaved edits on the model.
 	 */
 	public get isDirty(): boolean {
@@ -133,7 +139,7 @@ export class HexDocumentModel {
 	 * bytes that were read.
 	 */
 	public readInto(offset: number, target: Uint8Array): Promise<number>	{
-		return (this.readAccessor || this.accessor).read(offset, target);
+		return this.accessor.read(offset, target);
 	}
 
 	/**
@@ -153,25 +159,26 @@ export class HexDocumentModel {
 
 		const edits = this._edits;
 		const { ranges } = this.getEditTimeline();
-		this.readAccessor = undefined;
 		this.revert();
 
 		// for length changes, we must rewrite the entire file. Or at least from
 		// the offset of the first edit. For replacements we can selectively write.
-		if (!edits.some(e => e.op !== HexDocumentEditOp.Replace) && !this.readAccessor) {
+		if (!edits.some(e => e.op !== HexDocumentEditOp.Replace)) {
 			await this.accessor.writeBulk(edits.map(e => ({ offset: e.offset, data: (e as HexDocumentReplaceEdit).value })));
 		} else {
 			await this.accessor.writeStream(this.readUsingRanges(ranges, 0));
 		}
+
+		this.unsavedEditIndex = this._edits.length;
 	}
 
 	/**
 	 * Reverts to the contents last saved on disk, discarding edits,
 	 */
 	public revert(): void {
+		this.unsavedEditIndex = 0;
 		this._edits = [];
 		this._editTimeline = undefined;
-		this.generation++;
 	}
 
 	/**
@@ -180,14 +187,13 @@ export class HexDocumentModel {
 	 * vise versa for `redo`.
 	 */
 	public makeEdits(edits: HexDocumentEdit[]): HexDocumentEditReference {
-		let currentGen = this.generation;
 		let currentIndex = this._edits.length;
 		this._edits.push(...edits);
 		this._editTimeline = undefined;
 
 		return {
 			undo: () => {
-				if (this.generation === currentGen) {
+				if (this.unsavedEditIndex <= currentIndex) {
 					this._edits.splice(currentIndex, edits.length);
 				} else {
 					this._edits.push(...edits.map(reverseEdit));
@@ -196,7 +202,6 @@ export class HexDocumentModel {
 			},
 			redo: () => {
 				currentIndex = this._edits.length;
-				currentGen = this.generation;
 				this._edits.push(...edits);
 				this._editTimeline = undefined;
 			},
@@ -205,7 +210,7 @@ export class HexDocumentModel {
 
 	private async *readUsingRanges(ranges: readonly Range[], fromOffset: number, chunkSize = 1024): AsyncIterableIterator<Uint8Array>	{
 		const buf = new Uint8Array(chunkSize);
-		const readAccessor = this.readAccessor || this.accessor;
+		const readAccessor = this.accessor;
 		for (let i = 0; i < ranges.length; i++) {
 			const range = ranges[i];
 			if (range.op === RangeOp.Skip) {
@@ -213,11 +218,12 @@ export class HexDocumentModel {
 			}
 
 			if (range.op === RangeOp.Insert) {
-				const offset = Math.max(0, fromOffset - range.offset);
-				let toYield = range.value;
-				if (offset < range.value.length && offset > 0) {
-					toYield = range.value.subarray(offset);
+				const readLast = (range.offset + range.value.length) - fromOffset;
+				if (readLast <= 0) {
+					continue;
 				}
+
+				const toYield = readLast < range.value.length ? range.value.subarray(-readLast) : range.value;
 				if (toYield.length > 0) {
 					yield toYield;
 				}
@@ -243,7 +249,7 @@ export class HexDocumentModel {
 	 * the file is re-read whenever the generation changes.
 	 */
 	private readonly getSizeInner =
-		memoizeLast((_generation: number) => (this.readAccessor || this.accessor).getSize());
+		memoizeLast((_generation: number) => this.accessor.getSize());
 
 	/**
 	 * Gets instructions for returning file data. Returns a list of contiguous

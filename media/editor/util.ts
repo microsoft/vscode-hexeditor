@@ -116,6 +116,20 @@ export function getElementsGivenMouseEvent(event: MouseEvent): HTMLCollectionOf<
 	return getElementsWithGivenOffset(getElementsOffset(hovered));
 }
 
+const nonPrintableAsciiRange = generateCharacterRanges();
+
+/**
+ * Gets the ascii character for the byte, if it's printable.
+ * @returns
+ */
+export const getAsciiCharacter = (byte: number): string | undefined => {
+	if (withinAnyRange(byte, nonPrintableAsciiRange)) {
+		return undefined;
+	} else {
+		return String.fromCharCode(byte);
+	}
+};
+
 /**
  * @description Given a bytedata object updates the ascii element with the correct decoded text
  * @param {ByteData} byteData The object containing information about a given byte
@@ -123,13 +137,12 @@ export function getElementsGivenMouseEvent(event: MouseEvent): HTMLCollectionOf<
  */
 export function updateAsciiValue(byteData: ByteData, asciiElement: HTMLSpanElement): void {
 	asciiElement.classList.remove("nongraphic");
-	// If it's some sort of character we cannot render we just represent it as a period with the nographic class
-	if (withinAnyRange(byteData.to8bitUInt(), generateCharacterRanges())) {
+	const char = getAsciiCharacter(byteData.to8bitUInt());
+	if (!char) {
 		asciiElement.classList.add("nongraphic");
 		asciiElement.innerText = ".";
 	} else {
-		const ascii_char = String.fromCharCode(byteData.to8bitUInt());
-		asciiElement.innerText = ascii_char;
+		asciiElement.innerText = char;
 	}
 }
 

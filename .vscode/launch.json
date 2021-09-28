@@ -18,7 +18,6 @@
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"
 			],
-			"preLaunchTask": "${defaultBuildTask}"
 		},
 		{
 			"name": "Run Web Extension",

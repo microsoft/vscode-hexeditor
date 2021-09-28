@@ -14,7 +14,7 @@
   },
   "license": "MIT",
   "engines": {
-    "vscode": "^1.56.0"
+    "vscode": "^1.60.0"
   },
   "categories": [
     "Other"
@@ -136,6 +136,10 @@
   },
   "dependencies": {
     "@vscode/codicons": "0.0.20",
-    "vscode-extension-telemetry": "0.3.2"
+    "js-base64": "^3.7.2",
+    "preact": "^10.5.14",
+    "recoil": "^0.4.1",
+    "vscode-extension-telemetry": "0.3.2",
+    "vscode-webview-tools": "^0.1.1"
   }
 }

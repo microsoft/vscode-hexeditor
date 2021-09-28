@@ -4,6 +4,7 @@
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { HexDocumentEdit, HexDocumentEditOp, HexDocumentModel } from "../shared/hexDocumentModel";
+import { Backup } from "./backup";
 import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
 import { SearchProvider } from "./searchProvider";
@@ -11,37 +12,34 @@ import { SearchProvider } from "./searchProvider";
 export class HexDocument extends Disposable implements vscode.CustomDocument {
 	static async create(
 		uri: vscode.Uri,
-		openContext: vscode.CustomDocumentOpenContext,
+		{ backupId, untitledDocumentData }: vscode.CustomDocumentOpenContext,
 		telemetryReporter: TelemetryReporter,
 	): Promise<HexDocument | PromiseLike<HexDocument>> {
-		const backupId = openContext.backupId;
-		// If we have a backup, read that. Otherwise read the resource from the workspace
-		const hasBackup = typeof backupId === "string";
-		const unsavedEditURI = hasBackup ? vscode.Uri.parse(backupId + ".json") : undefined;
-		const writeFile = accessFile(uri, openContext.untitledDocumentData);
-		const fileSize = await writeFile.getSize();
+		const accessor = accessFile(uri, untitledDocumentData);
+		const model = new HexDocumentModel({
+			accessor,
+			isFiniteSize: true,
+			supportsLengthChanges: true,
+			edits: backupId
+				? { unsaved: await new Backup(vscode.Uri.parse(backupId)).read(), saved: [] }
+				: undefined,
+		});
+
 		const queries = HexDocument.parseQuery(uri.query);
 		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
+
+		const fileSize = await accessor.getSize();
 		/* __GDPR__
 			"fileOpen" : {
 				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true }
 			}
 		*/
-		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
+		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize ?? 0 });
+
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
-		const isLargeFile = fileSize > maxFileSize && !backupId;
-		const readFile = hasBackup ? accessFile(vscode.Uri.parse(backupId)) : writeFile;
-		let unsavedEdits: HexDocumentEdit[][] = [];
-		// If there's a backup the user already hit open anyways so we will open it even if above max file size
-		if (unsavedEditURI) {
-			const jsonData = await vscode.workspace.fs.readFile(unsavedEditURI);
-			unsavedEdits = JSON.parse(Buffer.from(jsonData).toString("utf-8"));
-		}
-
-		return new HexDocument(writeFile, readFile, isLargeFile, fileSize, unsavedEdits, baseAddress);
+		const isLargeFile = !backupId && ((fileSize ?? 0) > maxFileSize);
+		return new HexDocument(model, isLargeFile, baseAddress);
 	}
-
-	private _baseAddress: number;
 
 	// Last save time
 	public lastSave = Date.now();
@@ -51,12 +49,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	private constructor(
 		private model: HexDocumentModel,
 		public readonly isLargeFile: boolean,
-		fileSize: number,
-		unsavedEdits: HexDocumentEdit[][],
-		baseAddress: number
+		public readonly baseAddress: number,
 	) {
 		super();
-		this._baseAddress = baseAddress;
 		this.searchProvider = new SearchProvider(this);
 	}
 
@@ -70,7 +65,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * buffer of the requested length.
 	 */
 	public async readBufferWithEdits(offset: number, length: number): Promise<Uint8Array> {
-		const target = new Uint8Array();
+		const target = new Uint8Array(length);
 		let soFar = 0;
 		for await (const chunk of this.model.readWithEdits(offset)) {
 			const read = Math.min(chunk.length, target.length - soFar);
@@ -83,10 +78,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 		return target.subarray(0, soFar);
 	}
-
-	public get isDirty(): boolean { return this.model.isDirty; }
-
-	public get baseAddress(): number { return this._baseAddress; }
 
 	private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
 	/*
@@ -119,6 +110,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * This updates the document's dirty indicator.
 	 */
 	public readonly onDidChange = this._onDidChange.event;
+
+	/**
+	 * Gets whether there are unsaved edits.
+	 */
+	public get isUnsaved(): boolean {
+		return this.model.unsavedEdits.length > 0;
+	}
 
 	/**
 	 * Called when the user edits the document in a webview.
@@ -178,16 +176,15 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 *
 	 * These backups are used to implement hot exit.
 	 */
-	async backup(destination: vscode.Uri, cancellation: vscode.CancellationToken): Promise<vscode.CustomDocumentBackup> {
-		await this.saveAs(destination, cancellation);
-		await vscode.workspace.fs.writeFile(vscode.Uri.parse(destination.path + ".json"),
-			Buffer.from(JSON.stringify(this.model.edits), "utf-8"));
+	async backup(destination: vscode.Uri): Promise<vscode.CustomDocumentBackup> {
+		const backup = new Backup(destination);
+		await backup.write(this.model.unsavedEdits);
+
 		return {
 			id: destination.toString(),
 			delete: async (): Promise<void> => {
 				try {
 					await vscode.workspace.fs.delete(destination);
-					await vscode.workspace.fs.delete(vscode.Uri.parse(destination.path + ".json"));
 				} catch {
 					// noop
 				}

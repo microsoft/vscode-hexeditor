@@ -60,7 +60,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		listeners.push(watcher);
 		listeners.push(watcher.onDidChange(e => {
 			if (e.fsPath === uri.fsPath) {
-				if (document.isDirty) {
+				if (document.isUnsaved) {
 					const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
 					vscode.window.showWarningMessage(message, "Overwrite", "Revert").then((selected) => {
 						if (selected === "Overwrite") {
@@ -161,8 +161,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		return document.revert(cancellation);
 	}
 
-	public backupCustomDocument(document: HexDocument, context: vscode.CustomDocumentBackupContext, cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
-		return document.backup(context.destination, cancellation);
+	public backupCustomDocument(document: HexDocument, context: vscode.CustomDocumentBackupContext, _cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
+		return document.backup(context.destination);
 	}
 
 	/**
@@ -248,13 +248,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.ReadyRequest:
 				return {
 					type: MessageType.ReadyResponse,
-					editorFontSize: vscode.workspace.getConfiguration("editor").get("fontSize") || 13,
+					initialOffset: document.baseAddress,
 					fileSize: await document.size(),
 					isLargeFile: document.isLargeFile,
 				};
 			case MessageType.ReadRangeRequest:
 				const data = await document.readBufferWithEdits(message.offset, message.bytes);
-				return { type: MessageType.ReadRangeResponse, data };
+				return { type: MessageType.ReadRangeResponse, data: data.buffer };
 			case MessageType.MakeEdits:
 				document.makeEdit(message.edits);
 				return;
@@ -266,7 +266,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				if (message.searchType === "ascii") {
 					results = await document.searchProvider.createNewRequest().textSearch(message.query, message.options);
 				} else {
-					results = await document.searchProvider.createNewRequest().hexSearch(message.query);
+					results = await document.searchProvider.createNewRequest().hexSearch(message.query as any);
 				}
 				return { type: MessageType.SearchResponse, results };
 			case MessageType.ReplaceRequest:

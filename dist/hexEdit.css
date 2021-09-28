@@ -95,6 +95,7 @@ body:not(#editor-container) {
 	color: var(--vscode-editorLineNumber-activeForeground);
 	z-index: 10;
 	border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
+	text-transform: uppercase;
 }
 
 .vscode-high-contrast>.column>.header {

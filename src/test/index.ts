@@ -1,6 +1,7 @@
 import Mocha from "mocha";
 
 const fileImports = [
+	() => import("./backup.test"),
 	() => import("./hexDocumentModel.test"),
 ];
 
