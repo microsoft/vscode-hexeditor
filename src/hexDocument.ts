@@ -43,9 +43,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	private _baseAddress: number;
 
-	private _edits: HexDocumentEdit[][] = [];
-	private _unsavedEdits: HexDocumentEdit[][] = [];
-
 	// Last save time
 	public lastSave = Date.now();
 
@@ -60,7 +57,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	) {
 		super();
 		this._baseAddress = baseAddress;
-		this._unsavedEdits = unsavedEdits;
 		this.searchProvider = new SearchProvider(this);
 	}
 
@@ -88,6 +84,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		return target.subarray(0, soFar);
 	}
 
+	public get isDirty(): boolean { return this.model.isDirty; }
+
 	public get baseAddress(): number { return this._baseAddress; }
 
 	private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
@@ -102,8 +100,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		// Disposes of all the events attached to the custom document
 		super.dispose();
 	}
-
-	public get unsavedEdits(): HexDocumentEdit[][] { return this._unsavedEdits; }
 
 	private readonly _onDidChangeDocument = this._register(new vscode.EventEmitter<void>());
 
@@ -162,7 +158,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		const newFile = accessFile(targetResource);
 		await newFile.writeStream(this.model.readWithEdits());
 		this.lastSave = Date.now();
-		this._unsavedEdits = [];
 		this.model = new HexDocumentModel({
 			accessor: newFile,
 			isFiniteSize: true,
@@ -185,7 +180,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 */
 	async backup(destination: vscode.Uri, cancellation: vscode.CancellationToken): Promise<vscode.CustomDocumentBackup> {
 		await this.saveAs(destination, cancellation);
-		await vscode.workspace.fs.writeFile(vscode.Uri.parse(destination.path + ".json"), Buffer.from(JSON.stringify(this.unsavedEdits), "utf-8"));
+		await vscode.workspace.fs.writeFile(vscode.Uri.parse(destination.path + ".json"),
+			Buffer.from(JSON.stringify(this.model.edits), "utf-8"));
 		return {
 			id: destination.toString(),
 			delete: async (): Promise<void> => {

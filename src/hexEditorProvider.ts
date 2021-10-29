@@ -60,7 +60,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		listeners.push(watcher);
 		listeners.push(watcher.onDidChange(e => {
 			if (e.fsPath === uri.fsPath) {
-				if (document.unsavedEdits.length > 0) {
+				if (document.isDirty) {
 					const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
 					vscode.window.showWarningMessage(message, "Overwrite", "Revert").then((selected) => {
 						if (selected === "Overwrite") {
@@ -272,7 +272,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.ReplaceRequest:
 				const edits = await document.replace(message.query, message.offsets, message.preserveCase);
 				return { type: MessageType.ReplaceResponse, edits };
-				return;
 			case MessageType.DataInspector:
 				// This message was meant for the data inspector view so we forward it there
 				this._dataInspectorView.handleEditorMessage(message.body);

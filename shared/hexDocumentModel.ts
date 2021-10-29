@@ -129,7 +129,8 @@ export class HexDocumentModel {
 	}
 
 	/**
-	 * Reads bytes at the offset into the target array.
+	 * Reads bytes at the offset into the target array. Returns the number of
+	 * bytes that were read.
 	 */
 	public readInto(offset: number, target: Uint8Array): Promise<number>	{
 		return (this.readAccessor || this.accessor).read(offset, target);
@@ -157,7 +158,7 @@ export class HexDocumentModel {
 
 		// for length changes, we must rewrite the entire file. Or at least from
 		// the offset of the first edit. For replacements we can selectively write.
-		if (!this._edits.some(e => e.op !== HexDocumentEditOp.Replace) && !this.readAccessor) {
+		if (!edits.some(e => e.op !== HexDocumentEditOp.Replace) && !this.readAccessor) {
 			await this.accessor.writeBulk(edits.map(e => ({ offset: e.offset, data: (e as HexDocumentReplaceEdit).value })));
 		} else {
 			await this.accessor.writeStream(this.readUsingRanges(ranges, 0));
@@ -165,7 +166,7 @@ export class HexDocumentModel {
 	}
 
 	/**
-	 * Revents to the contents last saved on disk, discarding edits,
+	 * Reverts to the contents last saved on disk, discarding edits,
 	 */
 	public revert(): void {
 		this._edits = [];
@@ -174,7 +175,7 @@ export class HexDocumentModel {
 	}
 
 	/**
-	 * Applies edits to the model, reutnring the handle. Undo *must* only be
+	 * Applies edits to the model, returning the handle. Undo *must* only be
 	 * called once all subsequently made edits have also been undone, and
 	 * vise versa for `redo`.
 	 */
