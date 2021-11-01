@@ -1,7 +1,7 @@
 const esbuild = require('esbuild');
-const ImportGlobPlugin = require('esbuild-plugin-import-glob');
+const linaria = require('@linaria/esbuild');
 
-const watch = process.argv.find(a => a === '--watch') !== undefined;
+const watch = process.argv.includes('--watch');
 
 // Build the editor provider
 esbuild.build({
@@ -47,7 +47,8 @@ esbuild.build({
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	external: ['vscode'],
-	sourcemap: 'inline',
+	sourcemap: watch ? 'inline' : false,
+	minify: !watch,
 	watch,
 	platform: 'browser',
   outfile: 'dist/inspector.js',
@@ -59,8 +60,14 @@ esbuild.build({
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	external: ['vscode'],
-	sourcemap: 'inline',
+	sourcemap: watch ? 'inline' : false,
+	minify: !watch,
 	watch,
+  jsxFactory: 'h',
+  jsxFragment: 'Fragment',
 	platform: 'browser',
   outfile: 'dist/editor.js',
+	plugins: [
+		linaria.default({ sourceMap: watch }),
+	],
 }).catch(() => process.exit(1))

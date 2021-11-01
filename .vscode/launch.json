@@ -8,7 +8,6 @@
 		{
 			"name": "Run Extension",
 			"type": "extensionHost",
-			"debugWebviews": true,
 			"trace": false,
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",

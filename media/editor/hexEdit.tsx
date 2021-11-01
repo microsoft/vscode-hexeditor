@@ -3,20 +3,42 @@
 
 import { Fragment, FunctionComponent, h, render } from "preact";
 import { Suspense, useEffect } from "preact/compat";
-import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
+import { RecoilRoot, useRecoilState, useRecoilValue } from "recoil";
 import { FromWebviewMessage, MessageHandler, ToWebviewMessage, WebviewMessageHandler } from "../../shared/protocol";
 import { useTheme } from "./hooks";
+import { ScrollContainer } from "./scrollContainer";
 import * as select from "./state";
-import { DataDisplay } from "./virtualDocument";
+import { DataHeader } from "./virtualDocument";
+import { styled } from "@linaria/react";
+
+const Container = styled.div`
+	display: flex;
+	flex-direction: column;
+	width: 100vw;
+	height: 100vh;
+
+	:global() {
+		body {
+			margin: 0;
+			padding: 0;
+		}
+
+		html {
+			padding: 0;
+			overflow: hidden;
+		}
+	}
+`;
 
 const Root: FunctionComponent = () => {
-	const setWindowSize = useSetRecoilState(select.dimensions);
+	const [dimensions, setDimensions] = useRecoilState(select.dimensions);
 	const theme = useTheme();
 	useEffect(() => {
-		const listener = () => setWindowSize({
+		const listener = () => setDimensions({
 			width: window.innerWidth,
 			height: window.innerHeight,
-			rowHeight: parseInt(theme["font-size"]) + 4
+			rowPxHeight: parseInt(theme["font-size"]) + 8,
+			rowByteWidth: 16
 		});
 
 		window.addEventListener("resize", listener);
@@ -33,19 +55,10 @@ const Root: FunctionComponent = () => {
 		</div>;
 	}
 
-	return <>
-		<div className="column left">
-			<div className="header" aria-hidden>00000000</div>
-			<div className="rowwrapper" id="hexaddr" />
-		</div>
-		<div id="editor-container">
-			<DataDisplay />
-			<div id="scrollbar">
-				<div role="scrollbar" id="scroll-thumb">
-				</div>
-			</div>
-		</div>
-	</>;
+	return <Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` }}>
+		<DataHeader width={dimensions.rowByteWidth} />
+		<ScrollContainer />
+	</Container>;
 };
 
 
