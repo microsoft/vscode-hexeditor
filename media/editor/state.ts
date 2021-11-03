@@ -4,6 +4,7 @@
 
 import { atom, selector, selectorFamily } from "recoil";
 import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, ToWebviewMessage } from "../../shared/protocol";
+import { Range } from "./util";
 
 declare function acquireVsCodeApi(): ({ postMessage(msg: unknown): void });
 
@@ -68,11 +69,29 @@ export const dataPageSize = atom({
 	default: 1024
 });
 
+/** Bytes the user has selected */
+export const selectedRange = atom<Range | undefined>({
+	key: "selectedRange",
+	default: undefined
+});
+
+/** Whether the user is currently dragging to select content */
+export const isSelecting = atom({
+	key: "isSelecting",
+	default: false
+});
+
+/** The current byte that has focus and can be manipulated by keyboard shortcuts. */
+export const focusedByte = atom<number | undefined>({
+	key: "focusedByte",
+	default: undefined
+});
+
 /**
  * First and last byte that can be currently scrolled to. May expand with
  * infinite scrolling.
  */
-export const scrollBounds = atom<{from: number; to: number;}>({
+export const scrollBounds = atom<Range>({
 	key: "scrollBounds",
 	default: selector({
 		key: "initialScrollBounds",
@@ -81,10 +100,10 @@ export const scrollBounds = atom<{from: number; to: number;}>({
 			const { fileSize } = get(readyQuery);
 			const offset = get(initialOffset);
 			const windowSize = getDisplayedBytes(d);
-			return {
-				from: Math.max(0, offset - windowSize),
-				to: Math.min(offset + windowSize * 2, fileSize ?? Infinity),
-			};
+			return new Range(
+				Math.max(0, offset - windowSize),
+				Math.min(offset + windowSize * 2, fileSize ?? Infinity),
+			);
 		},
 	}),
 });

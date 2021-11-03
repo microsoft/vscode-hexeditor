@@ -2,12 +2,11 @@
 // Licensed under the MIT license
 
 import { styled } from "@linaria/react";
-import { ComponentChild, Fragment, FunctionComponent, h } from "preact";
-import { Suspense } from "preact/compat";
-import { useRecoilValue } from "recoil";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { ByteData } from "./byteData";
 import * as select from "./state";
-import { getAsciiCharacter } from "./util";
+import { clsx, getAsciiCharacter, Range } from "./util";
 import { css } from "@linaria/core";
 
 export interface VirtualizedPacket {
@@ -25,7 +24,7 @@ const Address = styled.div`
 	color: var(--vscode-editorLineNumber-foreground);
 `;
 
-const DataCell = styled.div`
+const DataCellSimple = styled.div`
 	font-family: var(--vscode-editor-font-family);
 	width: var(--cell-size);
 	height: var(--cell-size);
@@ -37,22 +36,42 @@ const DataCell = styled.div`
 const DataCellGroup = styled.div`
 	padding: 0 calc(var(--cell-size) / 4);
 	display: inline-block;
+	cursor: default;
+	user-select: none;
 `;
 
-const DataCellChar = styled(DataCell)``;
-const DataCellNonGraphicChar = styled(DataCellChar)`
+const nonGraphicCharCls = css`
 	opacity: 0.3;
 `;
 
-const Byte: FunctionComponent<{ value: number }> = ({ value }) => (
-	<DataCell>{value.toString(16).padStart(2, "0")}</DataCell>
-);
-
-const dataDisplayCls = css`
-	padding: 0 20px;
+const dataCellHoveredCls = css`
+	background: var(--vscode-editor-hoverHighlightBackground);
 `;
 
-export const DataHeader: FunctionComponent<{ width: number }> = ({ width }) => (
+const dataCellSelectedCls = css`
+	background: var(--vscode-editor-selectionBackground);
+	color: var(--vscode-editor-selectionForeground);
+`;
+
+const dataCellFocusedCls = css`
+	outline-offset: 1px;
+	outline: var(--vscode-focusBorder) 2px solid;
+`;
+
+const Byte: React.FC<{ value: number }> = ({ value }) => (
+	<DataCellSimple>{value.toString(16).padStart(2, "0")}</DataCellSimple>
+);
+
+// why 'sticky' here? Well ultimately we want the rows to be fixed inside the
+// div but allow scrolling. "fixed" blocks scrolling when the mouse is over
+// the element, but sticky doesn't.
+const dataDisplayCls = css`
+	position: sticky;
+	inset: 0;
+	height: 0px;
+`;
+
+export const DataHeader: React.FC<{ width: number }> = ({ width }) => (
 <Header>
 	<DataCellGroup style={{ visibility: "hidden" }}  aria-hidden="true">
 		<Address>00000000</Address>
@@ -66,20 +85,33 @@ export const DataHeader: FunctionComponent<{ width: number }> = ({ width }) => (
 </Header>
 );
 
-export const DataDisplay: FunctionComponent = () => {
-	const startByte = useRecoilValue(select.offset);
-	const scrollBounds = useRecoilValue(select.scrollBounds);
-	const { rowByteWidth: rowCellWidth, rowPxHeight, height } = useRecoilValue(select.dimensions);
-	const endByte = Math.ceil(height / rowPxHeight) * rowCellWidth;
-
-	const children: ComponentChild[] = [];
-	for (let i = startByte; i <= endByte; i += rowCellWidth) {
-		children.push(<DataRow key={i} offset={i} top={(i - scrollBounds.from) / rowCellWidth * rowPxHeight} width={rowCellWidth} />);
+export const DataDisplay: React.FC = () => {
+	const offset = useRecoilValue(select.offset);
+	const dimensions = useRecoilValue(select.dimensions);
+	const setIsSelecting = useSetRecoilState(select.isSelecting);
+	const endBytes = offset + select.getDisplayedBytes(dimensions);
+	const rows: React.ReactChild[] = [];
+	let row = 0;
+	for (let i = offset; i < endBytes; i += dimensions.rowByteWidth) {
+		rows.push(
+			<DataRow
+				key={i}
+				offset={i}
+				top={row * dimensions.rowPxHeight}
+				width={dimensions.rowByteWidth}
+			/>,
+		);
+		row++;
 	}
 
-	return <div className={dataDisplayCls}>{children}</div>;
-};
+	useEffect(() => {
+		const l = () => setIsSelecting(false);
+		window.addEventListener("mouseup", l, { passive: true });
+		return () => window.removeEventListener("mouseup", l);
+	}, []);
 
+	return <div className={dataDisplayCls}>{rows}</div>;
+};
 
 const dataRowCls = css`
 	position: absolute;
@@ -88,7 +120,7 @@ const dataRowCls = css`
 	right: 0;
 `;
 
-const DataRow: FunctionComponent<{ top: number; offset: number; width: number }> = ({ top, offset, width }) => (
+const DataRow: React.FC<{ top: number; offset: number; width: number }> = ({ top, offset, width }) => (
 	<div className={dataRowCls} style={{ transform: `translateY(${top}px)` }}>
 		<DataCellGroup>
 			<Address>{offset.toString(16).padStart(8, "0")}</Address>
@@ -99,8 +131,51 @@ const DataRow: FunctionComponent<{ top: number; offset: number; width: number }>
 	</div>
 );
 
-const DataRowContents: FunctionComponent<{ offset: number; width: number }> = ({ offset, width }) => {
+const DataCell: React.FC<{
+	byte: number;
+	value: string;
+	className?: string;
+	isHovered: boolean;
+	onMouseEnter(byte: number): void;
+	onMouseLeave(byte: number): void;
+}> = ({ byte, value, className, isHovered, onMouseEnter, onMouseLeave }) => {
+	const isMouseDown = useRef(false);
+	const [isSelecting, setIsSelecting] = useRecoilState(select.isSelecting);
+	const [focusedByte, setFocusedByte] = useRecoilState(select.focusedByte);
+	const [selectedRange, setSelectedRange] = useRecoilState(select.selectedRange);
+
+	return (
+		<DataCellSimple
+			className={clsx(
+				className,
+				isHovered && dataCellHoveredCls,
+				focusedByte === byte && dataCellFocusedCls,
+				selectedRange?.includes(byte) && dataCellSelectedCls,
+			)}
+			onMouseDown={() => isMouseDown.current = true}
+			onMouseUp={() => isMouseDown.current = false}
+			onMouseEnter={() => {
+				if (isSelecting && selectedRange) {
+					setFocusedByte(byte);
+					setSelectedRange(selectedRange.expandToContain(byte));
+				}
+				onMouseEnter(byte);
+			}}
+			onMouseLeave={e => {
+				if (e.buttons === 1) {
+					setSelectedRange(new Range(byte, byte + 1));
+					setIsSelecting(true);
+				}
+				onMouseLeave(byte);
+			}}
+		>{value}</DataCellSimple>
+	);
+};
+
+const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, width }) => {
 	const dataPageSize = useRecoilValue(select.dataPageSize);
+	const [hoveredByte, setHoveredByte] = useState<number>();
+	const unsetHoveredByte = useCallback(() => setHoveredByte(undefined), []);
 
 	const startPageNo = Math.floor(offset / dataPageSize);
 	const startPageStartsAt = startPageNo * dataPageSize;
@@ -110,22 +185,33 @@ const DataRowContents: FunctionComponent<{ offset: number; width: number }> = ({
 	const startPage = useRecoilValue(select.dataPages(startPageNo));
 	const endPage = useRecoilValue(select.dataPages(endPageNo));
 
-	const bytes: ComponentChild[] = [];
-	const chars: ComponentChild[] = [];
+	const bytes: React.ReactChild[] = [];
+	const chars: React.ReactChild[] = [];
 	for (let i = 0; i < width; i++) {
 		const boffset = offset + i;
-		const byte = offset >= endPageStartsAt
+		const value = offset >= endPageStartsAt
 			? endPage[boffset - endPageStartsAt]
 			: startPage[boffset - startPageStartsAt];
 
-		bytes.push(<Byte key={i} value={byte} />);
+		bytes.push(<DataCell
+			key={i}
+			byte={boffset}
+			value={value.toString(16).padStart(2, "0")}
+			isHovered={hoveredByte === boffset}
+			onMouseEnter={setHoveredByte}
+			onMouseLeave={unsetHoveredByte}
+		/>);
 
-		const char = getAsciiCharacter(byte);
-		if (char) {
-			chars.push(<DataCellChar key={i}>{char}</DataCellChar>);
-		} else {
-			chars.push(<DataCellNonGraphicChar key={i}>.</DataCellNonGraphicChar>);
-		}
+		const char = getAsciiCharacter(value);
+		chars.push(<DataCell
+			key={i}
+			byte={boffset}
+			className={char === undefined ? nonGraphicCharCls : undefined}
+			value={char === undefined ? "." : char}
+			isHovered={hoveredByte === boffset}
+			onMouseEnter={setHoveredByte}
+			onMouseLeave={unsetHoveredByte}
+		/>);
 	}
 
 	return (

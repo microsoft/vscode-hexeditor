@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { Fragment, FunctionComponent, h, render } from "preact";
-import { Suspense, useEffect } from "preact/compat";
+import React, { useEffect, Suspense } from "react";
+import { render } from "react-dom";
 import { RecoilRoot, useRecoilState, useRecoilValue } from "recoil";
 import { FromWebviewMessage, MessageHandler, ToWebviewMessage, WebviewMessageHandler } from "../../shared/protocol";
 import { useTheme } from "./hooks";
@@ -30,7 +30,7 @@ const Container = styled.div`
 	}
 `;
 
-const Root: FunctionComponent = () => {
+const Root: React.FC = () => {
 	const [dimensions, setDimensions] = useRecoilState(select.dimensions);
 	const theme = useTheme();
 	useEffect(() => {
@@ -55,7 +55,7 @@ const Root: FunctionComponent = () => {
 		</div>;
 	}
 
-	return <Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` }}>
+	return <Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
 		<DataHeader width={dimensions.rowByteWidth} />
 		<ScrollContainer />
 	</Container>;

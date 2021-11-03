@@ -1,39 +1,55 @@
 import { css } from "@linaria/core";
-import { Fragment, FunctionComponent, h } from "preact";
-import { useEffect, useState } from "preact/hooks";
+import React , { useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import * as select from "./state";
+import { Range } from "./util";
 import { DataDisplay } from "./virtualDocument";
 
 const wrapperCls = css`
 	overflow: scroll;
 	flex-grow: 1;
 	position: relative;
-	will-change: transform;
 `;
 
 const heightCls = css``;
 
+const loadThreshold = 0.5;
 
-export const ScrollContainer: FunctionComponent = () => {
+const getBoundScrollHeight = (bounds: Range, dimension: select.IDimensions) =>
+	Math.ceil(bounds.size / dimension.rowByteWidth) * dimension.rowPxHeight;
+
+export const ScrollContainer: React.FC = () => {
 	const dimension = useRecoilValue(select.dimensions);
-	const bounds = useRecoilValue(select.scrollBounds);
+	const ready = useRecoilValue(select.readyQuery);
+	const previousBounds = useRef<Range>();
+	const [bounds, setBounds] = useRecoilState(select.scrollBounds);
 	const [container, setContainer] = useState<HTMLDivElement | null>(null);
 	const [offset, setOffset] = useRecoilState(select.offset);
 
-	// update the scrollable height when bounds changes
-	useEffect(() => {
-		if (container) {
-			const heightEl = container.querySelector(`.${heightCls}`) as HTMLDivElement;
-			const boundRows = Math.ceil((bounds.to - bounds.from) / dimension.rowByteWidth);
-			heightEl.style.height = `${boundRows * dimension.rowPxHeight}px`;
+	const recalculateHeight = () => {
+		if (!container) {
+			return;
 		}
-	}, [container, bounds, dimension]);
+
+		const newHeight = getBoundScrollHeight(bounds, dimension);
+		const heightEl = container.querySelector(`.${heightCls}`) as HTMLDivElement;
+		heightEl.style.height = `${newHeight}px`;
+
+		// If data was added at the top, adjust scrolling so it stays in the same place
+		if (previousBounds.current && previousBounds.current.start !== bounds.start) {
+			heightEl.scrollTop += newHeight - getBoundScrollHeight(previousBounds.current!, dimension);
+		}
+
+		previousBounds.current = bounds;
+	};
+
+	// update the scrollable height when bounds changes
+	useEffect(recalculateHeight, [container, bounds, dimension]);
 
 	// initially, or on byte width change, adjust the scroll position.
 	useEffect(() => {
 		if (container) {
-			container.scrollTop = (offset - bounds.from) / dimension.rowByteWidth * dimension.rowPxHeight;
+			container.scrollTop = (offset - bounds.start) / dimension.rowByteWidth * dimension.rowPxHeight;
 		}
 	}, [container, dimension]);
 
@@ -43,13 +59,30 @@ export const ScrollContainer: FunctionComponent = () => {
 			return;
 		}
 
-		const l = () => setOffset(bounds.from + Math.floor(container.scrollTop / dimension.rowPxHeight) * dimension.rowByteWidth);
+		const l = () => {
+			const newOffset = bounds.start + Math.floor(container.scrollTop / dimension.rowPxHeight) * dimension.rowByteWidth;
+			setOffset(newOffset);
+			const windowSize = select.getDisplayedBytes(dimension);
+
+			setBounds(bounds => {
+				if (newOffset - bounds.start < windowSize * loadThreshold && bounds.start > 0) {
+					return new Range( Math.max(0, bounds.start - windowSize), bounds.end);
+				} else if (bounds.start - newOffset < windowSize * (1 + loadThreshold)) {
+					return new Range(bounds.start, Math.min(ready.fileSize || Infinity, bounds.end + windowSize));
+				} else {
+					return bounds;
+				}
+			});
+		};
+
 		container.addEventListener("scroll", l, { passive: true });
 		return () => container.removeEventListener("scroll", l);
-	}, [container]);
+	}, [container, dimension]);
 
-	return <div className={wrapperCls} ref={setContainer}>
-		<div className={heightCls} />
-		<DataDisplay />
-	</div>;
+	return (
+		<div className={wrapperCls} ref={setContainer}>
+			<DataDisplay />
+			<div className={heightCls} />
+		</div>
+	);
 };

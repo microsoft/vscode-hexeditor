@@ -63,8 +63,6 @@ esbuild.build({
 	sourcemap: watch ? 'inline' : false,
 	minify: !watch,
 	watch,
-  jsxFactory: 'h',
-  jsxFragment: 'Fragment',
 	platform: 'browser',
   outfile: 'dist/editor.js',
 	plugins: [

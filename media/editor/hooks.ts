@@ -2,7 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useState } from "react";
 import { ColorMap, observeColors, parseColors } from "vscode-webview-tools";
 
 export const useTheme = (): ColorMap => {

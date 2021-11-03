@@ -8,6 +8,20 @@ import { ByteData } from "./byteData";
 export const isMac = navigator.userAgent.indexOf("Mac OS X") >= 0;
 
 /**
+ * Returns truthy classes passed in as parameters joined into a class string.
+ */
+export const clsx = (...classes: (string | false | undefined | null)[]): string | undefined => {
+	let out: undefined | string;
+	for (const cls of classes) {
+		if (cls) {
+			out = out ? `${out} ${cls}` : cls;
+		}
+	}
+
+	return out;
+};
+
+/**
  * @description Class which represents a range of numbers
  */
 export class Range {
@@ -15,11 +29,22 @@ export class Range {
 	public readonly end: number;
 
 	/**
-	 * @description Constructs a range object representing [start, end] inclusive of both
+	 * Gets the number of integers in the range [start, end)
+	 */
+	public get size(): number {
+		return this.end - this.start;
+	}
+
+	/**
+	 * @description Constructs a range object representing [start, end)
 	 * @param {number} start Represents the start of the range
 	 * @param {number} end Represents the end of the range
 	 */
 	constructor(start: number, end: number = Number.MAX_SAFE_INTEGER) {
+		if (start < 0) {
+			throw new Error("Cannot construct a range with a negative start");
+		}
+
 		if (start > end) {
 			this.start = end;
 			this.end = start;
@@ -31,13 +56,27 @@ export class Range {
 	/**
 	 * @desciption Tests if the given number if within the range
 	 * @param {number} num The number to test
-	 * @returns {boolean } True if the number is in the range, false otherwise
+	 * @returns {boolean} True if the number is in the range, false otherwise
 	 */
-	between(num: number): boolean {
+	public includes(num: number): boolean {
 		if (this.end) {
-			return num >= this.start && num <= this.end;
+			return num >= this.start && num < this.end;
 		} else {
 			return num >= this.start;
+		}
+	}
+
+	/**
+	 * Expands the range to include the given value, if it is not already
+	 * within the range.
+	 */
+	public expandToContain(value: number): Range {
+		if (value < this.start) {
+			return new Range(value, this.end);
+		} else if (value >= this.end) {
+			return new Range(this.start, value + 1);
+		} else {
+			return this;
 		}
 	}
 }
@@ -50,7 +89,7 @@ export class Range {
  */
 export function withinAnyRange(num: number, ranges: Range[]): boolean {
 	for (const range of ranges) {
-		if (range.between(num)) {
+		if (range.includes(num)) {
 			return true;
 		}
 	}
@@ -63,9 +102,9 @@ export function withinAnyRange(num: number, ranges: Range[]): boolean {
  */
 export function generateCharacterRanges(): Range[] {
 	const ranges: Range[] = [];
-	ranges.push(new Range(0, 31));
-	ranges.push(new Range(127, 160));
-	ranges.push(new Range(173, 173));
+	ranges.push(new Range(0, 32));
+	ranges.push(new Range(127, 161));
+	ranges.push(new Range(173, 174));
 	ranges.push(new Range(256));
 	return ranges;
 }
