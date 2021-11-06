@@ -69,10 +69,33 @@ export const dataPageSize = atom({
 	default: 1024
 });
 
-/** Bytes the user has selected */
-export const selectedRange = atom<Range | undefined>({
+/**
+ * Bytes the user has selected, as a list of ranges. Each range "switches"
+ * the state of included bytes. For instance, if X is included `[r1]`, it's
+ * selected. If X is included in both `[r1, r2]`, it's not selected.
+ */
+export const selection = atom<Range[]>({
 	key: "selectedRange",
-	default: undefined
+	default: []
+});
+
+export const isByteSelected = selectorFamily({
+	key: "isByteSelected",
+	get: (byte: number) => ({ get }) => {
+		let selected = false;
+		for (const range of get(selection)) {
+			if (range.includes(byte)) {
+				selected = !selected;
+			}
+		}
+
+		return selected;
+	}
+});
+
+export const isByteFocused = selectorFamily({
+	key: "isByteFocused",
+	get: (byte: number) => ({ get }) => get(focusedByte) === byte,
 });
 
 /** Whether the user is currently dragging to select content */

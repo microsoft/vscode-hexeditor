@@ -21,13 +21,21 @@ export const clsx = (...classes: (string | false | undefined | null)[]): string 
 	return out;
 };
 
+/** Direction for the {@link Range} */
+export const enum RangeDirection {
+	/** When the range was constructed, end >= start */
+	Ascending,
+	/** When the range was constructed, start > end */
+	Descending,
+}
+
 /**
- * @description Class which represents a range of numbers
+ * @description Class which represents a range of numbers. Ranges represent
+ * a number range [start, end). They may be directional, as indicated by
+ * the order of arguments in the constructor and reflected in the {@link direction}.
  */
 export class Range {
-	public readonly start: number;
-	public readonly end: number;
-
+	public readonly direction: RangeDirection;
 	/**
 	 * Gets the number of integers in the range [start, end)
 	 */
@@ -37,21 +45,28 @@ export class Range {
 
 	/**
 	 * @description Constructs a range object representing [start, end)
-	 * @param {number} start Represents the start of the range
-	 * @param {number} end Represents the end of the range
+	 * @param start Represents the start of the range
+	 * @param end Represents the end of the range
+	 * @param direction The direction of the range, inferred from
+	 * argument order if not provided.
 	 */
-	constructor(start: number, end: number = Number.MAX_SAFE_INTEGER) {
+	constructor(
+		public readonly start: number,
+		public readonly end: number = Number.MAX_SAFE_INTEGER,
+		direction?: RangeDirection,
+	) {
 		if (start < 0) {
 			throw new Error("Cannot construct a range with a negative start");
 		}
 
-		if (start > end) {
-			this.start = end;
-			this.end = start;
+		if (end < start) {
+			[this.start, this.end] = [end, start];
+			direction ??= RangeDirection.Descending;
 		} else {
-			this.start = start;
-			this.end = end;
+			direction ??= RangeDirection.Ascending;
 		}
+
+		this.direction = direction;
 	}
 	/**
 	 * @desciption Tests if the given number if within the range
@@ -59,11 +74,7 @@ export class Range {
 	 * @returns {boolean} True if the number is in the range, false otherwise
 	 */
 	public includes(num: number): boolean {
-		if (this.end) {
-			return num >= this.start && num < this.end;
-		} else {
-			return num >= this.start;
-		}
+		return num >= this.start && num < this.end;
 	}
 
 	/**
@@ -72,9 +83,9 @@ export class Range {
 	 */
 	public expandToContain(value: number): Range {
 		if (value < this.start) {
-			return new Range(value, this.end);
+			return new Range(value, this.end, this.direction);
 		} else if (value >= this.end) {
-			return new Range(this.start, value + 1);
+			return new Range(this.start, value + 1, this.direction);
 		} else {
 			return this;
 		}

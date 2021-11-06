@@ -1,5 +1,5 @@
 import { css } from "@linaria/core";
-import React , { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import * as select from "./state";
 import { Range } from "./util";
@@ -66,8 +66,8 @@ export const ScrollContainer: React.FC = () => {
 
 			setBounds(bounds => {
 				if (newOffset - bounds.start < windowSize * loadThreshold && bounds.start > 0) {
-					return new Range( Math.max(0, bounds.start - windowSize), bounds.end);
-				} else if (bounds.start - newOffset < windowSize * (1 + loadThreshold)) {
+					return new Range(Math.max(0, bounds.start - windowSize), bounds.end);
+				} else if (bounds.end - newOffset < windowSize * (1 + loadThreshold)) {
 					return new Range(bounds.start, Math.min(ready.fileSize || Infinity, bounds.end + windowSize));
 				} else {
 					return bounds;

@@ -1,13 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license
 
+import { css } from "@linaria/core";
 import { styled } from "@linaria/react";
-import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
+import React, { Suspense, useCallback, useEffect, useState } from "react";
+import { useRecoilTransaction_UNSTABLE, useRecoilValue, useSetRecoilState } from "recoil";
 import { ByteData } from "./byteData";
 import * as select from "./state";
-import { clsx, getAsciiCharacter, Range } from "./util";
-import { css } from "@linaria/core";
+import { clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
 export interface VirtualizedPacket {
 	offset: number;
@@ -139,33 +139,62 @@ const DataCell: React.FC<{
 	onMouseEnter(byte: number): void;
 	onMouseLeave(byte: number): void;
 }> = ({ byte, value, className, isHovered, onMouseEnter, onMouseLeave }) => {
-	const isMouseDown = useRef(false);
-	const [isSelecting, setIsSelecting] = useRecoilState(select.isSelecting);
-	const [focusedByte, setFocusedByte] = useRecoilState(select.focusedByte);
-	const [selectedRange, setSelectedRange] = useRecoilState(select.selectedRange);
+	const onMouseEnterTxn = useRecoilTransaction_UNSTABLE(({ get, set }) => (byte: number) => {
+		const selection = get(select.selection);
+		const isSelecting = get(select.isSelecting);
+		if (isSelecting && selection.length) {
+			set(select.focusedByte, byte);
+			const newRange = selection[0].direction === RangeDirection.Ascending
+				? new Range(selection[0].start, byte + 1)
+				: new Range(selection[0].end, byte);
+			set(select.selection, selection.length > 1 ? [newRange, ...selection.slice(1)] : [newRange]);
+		}
+	});
+
+	const onMouseLeaveTxn = useRecoilTransaction_UNSTABLE(({ get, set }) => (byte: number, e: React.MouseEvent) => {
+		if ((e.buttons & 1) && !get(select.isSelecting)) {
+			set(select.selection, [new Range(byte, byte + 1)]);
+			set(select.isSelecting, true);
+		}
+	});
+
+	const onMouseUpTxn = useRecoilTransaction_UNSTABLE(({ get, set }) => (byte: number, e: React.MouseEvent) => {
+		const prevFocused = get(select.focusedByte) || 0;
+		set(select.focusedByte, byte);
+
+		if (get(select.isSelecting)) {
+			set(select.isSelecting, false);
+		} else if (e.shiftKey) {
+			// on a shift key, the user is expanding the selection (or deselection)
+			// of an existing byte. We *don't* include that byte since we don't want
+			// to swap the byte.
+			const asc = prevFocused < byte;
+			const end = asc ? byte + 1 : byte;
+			set(select.selection, e.ctrlKey
+				? [new Range(asc ? prevFocused + 1 : prevFocused, end), ...get(select.selection)]
+				: [new Range(asc ? prevFocused : prevFocused + 1, end)]);
+		} else if (e.ctrlKey) {
+			set(select.selection, [new Range(byte, byte + 1), ...get(select.selection)]);
+		} else {
+			set(select.selection, [new Range(byte, byte + 1)]);
+		}
+	});
 
 	return (
 		<DataCellSimple
 			className={clsx(
 				className,
 				isHovered && dataCellHoveredCls,
-				focusedByte === byte && dataCellFocusedCls,
-				selectedRange?.includes(byte) && dataCellSelectedCls,
+				useRecoilValue(select.isByteFocused(byte)) && dataCellFocusedCls,
+				useRecoilValue(select.isByteSelected(byte)) && dataCellSelectedCls,
 			)}
-			onMouseDown={() => isMouseDown.current = true}
-			onMouseUp={() => isMouseDown.current = false}
 			onMouseEnter={() => {
-				if (isSelecting && selectedRange) {
-					setFocusedByte(byte);
-					setSelectedRange(selectedRange.expandToContain(byte));
-				}
+				onMouseEnterTxn(byte);
 				onMouseEnter(byte);
 			}}
+			onMouseUp={e => onMouseUpTxn(byte, e)}
 			onMouseLeave={e => {
-				if (e.buttons === 1) {
-					setSelectedRange(new Range(byte, byte + 1));
-					setIsSelecting(true);
-				}
+				onMouseLeaveTxn(byte, e);
 				onMouseLeave(byte);
 			}}
 		>{value}</DataCellSimple>
