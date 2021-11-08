@@ -3,10 +3,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import * as select from "./state";
 import { Range } from "./util";
-import { DataDisplay } from "./virtualDocument";
+import { DataDisplay } from "./dataDisplay";
 
 const wrapperCls = css`
-	overflow: scroll;
+	overflow-y: scroll;
+	overflow-x: hidden;
 	flex-grow: 1;
 	position: relative;
 `;
@@ -16,11 +17,11 @@ const heightCls = css``;
 const loadThreshold = 0.5;
 
 const getBoundScrollHeight = (bounds: Range, dimension: select.IDimensions) =>
-	Math.ceil(bounds.size / dimension.rowByteWidth) * dimension.rowPxHeight;
+	Math.ceil(bounds.size / dimension.rowByteWidth) * dimension.rowPxHeight + dimension.height / 2;
 
 export const ScrollContainer: React.FC = () => {
 	const dimension = useRecoilValue(select.dimensions);
-	const ready = useRecoilValue(select.readyQuery);
+	const fileSize = useRecoilValue(select.fileSize);
 	const previousBounds = useRef<Range>();
 	const [bounds, setBounds] = useRecoilState(select.scrollBounds);
 	const [container, setContainer] = useState<HTMLDivElement | null>(null);
@@ -68,7 +69,7 @@ export const ScrollContainer: React.FC = () => {
 				if (newOffset - bounds.start < windowSize * loadThreshold && bounds.start > 0) {
 					return new Range(Math.max(0, bounds.start - windowSize), bounds.end);
 				} else if (bounds.end - newOffset < windowSize * (1 + loadThreshold)) {
-					return new Range(bounds.start, Math.min(ready.fileSize || Infinity, bounds.end + windowSize));
+					return new Range(bounds.start, Math.min(fileSize ?? Infinity, bounds.end + windowSize));
 				} else {
 					return bounds;
 				}

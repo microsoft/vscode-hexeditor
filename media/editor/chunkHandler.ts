@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import { virtualHexDocument, messageHandler } from "./hexEdit";
-import { VirtualizedPacket } from "./virtualDocument";
+import { VirtualizedPacket } from "./dataDisplay";
 import { ByteData } from "./byteData";
 import { EditMessage } from "./editHandler";
 

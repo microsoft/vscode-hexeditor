@@ -23,3 +23,10 @@ export async function openOffsetInput(): Promise<string | undefined> {
 		}
 	});
 }
+
+/**
+ * Gets the ArrayBuffer for a uint8array sized correctly for the array. TypedArrays
+ * are allowed to point at subsets of the underlying ArrayBuffers.
+ */
+export const getCorrectArrayBuffer = (u8: Uint8Array): ArrayBuffer =>
+	u8.byteLength === u8.buffer.byteLength ? u8.buffer : u8.buffer.slice(0, u8.byteLength);

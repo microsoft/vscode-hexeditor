@@ -25,6 +25,11 @@ export const readyQuery = selector({
 	get: () => messageHandler.sendRequest<ReadyResponseMessage>({ type: MessageType.ReadyRequest }),
 });
 
+export const fileSize = selector({
+	key: "fileSize",
+	get: ({ get }) => get(readyQuery).fileSize,
+});
+
 const initialOffset = selector({
 	key: "initialOffset",
 	get: ({ get }) => get(readyQuery).initialOffset,
@@ -55,7 +60,7 @@ export const dimensions = atom<IDimensions>({
 
 /** Gets the number of bytes visible in the window. */
 export const getDisplayedBytes = (d: IDimensions): number =>
-	d.rowByteWidth * Math.ceil(d.height / d.rowPxHeight);
+	d.rowByteWidth * (Math.ceil(d.height / d.rowPxHeight) - 1);
 
 /** Currently displayed byte offset */
 export const offset = atom({
@@ -93,9 +98,28 @@ export const isByteSelected = selectorFamily({
 	}
 });
 
+export class FocusedByte {
+	public static readonly zero = new FocusedByte(false, 0);
+
+	constructor(
+		/** If true, the character rather than data is focused */
+		public readonly char: boolean,
+		/** Focused byte index */
+		public readonly byte: number,
+	) {}
+
+	public toJSON(): any {
+		return `${this.char}:${this.byte}`;
+	}
+
+	public equals(other: FocusedByte | undefined): boolean {
+		return !!other && other.char === this.char && other.byte === this.byte;
+	}
+}
+
 export const isByteFocused = selectorFamily({
 	key: "isByteFocused",
-	get: (byte: number) => ({ get }) => get(focusedByte) === byte,
+	get: (target: FocusedByte) => ({ get }) => target.equals(get(focusedByte)),
 });
 
 /** Whether the user is currently dragging to select content */
@@ -105,9 +129,21 @@ export const isSelecting = atom({
 });
 
 /** The current byte that has focus and can be manipulated by keyboard shortcuts. */
-export const focusedByte = atom<number | undefined>({
+export const focusedByte = atom<FocusedByte | undefined>({
 	key: "focusedByte",
-	default: undefined
+	default: undefined,
+
+	effects_UNSTABLE: [
+		fx => {
+			fx.onSet(focused => {
+				if (!focused) {
+					return messageHandler.sendEvent({ type: MessageType.ClearDataInspector	});
+				} else {
+					return messageHandler.sendEvent({ type: MessageType.SetInspectByte, offset: focused.byte });
+				}
+			});
+		}
+	]
 });
 
 /**
@@ -120,12 +156,12 @@ export const scrollBounds = atom<Range>({
 		key: "initialScrollBounds",
 		get: ({ get }) => {
 			const d = get(dimensions);
-			const { fileSize } = get(readyQuery);
+			const max = get(fileSize) ?? Infinity;
 			const offset = get(initialOffset);
 			const windowSize = getDisplayedBytes(d);
 			return new Range(
 				Math.max(0, offset - windowSize),
-				Math.min(offset + windowSize * 2, fileSize ?? Infinity),
+				Math.min(offset + windowSize * 2, max),
 			);
 		},
 	}),

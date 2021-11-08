@@ -2,6 +2,7 @@ const esbuild = require('esbuild');
 const linaria = require('@linaria/esbuild');
 
 const watch = process.argv.includes('--watch');
+const minify = !watch || process.argv.includes('--minify');
 
 // Build the editor provider
 esbuild.build({
@@ -10,7 +11,7 @@ esbuild.build({
   bundle: true,
 	external: ['vscode'],
 	sourcemap: watch,
-	minify: !watch,
+	minify,
 	watch,
 	platform: 'node',
   outfile: 'dist/extension.js',
@@ -23,7 +24,7 @@ esbuild.build({
   bundle: true,
 	external: ['vscode', 'mocha', 'chai'],
 	sourcemap: watch,
-	minify: !watch,
+	minify,
 	watch,
 	platform: 'node',
   outfile: 'dist/test.js',
@@ -35,7 +36,7 @@ esbuild.build({
   bundle: true,
 	format: 'cjs',
 	external: ['vscode'],
-	minify: !watch,
+	minify,
 	watch,
 	platform: 'browser',
   outfile: 'dist/web/extension.js',
@@ -48,7 +49,7 @@ esbuild.build({
   bundle: true,
 	external: ['vscode'],
 	sourcemap: watch ? 'inline' : false,
-	minify: !watch,
+	minify,
 	watch,
 	platform: 'browser',
   outfile: 'dist/inspector.js',
@@ -61,7 +62,7 @@ esbuild.build({
   bundle: true,
 	external: ['vscode'],
 	sourcemap: watch ? 'inline' : false,
-	minify: !watch,
+	minify,
 	watch,
 	platform: 'browser',
   outfile: 'dist/editor.js',

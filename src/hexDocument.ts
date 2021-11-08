@@ -76,7 +76,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			}
 		}
 
-		return target.subarray(0, soFar);
+		return target.slice(0, soFar);
 	}
 
 	private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());

@@ -44,6 +44,20 @@ export class Range {
 	}
 
 	/**
+	 * Returns a range containing the single byte.
+	 */
+	public static single(byte: number): Range {
+		return new Range(byte, byte + 1);
+	}
+
+	/**
+	 * Creates a new range representing [start, end], inclusive.
+	 */
+	public static inclusive(start: number, end: number): Range {
+		return end >= start ? new Range(start, end + 1) : new Range(start + 1, end);
+	}
+
+	/**
 	 * @description Constructs a range object representing [start, end)
 	 * @param start Represents the start of the range
 	 * @param end Represents the end of the range

@@ -8,7 +8,7 @@ import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
 import { SearchResults } from "./searchRequest";
-import { getNonce } from "./util";
+import { getCorrectArrayBuffer, getNonce } from "./util";
 import { WebviewCollection } from "./webViewCollection";
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
@@ -254,7 +254,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				};
 			case MessageType.ReadRangeRequest:
 				const data = await document.readBufferWithEdits(message.offset, message.bytes);
-				return { type: MessageType.ReadRangeResponse, data: data.buffer };
+				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
 			case MessageType.MakeEdits:
 				document.makeEdit(message.edits);
 				return;
@@ -272,9 +272,15 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.ReplaceRequest:
 				const edits = await document.replace(message.query, message.offsets, message.preserveCase);
 				return { type: MessageType.ReplaceResponse, edits };
-			case MessageType.DataInspector:
-				// This message was meant for the data inspector view so we forward it there
-				this._dataInspectorView.handleEditorMessage(message.body);
+			case MessageType.ClearDataInspector:
+				this._dataInspectorView.handleEditorMessage({ method: "reset" });
+				break;
+			case MessageType.SetInspectByte:
+				this._dataInspectorView.handleEditorMessage({
+					method: "update",
+					data: getCorrectArrayBuffer(await document.readBufferWithEdits(message.offset, 8))
+				});
+				break;
 		}
 	}
 }

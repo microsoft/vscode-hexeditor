@@ -8,7 +8,7 @@ import { FromWebviewMessage, MessageHandler, ToWebviewMessage, WebviewMessageHan
 import { useTheme } from "./hooks";
 import { ScrollContainer } from "./scrollContainer";
 import * as select from "./state";
-import { DataHeader } from "./virtualDocument";
+import { DataHeader } from "./dataDisplay";
 import { styled } from "@linaria/react";
 
 const Container = styled.div`

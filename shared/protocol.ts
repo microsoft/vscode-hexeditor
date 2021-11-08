@@ -22,7 +22,8 @@ export const enum MessageType {
 	SearchRequest,
 	ReplaceRequest,
 	CancelSearch,
-	DataInspector,
+	ClearDataInspector,
+	SetInspectByte,
 	//#endregion
 }
 
@@ -105,9 +106,13 @@ export interface CancelSearchMessage {
 	type: MessageType.CancelSearch;
 }
 
-export interface DataInspectorMessage {
-	type: MessageType.DataInspector;
-	body: unknown;
+export interface ClearDataInspectorMessage {
+	type: MessageType.ClearDataInspector;
+}
+
+export interface SetInspectByteMessage {
+	type: MessageType.SetInspectByte;
+	offset: number;
 }
 
 export interface ReadyRequestMessage {
@@ -120,7 +125,8 @@ export type FromWebviewMessage =
 	| MakeEditsMessage
 	| SearchRequestMessage
 	| CancelSearchMessage
-	| DataInspectorMessage
+	| ClearDataInspectorMessage
+	| SetInspectByteMessage
 	| ReplaceRequestMessage
 	| ReadyRequestMessage;
 
