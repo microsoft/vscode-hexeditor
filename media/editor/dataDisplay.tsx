@@ -3,8 +3,9 @@
 
 import { css } from "@linaria/core";
 import { styled } from "@linaria/react";
-import React, { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
-import { useRecoilState, useRecoilValue } from "recoil";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
+import { HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import { ByteData } from "./byteData";
 import { DataDisplayContext, DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected } from "./dataDisplayContext";
 import * as select from "./state";
@@ -34,7 +35,6 @@ const dataCellCls = css`
 	line-height: var(--cell-size);
 	text-align: center;
 	display: inline-block;
-	text-transform: uppercase;
 `;
 
 const DataCellGroup = styled.div`
@@ -71,7 +71,7 @@ const EmptyDataCell = () => (
 );
 
 const Byte: React.FC<{ value: number }> = ({ value }) => (
-	<span className={dataCellCls}>{value.toString(16).padStart(2, "0")}</span>
+	<span className={dataCellCls}>{value.toString(16).padStart(2, "0").toUpperCase()}</span>
 );
 
 // why 'sticky' here? Well ultimately we want the rows to be fixed inside the
@@ -103,7 +103,9 @@ export const DataDisplay: React.FC = () => {
 	const [scrollBounds, setScrollBounds] = useRecoilState(select.scrollBounds);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
-	const ctx = useMemo(() => new DisplayContext(), []);
+
+	const setEdit = useSetRecoilState(select.edits);
+	const ctx = useMemo(() => new DisplayContext(setEdit), []);
 
 	useEffect(() => {
 		const l = () => { ctx.isSelecting = false; };
@@ -243,6 +245,18 @@ const DataRow: React.FC<{ top: number; offset: number; width: number }> = ({ top
 	</div>
 );
 
+let opIdCounter = 0;
+
+const keysToOctets = new Map([
+	["0", 0x0], ["1", 0x1], ["2", 0x2], ["3", 0x3], ["4", 0x4], ["5", 0x5],
+	["6", 0x6], ["7", 0x7], ["8", 0x8], ["9", 0x9], ["a", 0xa], ["b", 0xb],
+	["c", 0xc], ["d", 0xd], ["e", 0xe], ["f", 0xf],
+]);
+
+for (const [key, value] of keysToOctets) {
+	keysToOctets.set(key.toUpperCase(), value);
+}
+
 const DataCell: React.FC<{
 	byte: number;
 	isChar: boolean;
@@ -251,7 +265,6 @@ const DataCell: React.FC<{
 }> = ({ byte, value, className, isChar }) => {
 	const elRef = useRef<HTMLSpanElement | null>(null);
 	const focusedElement = new FocusedElement(isChar, byte);
-
 	const ctx = useDisplayContext();
 
 	const onMouseEnter = useCallback(() => {
@@ -307,6 +320,38 @@ const DataCell: React.FC<{
 		}
 	}, [isFocused]);
 
+	// Filling in a byte cell requires two octets to be entered. This stores
+	// the first octet, and is reset if the user stops editing.
+	const [firstOctetOfEdit, setFirstOctetOfEdit] = useState<number>();
+	const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+		let val: number;
+		if (isChar && e.key.length === 1) {
+			val = e.key.charCodeAt(0);
+		} else if (keysToOctets.has(e.key)) {
+			val = keysToOctets.get(e.key)!;
+		} else {
+			return;
+		}
+
+		if (isChar) {
+			// b is final
+		} else if (firstOctetOfEdit !== undefined) {
+			val = firstOctetOfEdit << 4 | val;
+		} else {
+			return setFirstOctetOfEdit(val);
+		}
+
+		ctx.focusedElement = ctx.focusedElement?.shift(1);
+		setFirstOctetOfEdit(undefined);
+		ctx.edit({
+			op: HexDocumentEditOp.Replace,
+			opId: opIdCounter++,
+			previous: new Uint8Array([byte]),
+			value: new Uint8Array([val]),
+			offset: byte,
+		});
+	}, [byte, isChar, firstOctetOfEdit]);
+
 	return (
 		<span
 			ref={elRef}
@@ -321,6 +366,7 @@ const DataCell: React.FC<{
 			onMouseEnter={onMouseEnter}
 			onMouseUp={onMouseUp}
 			onMouseLeave={onMouseLeave}
+			onKeyDown={onKeyDown}
 		>{value}</span>
 	);
 };
@@ -333,8 +379,9 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 	const endPageNo = Math.floor((offset + width) / dataPageSize);
 	const endPageStartsAt = endPageNo * dataPageSize;
 
-	const startPage = useRecoilValue(select.dataPages(startPageNo));
-	const endPage = useRecoilValue(select.dataPages(endPageNo));
+	const startPage = useRecoilValue(select.editedDataPages(startPageNo));
+	const endPage = useRecoilValue(select.editedDataPages(endPageNo));
+
 	let memoValue = "";
 	const rawBytes = new Uint8Array(width);
 	for (let i = 0; i < width; i++) {
@@ -363,7 +410,7 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 				key={i}
 				byte={boffset}
 				isChar={false}
-				value={value.toString(16).padStart(2, "0")}
+				value={value.toString(16).padStart(2, "0").toUpperCase()}
 			/>);
 
 			const char = getAsciiCharacter(value);

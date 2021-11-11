@@ -3,10 +3,10 @@
 
 import { window } from "vscode";
 
-export function getNonce(): string {
+export function randomString(len = 32): string {
 	let text = "";
 	const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	for (let i = 0; i < 32; i++) {
+	for (let i = 0; i < len; i++) {
 		text += possible.charAt(Math.floor(Math.random() * possible.length));
 	}
 	return text;

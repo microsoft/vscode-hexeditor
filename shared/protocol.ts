@@ -11,6 +11,7 @@ export const enum MessageType {
 	ReadRangeResponse,
 	SearchResponse,
 	ReplaceResponse,
+	SetEdits,
 	Saved,
 	Changed,
 	//#endregion
@@ -65,13 +66,20 @@ export interface ChangedMessage {
 	type: MessageType.Changed;
 }
 
+/** Sets the edits that should be applied to the document */
+export interface SetEditsMessage {
+	type: MessageType.SetEdits;
+	edits: readonly HexDocumentEdit[];
+}
+
 export type ToWebviewMessage =
 	| ReadyResponseMessage
 	| ReadRangeResponseMessage
 	| SearchResponseMessage
 	| ReplaceResponseMessage
 	| SavedMessage
-	| ChangedMessage;
+	| ChangedMessage
+	| SetEditsMessage;
 
 export interface OpenDocumentMessage {
 	type: MessageType.OpenDocument;
@@ -85,7 +93,7 @@ export interface ReadRangeMessage {
 
 export interface MakeEditsMessage {
 	type: MessageType.MakeEdits;
-	edits: HexDocumentEdit[];
+	edits: readonly HexDocumentEdit[];
 }
 
 export interface SearchRequestMessage {

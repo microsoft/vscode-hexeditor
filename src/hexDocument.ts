@@ -79,6 +79,15 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		return target.slice(0, soFar);
 	}
 
+	/**
+	 * Reads into the buffer from the original file, without edits.
+	 */
+	public async readBuffer(offset: number, length: number): Promise<Uint8Array> {
+		const target = new Uint8Array(length);
+		const read = await this.model.readInto(offset, target);
+		return read === length ? target : target.slice(0, read);
+	}
+
 	private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
 	/*
 		Fires when the document is disposed of
@@ -123,7 +132,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 *
 	 * This fires an event to notify VS Code that the document has been edited.
 	 */
-	public makeEdit(edits: HexDocumentEdit[]): void {
+	public makeEdits(edits: readonly HexDocumentEdit[]): void {
 		this._onDidChange.fire(this.model.makeEdits(edits));
 	}
 
@@ -240,7 +249,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			offset += chunk.length;
 		}
 		// After the replacement is complete we add it to the document's edit queue
-		if (allEdits.length !== 0) this.makeEdit(allEdits);
+		if (allEdits.length !== 0) this.makeEdits(allEdits);
 		return allEdits;
 	}
 

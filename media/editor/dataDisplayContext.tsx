@@ -1,5 +1,7 @@
 import { EventEmitter, IDisposable } from "cockatiel";
 import { createContext, useContext, useEffect, useState } from "react";
+import { SetterOrUpdater } from "recoil";
+import { HexDocumentEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
 import { messageHandler } from "./state";
 import { Range } from "./util";
@@ -18,6 +20,13 @@ export class FocusedElement {
 	/** Gets the other element at this byte (the character or non-character) */
 	public other(): FocusedElement {
 		return new FocusedElement(!this.char, this.byte);
+	}
+
+	/**
+	 * Returns the element "delta" bytes away from this one.
+	 */
+	public shift(delta: number): FocusedElement {
+		return new FocusedElement(this.char, this.byte + delta);
 	}
 }
 
@@ -138,6 +147,15 @@ export class DisplayContext {
 	 */
 	public get selection(): readonly Range[] {
 		return this._selection;
+	}
+
+	constructor(private readonly setEdits: SetterOrUpdater<readonly HexDocumentEdit[]>) {}
+
+	/**
+	 * Appends a new edit to the document.
+	 */
+	public edit(edit: HexDocumentEdit): void {
+		this.setEdits(prev => [...prev, edit]);
 	}
 
 	/**

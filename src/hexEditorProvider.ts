@@ -8,7 +8,7 @@ import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
 import { SearchResults } from "./searchRequest";
-import { getCorrectArrayBuffer, getNonce } from "./util";
+import { getCorrectArrayBuffer, randomString } from "./util";
 import { WebviewCollection } from "./webViewCollection";
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
@@ -175,7 +175,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "node_modules", "@vscode", "codicons", "dist", "codicon.css"));
 
 		// Use a nonce to whitelist which scripts can be run
-		const nonce = getNonce();
+		const nonce = randomString();
 
 		return /* html */`
 			<!DOCTYPE html>
@@ -253,10 +253,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					isLargeFile: document.isLargeFile,
 				};
 			case MessageType.ReadRangeRequest:
-				const data = await document.readBufferWithEdits(message.offset, message.bytes);
+				const data = await document.readBuffer(message.offset, message.bytes);
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
 			case MessageType.MakeEdits:
-				document.makeEdit(message.edits);
+				document.makeEdits(message.edits);
 				return;
 			case MessageType.CancelSearch:
 				document.searchProvider.cancelRequest();
