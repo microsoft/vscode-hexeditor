@@ -3,10 +3,10 @@
 
 import { css } from "@linaria/core";
 import { styled } from "@linaria/react";
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRecoilState, useRecoilTransaction_UNSTABLE, useRecoilValue, useSetRecoilState } from "recoil";
-import { MessageType } from "../../shared/protocol";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
+import { useRecoilState, useRecoilValue } from "recoil";
 import { ByteData } from "./byteData";
+import { DataDisplayContext, DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected } from "./dataDisplayContext";
 import * as select from "./state";
 import { clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
@@ -24,6 +24,7 @@ const Address = styled.div`
 	font-family: var(--vscode-editor-font-family);
 	color: var(--vscode-editorLineNumber-foreground);
 	text-transform: uppercase;
+	line-height: var(--cell-size);
 `;
 
 const dataCellCls = css`
@@ -102,18 +103,17 @@ export const DataDisplay: React.FC = () => {
 	const [scrollBounds, setScrollBounds] = useRecoilState(select.scrollBounds);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
-	const setIsSelecting = useSetRecoilState(select.isSelecting);
-	const setSelection = useSetRecoilState(select.selection);
-	const [focusedByte, setFocusedByte] = useRecoilState(select.focusedByte);
+	const ctx = useMemo(() => new DisplayContext(), []);
 
 	useEffect(() => {
-		const l = () => setIsSelecting(false);
+		const l = () => { ctx.isSelecting = false; };
 		window.addEventListener("mouseup", l, { passive: true });
 		return () => window.removeEventListener("mouseup", l);
 	}, []);
 
 	const onKeyDown = (e: React.KeyboardEvent) => {
-		const current = focusedByte || select.FocusedByte.zero;
+		const current = ctx.focusedElement || FocusedElement.zero;
+		const displayedBytes = select.getDisplayedBytes(dimensions);
 
 		let delta = 0;
 		switch (e.key) {
@@ -133,38 +133,47 @@ export const DataDisplay: React.FC = () => {
 			case "g":
 				delta = -dimensions.rowByteWidth;
 				break;
+			case "Home":
+				delta = -current.byte;
+				break;
+			case "End":
+				delta = fileSize === undefined ?  displayedBytes : - current.byte - 1;
+				break;
+			case "PageUp":
+				delta = -displayedBytes;
+				break;
+			case "PageDown":
+				delta = displayedBytes;
+				break;
 		}
 
 		if (e.ctrlKey || e.metaKey) {
 			delta *= 10;
 		}
 
-		const next = new select.FocusedByte(current.char, Math.min(Math.max(0, current.byte + delta), fileSize ?? Infinity));
-		if (next.equals(current)) {
+		const next = new FocusedElement(current.char, Math.min(Math.max(0, current.byte + delta), fileSize ?? Infinity));
+		if (next.key === current.key) {
 			return;
 		}
 
 		e.preventDefault();
-		setFocusedByte(next);
+		ctx.focusedElement = next;
 
 		if (e.shiftKey) {
-			setSelection(selection => {
-				const srange = selection[0];
-				if (!srange) {
-					return [Range.inclusive(current.byte, next.byte)];
-				}
+			const srange = ctx.selection[0];
+			if (!srange) {
+				return [Range.inclusive(current.byte, next.byte)];
+			}
 
-				if (!srange.includes(next.byte)) {
-					return [srange.expandToContain(next.byte), ...selection.slice(1)];
-				}
+			if (!srange.includes(next.byte)) {
+				return ctx.replaceLastSelectionRange(srange.expandToContain(next.byte));
+			}
 
-				const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
-				const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
-				return [nextRange, ...selection.slice(1)];
-			});
+			const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
+			const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
+			return ctx.addSelectionRange(nextRange);
 		}
 
-		const displayedBytes = select.getDisplayedBytes(dimensions);
 		const byteRowStart = Math.floor(next.byte / dimensions.rowByteWidth) * dimensions.rowByteWidth;
 
 		let newOffset: number;
@@ -184,11 +193,13 @@ export const DataDisplay: React.FC = () => {
 		}
 	};
 
-	return <div
-		ref={containerRef}
-		className={dataDisplayCls}
-		onKeyDown={onKeyDown}
-	><DataRows /></div>;
+	return <DataDisplayContext.Provider value={ctx}>
+		<div
+			ref={containerRef}
+			className={dataDisplayCls}
+			onKeyDown={onKeyDown}
+		><DataRows /></div>
+	</DataDisplayContext.Provider> ;
 };
 
 const DataRows: React.FC = () => {
@@ -237,54 +248,59 @@ const DataCell: React.FC<{
 	isChar: boolean;
 	value: string;
 	className?: string;
-	isHovered: boolean;
-	onMouseEnter(byte: number): void;
-	onMouseLeave(byte: number): void;
-}> = ({ byte, value, className, isHovered, onMouseEnter, isChar, onMouseLeave }) => {
+}> = ({ byte, value, className, isChar }) => {
 	const elRef = useRef<HTMLSpanElement | null>(null);
-	const focusedByte = useMemo(() => new select.FocusedByte(isChar, byte), [isChar, byte]);
+	const focusedElement = new FocusedElement(isChar, byte);
 
-	const onMouseEnterTxn = useRecoilTransaction_UNSTABLE(({ get, set }) => (byte: number) => {
-		const selection = get(select.selection);
-		const isSelecting = get(select.isSelecting);
-		if (isSelecting && selection.length) {
-			const newRange = selection[0].direction === RangeDirection.Ascending
-				? new Range(selection[0].start, byte + 1)
-				: new Range(selection[0].end, byte);
-			set(select.selection, selection.length > 1 ? [newRange, ...selection.slice(1)] : [newRange]);
+	const ctx = useDisplayContext();
+
+	const onMouseEnter = useCallback(() => {
+		const last = ctx.selection[0];
+		ctx.hoveredByte = focusedElement;
+		if (ctx.isSelecting && last) {
+			const newRange = last.direction === RangeDirection.Ascending
+				? new Range(last.start, byte + 1) : new Range(last.end, byte);
+			ctx.replaceLastSelectionRange(newRange);
 		}
-	}, []);
+	}, [byte, focusedElement]);
 
-	const onMouseLeaveTxn = useRecoilTransaction_UNSTABLE(({ get, set }) => (byte: number, e: React.MouseEvent) => {
-		if ((e.buttons & 1) && !get(select.isSelecting)) {
-			set(select.selection, e.ctrlKey || e.metaKey ? [Range.single(byte), ...get(select.selection)] : [Range.single(byte)]);
-			set(select.isSelecting, true);
+	const onMouseLeave = useCallback((e: React.MouseEvent) => {
+		ctx.hoveredByte = undefined;
+		if ((e.buttons & 1) && !ctx.isSelecting) {
+			ctx.isSelecting = true;
+			if (e.ctrlKey || e.metaKey) {
+				ctx.addSelectionRange(Range.single(byte));
+			} else {
+				ctx.replaceSelectionRanges([Range.single(byte)]);
+			}
 		}
-	}, []);
+	}, [byte]);
 
-	const onMouseUpTxn = useRecoilTransaction_UNSTABLE(({ get, set }) => (byte: number, e: React.MouseEvent) => {
-			const prevFocused = get(select.focusedByte) || select.FocusedByte.zero;
-			set(select.focusedByte, focusedByte);
+	const onMouseUp = useCallback((e: React.MouseEvent) => {
+		const prevFocused = ctx.focusedElement || FocusedElement.zero;
+		ctx.focusedElement = focusedElement;
 
-		if (get(select.isSelecting)) {
-			set(select.isSelecting, false);
+		if (ctx.isSelecting) {
+			ctx.isSelecting = false;
 		} else if (e.shiftKey) {
 			// on a shift key, the user is expanding the selection (or deselection)
 			// of an existing byte. We *don't* include that byte since we don't want
 			// to swap the byte.
 			const pb = prevFocused.byte;
 			const asc = pb < byte;
-			set(select.selection, e.ctrlKey || e.metaKey
-				? [Range.inclusive(asc ? pb + 1 : pb, byte), ...get(select.selection)]
-				: [Range.inclusive(asc ? pb : pb + 1, byte)]);
+			if (e.ctrlKey || e.metaKey) {
+				ctx.addSelectionRange(Range.inclusive(asc ? pb + 1 : pb, byte));
+			} else {
+				ctx.replaceSelectionRanges([Range.inclusive(asc ? pb : pb + 1, byte)]);
+			}
 		} else if (e.ctrlKey || e.metaKey) {
-			set(select.selection, [Range.single(byte), ...get(select.selection)]);
+			ctx.addSelectionRange(Range.single(byte));
 		} else {
-			set(select.selection, [Range.single(byte)]);
+			ctx.replaceSelectionRanges([Range.single(byte)]);
 		}
-	}, [focusedByte]);
+	}, [focusedElement.key, byte]);
 
-	const isFocused = useRecoilValue(select.isByteFocused(focusedByte));
+	const isFocused = useIsFocused(focusedElement);
 	useEffect(() => {
 		if (isFocused) {
 			elRef.current?.focus();
@@ -298,27 +314,19 @@ const DataCell: React.FC<{
 			className={clsx(
 				dataCellCls,
 				className,
-				isHovered && dataCellHoveredCls,
-				useRecoilValue(select.isByteSelected(byte)) && dataCellSelectedCls,
+				useIsHovered(focusedElement) && dataCellHoveredCls,
+				useIsSelected(byte) && dataCellSelectedCls,
 				isFocused && dataCellFocusedCls,
 			)}
-			onMouseEnter={useCallback(() => {
-				onMouseEnterTxn(byte);
-				onMouseEnter(byte);
-			}, [onMouseEnterTxn, onMouseEnter, byte])}
-			onMouseUp={useCallback(e => onMouseUpTxn(byte, e), [onMouseUpTxn, byte])}
-			onMouseLeave={useCallback(e => {
-				onMouseLeaveTxn(byte, e);
-				onMouseLeave(byte);
-			}, [onMouseLeaveTxn, onMouseLeave, byte])}
+			onMouseEnter={onMouseEnter}
+			onMouseUp={onMouseUp}
+			onMouseLeave={onMouseLeave}
 		>{value}</span>
 	);
 };
 
 const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, width }) => {
 	const dataPageSize = useRecoilValue(select.dataPageSize);
-	const [hoveredByte, setHoveredByte] = useState<number>();
-	const unsetHoveredByte = useCallback(() => setHoveredByte(undefined), []);
 
 	const startPageNo = Math.floor(offset / dataPageSize);
 	const startPageStartsAt = startPageNo * dataPageSize;
@@ -327,15 +335,23 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 
 	const startPage = useRecoilValue(select.dataPages(startPageNo));
 	const endPage = useRecoilValue(select.dataPages(endPageNo));
+	let memoValue = "";
+	const rawBytes = new Uint8Array(width);
+	for (let i = 0; i < width; i++) {
+		const boffset = offset + i;
+		const value = boffset >= endPageStartsAt
+			? endPage[boffset - endPageStartsAt]
+			: startPage[boffset - startPageStartsAt];
+		memoValue += "," + value;
+		rawBytes[i] = value;
+	}
 
 	const { bytes, chars } = useMemo(() => {
 		const bytes: React.ReactChild[] = [];
 		const chars: React.ReactChild[] = [];
 		for (let i = 0; i < width; i++) {
 			const boffset = offset + i;
-			const value = boffset >= endPageStartsAt
-				? endPage[boffset - endPageStartsAt]
-				: startPage[boffset - startPageStartsAt];
+			const value = rawBytes[i];
 
 			if (value === undefined) {
 				bytes.push(<EmptyDataCell key={i} />);
@@ -348,9 +364,6 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 				byte={boffset}
 				isChar={false}
 				value={value.toString(16).padStart(2, "0")}
-				isHovered={hoveredByte === boffset}
-				onMouseEnter={setHoveredByte}
-				onMouseLeave={unsetHoveredByte}
 			/>);
 
 			const char = getAsciiCharacter(value);
@@ -360,13 +373,10 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 				isChar={true}
 				className={char === undefined ? nonGraphicCharCls : undefined}
 				value={char === undefined ? "." : char}
-				isHovered={hoveredByte === boffset}
-				onMouseEnter={setHoveredByte}
-				onMouseLeave={unsetHoveredByte}
 			/>);
 		}
-		return { bytes, chars, hoveredByte };
-	}, [startPage, endPage]);
+		return { bytes, chars };
+	}, [memoValue]);
 
 	return (
 		<>

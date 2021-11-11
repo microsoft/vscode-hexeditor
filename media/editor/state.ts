@@ -75,78 +75,6 @@ export const dataPageSize = atom({
 });
 
 /**
- * Bytes the user has selected, as a list of ranges. Each range "switches"
- * the state of included bytes. For instance, if X is included `[r1]`, it's
- * selected. If X is included in both `[r1, r2]`, it's not selected.
- */
-export const selection = atom<Range[]>({
-	key: "selectedRange",
-	default: []
-});
-
-export const isByteSelected = selectorFamily({
-	key: "isByteSelected",
-	get: (byte: number) => ({ get }) => {
-		let selected = false;
-		for (const range of get(selection)) {
-			if (range.includes(byte)) {
-				selected = !selected;
-			}
-		}
-
-		return selected;
-	}
-});
-
-export class FocusedByte {
-	public static readonly zero = new FocusedByte(false, 0);
-
-	constructor(
-		/** If true, the character rather than data is focused */
-		public readonly char: boolean,
-		/** Focused byte index */
-		public readonly byte: number,
-	) {}
-
-	public toJSON(): any {
-		return `${this.char}:${this.byte}`;
-	}
-
-	public equals(other: FocusedByte | undefined): boolean {
-		return !!other && other.char === this.char && other.byte === this.byte;
-	}
-}
-
-export const isByteFocused = selectorFamily({
-	key: "isByteFocused",
-	get: (target: FocusedByte) => ({ get }) => target.equals(get(focusedByte)),
-});
-
-/** Whether the user is currently dragging to select content */
-export const isSelecting = atom({
-	key: "isSelecting",
-	default: false
-});
-
-/** The current byte that has focus and can be manipulated by keyboard shortcuts. */
-export const focusedByte = atom<FocusedByte | undefined>({
-	key: "focusedByte",
-	default: undefined,
-
-	effects_UNSTABLE: [
-		fx => {
-			fx.onSet(focused => {
-				if (!focused) {
-					return messageHandler.sendEvent({ type: MessageType.ClearDataInspector	});
-				} else {
-					return messageHandler.sendEvent({ type: MessageType.SetInspectByte, offset: focused.byte });
-				}
-			});
-		}
-	]
-});
-
-/**
  * First and last byte that can be currently scrolled to. May expand with
  * infinite scrolling.
  */
@@ -156,12 +84,11 @@ export const scrollBounds = atom<Range>({
 		key: "initialScrollBounds",
 		get: ({ get }) => {
 			const d = get(dimensions);
-			const max = get(fileSize) ?? Infinity;
 			const offset = get(initialOffset);
 			const windowSize = getDisplayedBytes(d);
 			return new Range(
 				Math.max(0, offset - windowSize),
-				Math.min(offset + windowSize * 2, max),
+				get(fileSize) ?? offset + windowSize * 2,
 			);
 		},
 	}),

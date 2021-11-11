@@ -104,6 +104,21 @@ export class Range {
 			return this;
 		}
 	}
+
+	/**
+	 * Returns one or more ranges representing this range but excluding the otherRange.
+	 */
+	public subtract(otherRange: Range): Range[] {
+		const delta: Range[] = [];
+		if (otherRange.start > this.start) {
+			delta.push(new Range(this.start, otherRange.start));
+		}
+		if (otherRange.end < this.end) {
+			delta.push(new Range(otherRange.end, this.end));
+		}
+
+		return delta;
+	}
 }
 
 /**

@@ -9,6 +9,7 @@ const wrapperCls = css`
 	overflow-y: scroll;
 	overflow-x: hidden;
 	flex-grow: 1;
+	flex-basis: 0;
 	position: relative;
 `;
 
