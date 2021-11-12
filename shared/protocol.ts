@@ -14,6 +14,10 @@ export const enum MessageType {
 	SetEdits,
 	Saved,
 	Changed,
+	StashDisplayedOffset,
+	GoToOffset,
+	SetFocusedByte,
+	PopDisplayedOffset,
 	//#endregion
 	//#region from webview
 	ReadyRequest,
@@ -37,6 +41,8 @@ export interface WebviewMessage<T> {
 export interface ReadyResponseMessage {
 	type: MessageType.ReadyResponse;
 	initialOffset: number;
+	edits: readonly HexDocumentEdit[];
+	lastSavedEdit: number;
 	fileSize: number | undefined;
 	isLargeFile: boolean;
 }
@@ -59,6 +65,7 @@ export interface ReplaceResponseMessage {
 /** Notifies the document is saved, any pending edits should be flushed */
 export interface SavedMessage {
 	type: MessageType.Saved;
+	lastEditId: number;
 }
 
 /** Notifies that the underlying file is changed. Webview should throw away and re-request state. */
@@ -72,6 +79,28 @@ export interface SetEditsMessage {
 	edits: readonly HexDocumentEdit[];
 }
 
+/** Sets the displayed offset. */
+export interface GoToOffsetMessage {
+	type: MessageType.GoToOffset;
+	offset: number;
+}
+
+/** Focuses a byte in the editor. */
+export interface SetFocusedByteMessage {
+	type: MessageType.SetFocusedByte;
+	offset: number;
+}
+
+/** Saves the current offset shown in the editor. */
+export interface StashDisplayedOffsetMessage {
+	type: MessageType.StashDisplayedOffset;
+}
+
+/** Restored a stashed offset. */
+export interface PopDisplayedOffsetMessage {
+	type: MessageType.PopDisplayedOffset;
+}
+
 export type ToWebviewMessage =
 	| ReadyResponseMessage
 	| ReadRangeResponseMessage
@@ -79,7 +108,11 @@ export type ToWebviewMessage =
 	| ReplaceResponseMessage
 	| SavedMessage
 	| ChangedMessage
-	| SetEditsMessage;
+	| GoToOffsetMessage
+	| SetEditsMessage
+	| SetFocusedByteMessage
+	| PopDisplayedOffsetMessage
+	| StashDisplayedOffsetMessage;
 
 export interface OpenDocumentMessage {
 	type: MessageType.OpenDocument;

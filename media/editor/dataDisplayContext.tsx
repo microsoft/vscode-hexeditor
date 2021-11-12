@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { SetterOrUpdater } from "recoil";
 import { HexDocumentEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
-import { messageHandler } from "./state";
+import { messageHandler, registerHandler } from "./state";
 import { Range } from "./util";
 
 export class FocusedElement {
@@ -38,9 +38,12 @@ export class DisplayContext {
 	private _selection: Range[] = [];
 	private _hoveredByte?: FocusedElement;
 	private _focusedByte?: FocusedElement;
-	private readonly selectionChangeEmitter = new EventEmitter<{range:Range; isSingleSwap: boolean}>();
+	private _unsavedRanges: readonly Range[] = [];
+	private readonly unsavedRangesEmitter = new EventEmitter<readonly Range[]>();
+	private readonly selectionChangeEmitter = new EventEmitter<{ range:Range; isSingleSwap: boolean }>();
 	private readonly hoverChangeHandlers = new Map<bigint, (isSelected: boolean) => void>();
 	private readonly focusChangeHandlers = new Map<bigint, (isSelected: boolean) => void>();
+	private readonly focusChangeGenericHandler = new EventEmitter<number | undefined>();
 
 	/**
 	 * Whether the user is currently selecting data.
@@ -59,7 +62,22 @@ export class DisplayContext {
 	}
 
 	/**
-	 * Emitter that fires when the given byte is focused or unfocused.
+	 * Emitter that fires when the unsaved state for a single byte changes.
+	 */
+	public onDidChangeUnsavedState(forByte: number, listener: (isEdited: boolean) => void): IDisposable {
+		let wasEdited = this._unsavedRanges.some(e => e.includes(forByte));
+
+		return this.unsavedRangesEmitter.addListener(ranges => {
+			const isEdited = ranges.some(r => r.includes(forByte));
+			if (isEdited !== wasEdited) {
+				wasEdited = isEdited;
+				listener(isEdited);
+			}
+		});
+	}
+
+	/**
+ 	 * Emitter that fires when the given byte is focused or unfocused.
 	 */
 	public onDidChangeFocus(element: FocusedElement, listener: (isFocused: boolean) => void): IDisposable {
 		if (this.focusChangeHandlers.has(element.key)) {
@@ -69,6 +87,11 @@ export class DisplayContext {
 		this.focusChangeHandlers.set(element.key, listener);
 		return { dispose: () => this.focusChangeHandlers.delete(element.key) };
 	}
+
+	/**
+	 * Emitter that fires with the new focused byte.
+	 */
+	public readonly onDidChangeAnyFocus = this.focusChangeGenericHandler.addListener;
 
 	/**
 	 * Emitter that fires when the given byte is hovered or unhovered.
@@ -105,11 +128,27 @@ export class DisplayContext {
 
 		if (this._focusedByte !== undefined) {
 			this.focusChangeHandlers.get(this._focusedByte.key)?.(true);
+			this.focusChangeGenericHandler.emit(element?.byte);
 			messageHandler.sendEvent({
 				type: MessageType.SetInspectByte,
 				offset: this._focusedByte.byte,
 			});
 		}
+	}
+
+	/**
+	 * Gets unsaved ranges in the file.
+	 */
+	public get unsavedRanges(): readonly Range[] {
+		return this._unsavedRanges;
+	}
+
+	/**
+	 * Sets unsaved ranges.
+	 */
+	public set unsavedRanges(ranges: readonly Range[]) {
+		this._unsavedRanges = ranges;
+		this.unsavedRangesEmitter.emit(ranges);
 	}
 
 	/**
@@ -149,7 +188,12 @@ export class DisplayContext {
 		return this._selection;
 	}
 
-	constructor(private readonly setEdits: SetterOrUpdater<readonly HexDocumentEdit[]>) {}
+	constructor(private readonly setEdits: SetterOrUpdater<readonly HexDocumentEdit[]>) {
+		registerHandler(MessageType.SetFocusedByte, msg => {
+			this.focusedElement = new FocusedElement(false, msg.offset);
+			this.setSelectionRanges([Range.single(msg.offset)]);
+		});
+	}
 
 	/**
 	 * Appends a new edit to the document.
@@ -280,4 +324,19 @@ export const useIsFocused = (element: FocusedElement): boolean => {
 	}, [element.key]);
 
 	return focused;
+};
+
+/** Hook that returns whether the given byte is unsaved */
+export const useIsUnsaved = (byte: number): boolean => {
+	const ctx = useDisplayContext();
+
+	const [unsaved, setIsUnsaved] = useState(false);
+
+	useEffect(() => {
+		setIsUnsaved(ctx.unsavedRanges.some(r => r.includes(byte)));
+		const disposable = ctx.onDidChangeUnsavedState(byte, setIsUnsaved);
+		return () => disposable.dispose();
+	}, [byte]);
+
+	return unsaved;
 };

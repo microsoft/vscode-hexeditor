@@ -2,7 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import { atom, selector, selectorFamily } from "recoil";
+import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, editsEqual, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, ToWebviewMessage } from "../../shared/protocol";
 import { Range } from "./util";
@@ -13,7 +13,7 @@ export const vscode = acquireVsCodeApi();
 
 const handles: { [T in ToWebviewMessage["type"]]?: (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined } = {};
 
-const registerHandler = <T extends ToWebviewMessage["type"]>(typ: T, handler: (msg: ToWebviewMessage & { type: T }) => Promise<FromWebviewMessage> | void) => {
+export const registerHandler = <T extends ToWebviewMessage["type"]>(typ: T, handler: (msg: ToWebviewMessage & { type: T }) => Promise<FromWebviewMessage> | void): void => {
 	handles[typ] = handler as any;
 };
 
@@ -70,6 +70,28 @@ export const getDisplayedBytes = (d: IDimensions): number =>
 export const offset = atom({
 	key: "offset",
 	default: initialOffset,
+
+	effects_UNSTABLE: [
+		fx => {
+			let stashedOffset: number | undefined;
+
+			registerHandler(MessageType.StashDisplayedOffset, () => {
+				stashedOffset = fx.getLoadable(fx.node).getValue();
+			});
+
+			registerHandler(MessageType.PopDisplayedOffset, () => {
+				if (stashedOffset !== undefined) {
+					fx.setSelf(stashedOffset);
+					stashedOffset = undefined;
+				}
+			});
+
+			registerHandler(MessageType.GoToOffset, msg => {
+				const d = fx.getLoadable(dimensions).getValue();
+				fx.setSelf(Math.floor(msg.offset / d.rowByteWidth) * d.rowByteWidth);
+			});
+		}
+	],
 });
 
 /** Size of data pages, in bytes */
@@ -103,27 +125,48 @@ export const scrollBounds = atom<Range>({
  */
 export const edits = atom<readonly HexDocumentEdit[]>({
 	key: "edits",
-	default: [],
+	default: selector({
+		key: "initialEdits",
+		get: ({ get }) => get(readyQuery).edits,
+	}),
 
 	effects_UNSTABLE: [
-		fx => fx.onSet((newEdits, oldEdits) =>  {
-			if (oldEdits instanceof Array && newEdits.length > oldEdits.length) {
-				messageHandler.sendEvent({
-					type: MessageType.MakeEdits,
-					edits: newEdits.slice(oldEdits.length),
-				});
-			}
+		fx => {
+			fx.onSet((newEdits, oldEdits) => {
+				if (oldEdits instanceof DefaultValue || newEdits.length > oldEdits.length) {
+					messageHandler.sendEvent({
+						type: MessageType.MakeEdits,
+						edits: newEdits.slice(oldEdits instanceof Array ? oldEdits.length : 0),
+					});
+				}
+			});
 
 			registerHandler(MessageType.SetEdits, msg => {
 				if (!editsEqual(fx.getLoadable(fx.node).getValue(), msg.edits)) {
 					fx.setSelf(msg.edits);
 				}
 			});
-		}),
+		}
 	]
 });
 
-const editTimeline = selector({
+export const lastSavedEdit = atom({
+	key: "lastSavedEdit",
+	default: selector({
+		key: "initialLastSavedEdit",
+		get: ({ get }) => get(readyQuery).lastSavedEdit,
+	}),
+
+	effects_UNSTABLE: [
+		fx => {
+			registerHandler(MessageType.Saved, msg => {
+				fx.setSelf(msg.lastEditId);
+			});
+		},
+	]
+});
+
+export const editTimeline = selector({
 	key: "editTimeline",
 	get: ({ get }) => buildEditTimeline(get(edits)),
 });

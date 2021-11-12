@@ -23,7 +23,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	}
 
 	private static readonly viewType = "hexEditor.hexedit";
-	public static currentWebview?: vscode.Webview;
+
+	/** Currently-focused hex editor, if any. */
+	public static currentWebview?: ExtensionHostMessageHandler;
 
 	private readonly webviews = new WebviewCollection();
 
@@ -112,7 +114,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 		// Add the webview to our internal set of active webviews
 		this.webviews.add(document.uri, messageHandler, webviewPanel);
-		HexEditorProvider.currentWebview = webviewPanel.webview;
+		HexEditorProvider.currentWebview = messageHandler;
 
 		// Set the hex editor activity panel to be visible
 		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", true);
@@ -129,7 +131,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel.onDidChangeViewState(e => {
 			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible);
 			if (e.webviewPanel.visible) {
-				HexEditorProvider.currentWebview = e.webviewPanel.webview;
+				HexEditorProvider.currentWebview = messageHandler;
 				this._dataInspectorView.show({
 					autoReveal: true,
 					forceFocus: true
@@ -145,12 +147,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<HexDocument>>();
 	public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
 
-	public saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Thenable<void> {
+	public async saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Promise<void> {
+		await document.save(cancellation);
+
 		// Update all webviews that a save has just occured
 		for (const { messaging } of this.webviews.get(document.uri)) {
-			messaging.sendEvent({ type: MessageType.Saved });
+			messaging.sendEvent({ type: MessageType.Saved, lastEditId: document.lastSavedEdit });
 		}
-		return document.save(cancellation);
 	}
 
 	public saveCustomDocumentAs(document: HexDocument, destination: vscode.Uri, cancellation: vscode.CancellationToken): Thenable<void> {
@@ -249,6 +252,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				return {
 					type: MessageType.ReadyResponse,
 					initialOffset: document.baseAddress,
+					edits: document.edits,
+					lastSavedEdit: document.lastSavedEdit,
 					fileSize: await document.size(),
 					isLargeFile: document.isLargeFile,
 				};

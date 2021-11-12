@@ -126,6 +126,19 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public get isUnsaved(): boolean {
 		return this.model.unsavedEdits.length > 0;
 	}
+	/**
+	 * Edits made in the document.
+	 */
+	public get edits(): readonly HexDocumentEdit[] {
+		return this.model.edits;
+	}
+
+	/**
+	 * Gets the opId of the last saved edit.
+	 */
+	public get lastSavedEdit(): number {
+		return this.model.lastSavedEdit;
+	}
 
 	/**
 	 * Called when the user edits the document in a webview.

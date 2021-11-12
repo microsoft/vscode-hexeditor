@@ -4,10 +4,10 @@
 import { css } from "@linaria/core";
 import { styled } from "@linaria/react";
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
-import { HexDocumentEditOp } from "../../shared/hexDocumentModel";
+import { useRecoilValue, useSetRecoilState } from "recoil";
+import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import { ByteData } from "./byteData";
-import { DataDisplayContext, DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected } from "./dataDisplayContext";
+import { DataDisplayContext, DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import * as select from "./state";
 import { clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
@@ -62,6 +62,10 @@ const dataCellSelectedCls = css`
 	color: var(--vscode-editor-selectionForeground);
 `;
 
+const dataCellUnsavedCls = css`
+	background: var(--vscode-minimapGutter-modifiedBackground);
+`;
+
 const EmptyDataCell = () => (
 	<span
 		className={dataCellCls}
@@ -99,10 +103,12 @@ export const DataHeader: React.FC<{ width: number }> = ({ width }) => (
 
 export const DataDisplay: React.FC = () => {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [offset, setOffset] = useRecoilState(select.offset);
-	const [scrollBounds, setScrollBounds] = useRecoilState(select.scrollBounds);
+	const setOffset = useSetRecoilState(select.offset);
+	const setScrollBounds = useSetRecoilState(select.scrollBounds);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
+	const editTimeline = useRecoilValue(select.editTimeline);
+	const lastSavedEdit = useRecoilValue(select.lastSavedEdit);
 
 	const setEdit = useSetRecoilState(select.edits);
 	const ctx = useMemo(() => new DisplayContext(setEdit), []);
@@ -112,6 +118,58 @@ export const DataDisplay: React.FC = () => {
 		window.addEventListener("mouseup", l, { passive: true });
 		return () => window.removeEventListener("mouseup", l);
 	}, []);
+
+	// When the focused byte changes, make sure it's in view
+	useEffect(() => {
+		const disposable = ctx.onDidChangeAnyFocus(byte => {
+			if (!byte) {
+				return;
+			}
+
+			const displayedBytes = select.getDisplayedBytes(dimensions);
+			const byteRowStart = Math.floor(byte / dimensions.rowByteWidth) * dimensions.rowByteWidth;
+			let newOffset: number;
+
+			setOffset(offset => {
+				if (byte < offset) {
+					return newOffset = byteRowStart;
+				} else if (byte - offset >= displayedBytes) {
+					return newOffset = byteRowStart - displayedBytes + dimensions.rowByteWidth;
+				} else {
+					return offset;
+				}
+			});
+
+			if (newOffset! !== undefined) {
+				setScrollBounds(scrollBounds => {
+					if (newOffset < scrollBounds.start) {
+						return scrollBounds.expandToContain(newOffset);
+					} else if (newOffset > scrollBounds.end) {
+						return scrollBounds.expandToContain(newOffset + displayedBytes * 2);
+					} else {
+						return scrollBounds;
+					}
+				});
+			}
+		});
+		return () => disposable.dispose();
+	}, [dimensions]);
+
+	useEffect(() => {
+		const unsavedRanges: Range[] = [];
+		for (let i = 0; i < editTimeline.ranges.length; i++) {
+			const range = editTimeline.ranges[i];
+			// todo: eventually support delete decorations?
+			if (range.op !== EditRangeOp.Insert || range.opId <= lastSavedEdit) {
+				continue;
+			}
+
+			if (range.value.byteLength > 0) {
+				unsavedRanges.push(new Range(range.offset, range.offset + range.value.byteLength));
+			}
+		}
+		ctx.unsavedRanges = unsavedRanges;
+	}, [editTimeline, lastSavedEdit]);
 
 	const onKeyDown = (e: React.KeyboardEvent) => {
 		const current = ctx.focusedElement || FocusedElement.zero;
@@ -172,23 +230,6 @@ export const DataDisplay: React.FC = () => {
 			}
 		} else {
 			ctx.setSelectionRanges([Range.single(next.byte)]);
-		}
-
-		const byteRowStart = Math.floor(next.byte / dimensions.rowByteWidth) * dimensions.rowByteWidth;
-		let newOffset: number;
-		if (next.byte < offset) {
-			newOffset = byteRowStart;
-		} else if (next.byte - offset >= displayedBytes) {
-			newOffset = byteRowStart - displayedBytes + dimensions.rowByteWidth;
-		} else {
-			return;
-		}
-
-		setOffset(newOffset);
-		if (newOffset < scrollBounds.start) {
-			setScrollBounds(scrollBounds.expandToContain(newOffset));
-		} else if (newOffset > scrollBounds.end) {
-			setScrollBounds(scrollBounds.expandToContain(newOffset + displayedBytes * 2));
 		}
 	};
 
@@ -321,6 +362,10 @@ const DataCell: React.FC<{
 	// the first octet, and is reset if the user stops editing.
 	const [firstOctetOfEdit, setFirstOctetOfEdit] = useState<number>();
 	const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+		if (e.metaKey || e.ctrlKey || e.altKey) {
+			return;
+		}
+
 		let val: number;
 		if (isChar && e.key.length === 1) {
 			val = e.key.charCodeAt(0);
@@ -360,6 +405,7 @@ const DataCell: React.FC<{
 				className,
 				useIsHovered(focusedElement) && dataCellHoveredCls,
 				useIsSelected(byte) && dataCellSelectedCls,
+				useIsUnsaved(byte) && dataCellUnsavedCls,
 			)}
 			onMouseEnter={onMouseEnter}
 			onMouseUp={onMouseUp}
