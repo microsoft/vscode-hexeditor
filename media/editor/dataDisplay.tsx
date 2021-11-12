@@ -35,6 +35,11 @@ const dataCellCls = css`
 	line-height: var(--cell-size);
 	text-align: center;
 	display: inline-block;
+
+	&:focus {
+		outline-offset: 1px;
+		outline: var(--vscode-focusBorder) 2px solid;
+	}
 `;
 
 const DataCellGroup = styled.div`
@@ -55,11 +60,6 @@ const dataCellHoveredCls = css`
 const dataCellSelectedCls = css`
 	background: var(--vscode-editor-selectionBackground);
 	color: var(--vscode-editor-selectionForeground);
-`;
-
-const dataCellFocusedCls = css`
-	outline-offset: 1px;
-	outline: var(--vscode-focusBorder) 2px solid;
 `;
 
 const EmptyDataCell = () => (
@@ -120,37 +120,34 @@ export const DataDisplay: React.FC = () => {
 		let delta = 0;
 		switch (e.key) {
 			case "ArrowLeft":
-			case "j":
 				delta = -1;
 				break;
 			case "ArrowRight":
-			case "k":
 				delta = 1;
 				break;
 			case "ArrowDown":
-			case "h":
 				delta = dimensions.rowByteWidth;
 				break;
 			case "ArrowUp":
-			case "g":
 				delta = -dimensions.rowByteWidth;
 				break;
 			case "Home":
 				delta = -current.byte;
 				break;
 			case "End":
-				delta = fileSize === undefined ?  displayedBytes : - current.byte - 1;
+				delta = fileSize === undefined ? displayedBytes : fileSize - current.byte - 1;
 				break;
 			case "PageUp":
 				delta = -displayedBytes;
 				break;
 			case "PageDown":
+			case "Space":
 				delta = displayedBytes;
 				break;
 		}
 
-		if (e.ctrlKey || e.metaKey) {
-			delta *= 10;
+		if (e.altKey) {
+			delta *= 8;
 		}
 
 		const next = new FocusedElement(current.char, Math.min(Math.max(0, current.byte + delta), fileSize ?? Infinity));
@@ -159,30 +156,30 @@ export const DataDisplay: React.FC = () => {
 		}
 
 		e.preventDefault();
+		e.stopPropagation();
 		ctx.focusedElement = next;
 
 		if (e.shiftKey) {
 			const srange = ctx.selection[0];
 			if (!srange) {
-				return [Range.inclusive(current.byte, next.byte)];
+				ctx.setSelectionRanges([Range.inclusive(current.byte, next.byte)]);
+			} else if (!srange.includes(next.byte)) {
+				ctx.replaceLastSelectionRange(srange.expandToContain(next.byte));
+			} else {
+				const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
+				const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
+				ctx.addSelectionRange(nextRange);
 			}
-
-			if (!srange.includes(next.byte)) {
-				return ctx.replaceLastSelectionRange(srange.expandToContain(next.byte));
-			}
-
-			const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
-			const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
-			return ctx.addSelectionRange(nextRange);
+		} else {
+			ctx.setSelectionRanges([Range.single(next.byte)]);
 		}
 
 		const byteRowStart = Math.floor(next.byte / dimensions.rowByteWidth) * dimensions.rowByteWidth;
-
 		let newOffset: number;
 		if (next.byte < offset) {
 			newOffset = byteRowStart;
 		} else if (next.byte - offset >= displayedBytes) {
-			newOffset = byteRowStart - displayedBytes;
+			newOffset = byteRowStart - displayedBytes + dimensions.rowByteWidth;
 		} else {
 			return;
 		}
@@ -284,7 +281,7 @@ const DataCell: React.FC<{
 			if (e.ctrlKey || e.metaKey) {
 				ctx.addSelectionRange(Range.single(byte));
 			} else {
-				ctx.replaceSelectionRanges([Range.single(byte)]);
+				ctx.setSelectionRanges([Range.single(byte)]);
 			}
 		}
 	}, [byte]);
@@ -304,12 +301,12 @@ const DataCell: React.FC<{
 			if (e.ctrlKey || e.metaKey) {
 				ctx.addSelectionRange(Range.inclusive(asc ? pb + 1 : pb, byte));
 			} else {
-				ctx.replaceSelectionRanges([Range.inclusive(asc ? pb : pb + 1, byte)]);
+				ctx.setSelectionRanges([Range.inclusive(asc ? pb : pb + 1, byte)]);
 			}
 		} else if (e.ctrlKey || e.metaKey) {
 			ctx.addSelectionRange(Range.single(byte));
 		} else {
-			ctx.replaceSelectionRanges([Range.single(byte)]);
+			ctx.setSelectionRanges([Range.single(byte)]);
 		}
 	}, [focusedElement.key, byte]);
 
@@ -332,6 +329,8 @@ const DataCell: React.FC<{
 		} else {
 			return;
 		}
+
+		e.stopPropagation();
 
 		if (isChar) {
 			// b is final
@@ -361,7 +360,6 @@ const DataCell: React.FC<{
 				className,
 				useIsHovered(focusedElement) && dataCellHoveredCls,
 				useIsSelected(byte) && dataCellSelectedCls,
-				isFocused && dataCellFocusedCls,
 			)}
 			onMouseEnter={onMouseEnter}
 			onMouseUp={onMouseUp}
@@ -383,12 +381,17 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 	const endPage = useRecoilValue(select.editedDataPages(endPageNo));
 
 	let memoValue = "";
-	const rawBytes = new Uint8Array(width);
+	let rawBytes = new Uint8Array(width);
 	for (let i = 0; i < width; i++) {
 		const boffset = offset + i;
 		const value = boffset >= endPageStartsAt
 			? endPage[boffset - endPageStartsAt]
 			: startPage[boffset - startPageStartsAt];
+		if (value === undefined) {
+			rawBytes = rawBytes.subarray(0, i);
+			break;
+		}
+
 		memoValue += "," + value;
 		rawBytes[i] = value;
 	}

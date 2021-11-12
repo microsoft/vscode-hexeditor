@@ -104,16 +104,26 @@ export class Range {
 			return this;
 		}
 	}
-
 	/**
-	 * Returns one or more ranges representing this range but excluding the otherRange.
+	 * Returns whether this range overlaps the other one.
 	 */
-	public subtract(otherRange: Range): Range[] {
-		const delta: Range[] = [];
-		if (otherRange.start > this.start) {
-			delta.push(new Range(this.start, otherRange.start));
+	public overlaps(other: Range): boolean {
+		return other.end > this.start && other.start < this.end;
+	}
+	/**
+	 * Returns one or more ranges representing ranges covered by exactly one of
+	 * this or the `otherRange`.
+	 */
+	public difference(otherRange: Range): Range[] {
+		if (!this.overlaps(otherRange)) {
+			return [this, otherRange];
 		}
-		if (otherRange.end < this.end) {
+
+		const delta: Range[] = [];
+		if (this.start !== otherRange.start) {
+			delta.push(new Range(otherRange.start, this.start));
+		}
+		if (this.end !== otherRange.end) {
 			delta.push(new Range(otherRange.end, this.end));
 		}
 

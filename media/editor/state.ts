@@ -64,7 +64,7 @@ export const dimensions = atom<IDimensions>({
 
 /** Gets the number of bytes visible in the window. */
 export const getDisplayedBytes = (d: IDimensions): number =>
-	d.rowByteWidth * (Math.ceil(d.height / d.rowPxHeight) - 1);
+	d.rowByteWidth * (Math.floor(d.height / d.rowPxHeight) - 1);
 
 /** Currently displayed byte offset */
 export const offset = atom({
@@ -141,7 +141,7 @@ export const editedDataPages = selectorFamily({
 				const page = get(rawDataPages(pageNo));
 				const start = offset - pageNo * pageSize;
 				const len = Math.min(page.byteLength - start, target.byteLength);
-				target.set(page.subarray(start, len), 0);
+				target.set(page.subarray(start, start + len), 0);
 				return Promise.resolve(len);
 			}
 		}, ranges, pageSize * pageNumber, pageSize);

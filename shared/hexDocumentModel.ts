@@ -275,7 +275,7 @@ export async function *readUsingRanges(readable: Pick<FileAccessor, "read">, ran
 		}
 
 		// range.op === Read
-		const until = i + 1 < ranges.length ? ranges[i + 1].offset - range.offset : Infinity;
+		const until = i + 1 < ranges.length ? ranges[i + 1].offset : Infinity;
 		let roffset = range.roffset + Math.max(0, fromOffset - range.offset);
 		while (roffset < until) {
 			const bytes = await readable.read(roffset, buf.subarray(0, Math.min(buf.length, until - roffset)));
@@ -295,9 +295,6 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 
 	/** Splits the "range" into two parts at the given byte within the range */
 	const getSplit = (split: EditRange, atByte: number): { before: EditRange, after: EditRange } => {
-		if (!split) {
-			debugger;
-		}
 		if (split.op === EditRangeOp.Read) {
 			return {
 				before: { op: EditRangeOp.Read, roffset: split.roffset, offset: split.offset },
@@ -316,7 +313,7 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 		}
 	};
 
-	const searcher = binarySearch<EditRange>(r => r.offset + 0.5);
+	const searcher = binarySearch<EditRange>(r => r.offset);
 	let sizeDelta = 0;
 
 	/** Shifts the offset of all ranges after i by the amount */
@@ -328,7 +325,10 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 	};
 
 	for (const edit of edits) {
-		const i = searcher(edit.offset, ranges);
+		let i = searcher(edit.offset, ranges);
+		if (i === ranges.length || ranges[i].offset > edit.offset) {
+			i--;
+		}
 		const split = ranges[i];
 
 		if (edit.op === HexDocumentEditOp.Insert) {
@@ -336,8 +336,12 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 			ranges.splice(i, 1, before, { op: EditRangeOp.Insert, offset: edit.offset, value: edit.value }, after);
 			shiftAfter(i + 2, edit.value.length);
 		} else if (edit.op === HexDocumentEditOp.Delete || edit.op === HexDocumentEditOp.Replace) {
-			const { before } = getSplit(split, edit.previous.length);
-			const until = searcher(edit.offset + edit.previous.length, ranges) - 1;
+			const { before } = getSplit(split, edit.offset - split.offset);
+			let until = searcher(edit.offset + edit.previous.length, ranges);
+			if (until === ranges.length || ranges[until].offset > edit.offset) {
+				until--;
+			}
+
 			const { after } = getSplit(ranges[until], edit.offset + edit.previous.length - ranges[until].offset);
 			ranges.splice(
 				i, until - i + 1,

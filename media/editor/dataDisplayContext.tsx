@@ -176,9 +176,9 @@ export class DisplayContext {
 	/**
 	 * Replaces the selection with the given ranges.
 	 */
-	public replaceSelectionRanges(ranges: Range[]): void {
-		if (this._selection.length === 0 && ranges.length === 1) {
-			this.addSelectionRange(ranges[0]);
+	public setSelectionRanges(ranges: Range[]): void {
+		if (this._selection.length < 2 && ranges.length === 1) {
+			this.replaceLastSelectionRange(ranges[0]);
 			return;
 		}
 
@@ -205,7 +205,7 @@ export class DisplayContext {
 			return;
 		}
 
-		const changed = range.subtract(this._selection[0]);
+		const changed = range.difference(this._selection[0]);
 		this._selection[0] = range;
 		for (const range of changed) {
 			this.selectionChangeEmitter.emit({ range, isSingleSwap: true });
