@@ -170,3 +170,8 @@ export const getAsciiCharacter = (byte: number): string | undefined => {
 		return String.fromCharCode(byte);
 	}
 };
+
+/**
+ * Returns `x` clamped between the provided lower and upper bounds.
+ */
+export const clamp = (lower: number, x: number, upper: number): number => Math.max(lower, Math.min(upper, x));
