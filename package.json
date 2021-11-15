@@ -110,7 +110,14 @@
           "when": "hexEditor:openEditor"
         }
       ]
-    }
+    },
+		"keybindings": [
+			{
+				"command": "hexEditor.goToOffset",
+				"key": "ctrl+g",
+				"when": "activeCustomEditorId == hexEditor.hexedit"
+			}
+		]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
