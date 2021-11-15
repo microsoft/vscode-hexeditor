@@ -6,15 +6,9 @@ import { styled } from "@linaria/react";
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
-import { ByteData } from "./byteData";
 import { DataDisplayContext, DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import * as select from "./state";
 import { clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
-
-export interface VirtualizedPacket {
-	offset: number;
-	data: ByteData;
-}
 
 const Header = styled.div`
 	font-weight: bold;
