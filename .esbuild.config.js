@@ -1,4 +1,5 @@
 const esbuild = require('esbuild');
+const svgr = require('esbuild-plugin-svgr');
 const linaria = require('@linaria/esbuild');
 
 const watch = process.argv.includes('--watch');
@@ -67,6 +68,7 @@ esbuild.build({
 	platform: 'browser',
   outfile: 'dist/editor.js',
 	plugins: [
+		svgr(),
 		linaria.default({ sourceMap: watch }),
 	],
 }).catch(() => process.exit(1))

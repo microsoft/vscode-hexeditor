@@ -10,6 +10,7 @@ import { ScrollContainer } from "./scrollContainer";
 import * as select from "./state";
 import { DataHeader } from "./dataDisplay";
 import { styled } from "@linaria/react";
+import { FindWidget } from "./findWidget";
 
 const Container = styled.div`
 	display: flex;
@@ -56,6 +57,7 @@ const Root: React.FC = () => {
 	}
 
 	return <Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
+		<FindWidget />
 		<DataHeader width={dimensions.rowByteWidth} />
 		<ScrollContainer />
 	</Container>;

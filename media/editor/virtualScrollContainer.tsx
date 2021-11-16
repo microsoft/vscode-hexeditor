@@ -15,6 +15,7 @@ const draggingCls = css`
 		background: var(--vscode-scrollbarSlider-activeBackground);
 	}
 `;
+<svg />
 
 const ScrollbarContainer = styled.div`
 	position: absolute;

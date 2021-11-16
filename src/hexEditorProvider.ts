@@ -175,7 +175,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		// Convert the styles and scripts for the webview into webview URIs
 		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.js"));
 		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.css"));
-		const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "node_modules", "@vscode", "codicons", "dist", "codicon.css"));
 
 		// Use a nonce to whitelist which scripts can be run
 		const nonce = randomString();
