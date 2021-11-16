@@ -15,7 +15,6 @@ const draggingCls = css`
 		background: var(--vscode-scrollbarSlider-activeBackground);
 	}
 `;
-<svg />
 
 const ScrollbarContainer = styled.div`
 	position: absolute;
@@ -81,6 +80,8 @@ export const VirtualScrollContainer: React.FC<{
 }> = ({ className, children, scrollStart, scrollEnd, minHandleHeight = 20, scrollTop, onScroll }) => {
 	const scrollDimension = useMemo(calcScrollbarDimensions, []);
 	const wrapperRef = useRef<HTMLDivElement | null>(null);
+	// Set when the scroll handle is being dragged. startY is the original pageY
+	// positon of the cursor. offset how far down the scroll handle the cursor was.
 	const [drag, setDrag] = useState<{ startY: number; offset: number; }>();
 	const size = useSize(wrapperRef);
 
@@ -91,7 +92,12 @@ export const VirtualScrollContainer: React.FC<{
 	let handleTop: number;
 	let handleHeight: number;
 	if (visible) {
+		// We use transform rather than top/height here since it's cheaper to
+		// rerender. The height is the greatest of either the min handle height or
+		// the proportion of the total data that the current window is displaying.
 		handleHeight = Math.max(minHandleHeight, size.height * size.height / scrollHeight);
+		// Likewise, the distance from the top is how far through the scrollHeight
+		// the current scrollTop is--adjusting for the handle height to keep it on screen.
 		handleTop = (scrollTop - scrollStart) / (scrollHeight - size.height) * (size.height - handleHeight);
 		style = {
 			opacity: 1,
@@ -100,11 +106,13 @@ export const VirtualScrollContainer: React.FC<{
 		};
 	}
 
-	const clampScroll = (value: number) => clamp(scrollStart, value, scrollEnd - size.height);
+	/** Clamps the `newScrollTop` witihn the valid scrollable region. */
+	const clampScroll = (newScrollTop: number) => clamp(scrollStart, newScrollTop, scrollEnd - size.height);
 
+	/** Handler for a mouse move to position "pageY" with the given scrubber offset. */
 	const onScrollWithOffset = (pageY: number, offset: number) => {
-		// This is just the `handleTop` assignment solved for the scrollTop where
-		// handleTop = `pageY - offset - size.top`.
+		// This is just the `handleTop` assignment from above solved for the
+		// scrollTop where handleTop = `pageY - offset - size.top`.
 		const newScrollTop = (pageY - offset - size.top) / (size.height - handleHeight) * (scrollHeight - size.height) - scrollStart;
 		onScroll(clampScroll(newScrollTop));
 	};
@@ -122,6 +130,7 @@ export const VirtualScrollContainer: React.FC<{
 
 		setDrag({
 			startY: evt.pageY,
+			// offset is how far down the scroll handle the cursor is
 			offset: clamp(0, evt.pageY - handleTop - size.top, handleHeight)
 		});
 		evt.preventDefault();
@@ -132,13 +141,14 @@ export const VirtualScrollContainer: React.FC<{
 			return;
 		}
 
-		// const handleY = clamp(0, evt.pageY - size.top - handleHeight / 2, size.height - handleHeight);
-		// const offset = evt.pageY  - size.top - handleY;
+		// Start scrolling and set the offset to by the middle of the scrollbar.
+		// Start dragging if we aren't already.
 		onScrollWithOffset(evt.pageY, handleHeight / 2);
 		setDrag(d => d || { startY: evt.pageY, offset: handleHeight / 2 });
 		evt.preventDefault();
 	};
 
+	// Effect that adds a drag overlay and global mouse listeners while scrubbing on the scrollbar.
 	useEffect(() => {
 		if (!drag) {
 			return;

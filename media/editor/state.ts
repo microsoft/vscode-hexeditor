@@ -66,6 +66,10 @@ export const dimensions = atom<IDimensions>({
 export const getDisplayedBytes = (d: IDimensions): number =>
 	d.rowByteWidth * (Math.floor(d.height / d.rowPxHeight) - 1);
 
+/** Returns the byte at the start of the row containing the given byte. */
+export const startOfRowContainingByte = (byte: number, dimensions: IDimensions): number =>
+	Math.floor(byte / dimensions.rowByteWidth) * dimensions.rowByteWidth;
+
 /** Currently displayed byte offset */
 export const offset = atom({
 	key: "offset",

@@ -194,7 +194,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 				<link href="${styleUri}" rel="stylesheet" />
-				<link href="${codiconsUri}" rel="stylesheet" />
 				<script nonce="${nonce}" src="${scriptUri}" defer></script>
 
 				<title>Hex Editor</title>

@@ -8,7 +8,7 @@ import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import { DataDisplayContext, DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import * as select from "./state";
-import { clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
+import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
 const Header = styled.div`
 	font-weight: bold;
@@ -121,10 +121,12 @@ export const DataDisplay: React.FC = () => {
 			}
 
 			const displayedBytes = select.getDisplayedBytes(dimensions);
-			const byteRowStart = Math.floor(byte / dimensions.rowByteWidth) * dimensions.rowByteWidth;
+			const byteRowStart = select.startOfRowContainingByte(byte, dimensions);
 			let newOffset: number;
 
 			setOffset(offset => {
+				// If the focused byte is before the selected byte, adjust upwards.
+				// If the focused byte is off the window, adjust the offset so it's displayed
 				if (byte < offset) {
 					return newOffset = byteRowStart;
 				} else if (byte - offset >= displayedBytes) {
@@ -135,6 +137,7 @@ export const DataDisplay: React.FC = () => {
 			});
 
 			if (newOffset! !== undefined) {
+				// Ensure the scroll bounds contain the new offset.
 				setScrollBounds(scrollBounds => {
 					if (newOffset < scrollBounds.start) {
 						return scrollBounds.expandToContain(newOffset);
@@ -149,6 +152,7 @@ export const DataDisplay: React.FC = () => {
 		return () => disposable.dispose();
 	}, [dimensions]);
 
+	// Whenever the edit timeline changes, update unsaved ranges.
 	useEffect(() => {
 		const unsavedRanges: Range[] = [];
 		for (let i = 0; i < editTimeline.ranges.length; i++) {
@@ -202,7 +206,7 @@ export const DataDisplay: React.FC = () => {
 			delta *= 8;
 		}
 
-		const next = new FocusedElement(current.char, Math.min(Math.max(0, current.byte + delta), fileSize ?? Infinity));
+		const next = new FocusedElement(current.char, clamp(0, current.byte + delta, fileSize ?? Infinity));
 		if (next.key === current.key) {
 			return;
 		}
@@ -213,6 +217,11 @@ export const DataDisplay: React.FC = () => {
 
 		if (e.shiftKey) {
 			const srange = ctx.selection[0];
+			// On a shift key, expand the selection to include the byte. If there
+			// was no previous selection, create one. If the old selection didn't
+			// include the newly focused byte, expand it. Otherwise, adjust the
+			// closer of the start or end of the selection to the focused byte
+			// (allows shrinking the selection.)
 			if (!srange) {
 				ctx.setSelectionRanges([Range.inclusive(current.byte, next.byte)]);
 			} else if (!srange.includes(next.byte)) {

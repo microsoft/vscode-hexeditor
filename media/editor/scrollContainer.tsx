@@ -11,6 +11,11 @@ const wrapperCls = css`
 	flex-basis: 0;
 `;
 
+/**
+ * "Overscroll" of data that the hex editor will try to load. For example, if
+ * this is set to 2, then two additional window heights of data will be loaded
+ * before and after the currently displayed data.
+ */
 const loadThreshold = 0.5;
 
 export const ScrollContainer: React.FC = () => {
@@ -29,6 +34,7 @@ export const ScrollContainer: React.FC = () => {
 	}, [offset]);
 
 	const onScroll = useCallback((scrollTop: number) => {
+		// On scroll, figure out the offset displayed at the new position.
 		const newOffset = bounds.start + Math.floor(scrollTop / dimension.rowPxHeight) * dimension.rowByteWidth;
 		const newScrollTop = Math.floor(scrollTop / dimension.rowPxHeight) * dimension.rowPxHeight;
 		previousOffset.current = newOffset;
@@ -37,6 +43,8 @@ export const ScrollContainer: React.FC = () => {
 
 		const windowSize = select.getDisplayedBytes(dimension);
 		setBounds(bounds => {
+			// Expand the scroll bounds if the new position is too close to the
+			// start or end of the selection, based on the loadThreshold.
 			if (newOffset - bounds.start < windowSize * loadThreshold && bounds.start > 0) {
 				return new Range(Math.max(0, bounds.start - windowSize), bounds.end);
 			} else if (bounds.end - newOffset < windowSize * (1 + loadThreshold)) {
