@@ -22,7 +22,7 @@ export class Backup {
 		await vscode.workspace.fs.writeFile(this.uri, encoder.encode(serialized));
 	}
 
-	/** Writes the edits to the backup file. */
+	/** Reads the edits from the backup file. */
 	public async read(): Promise<HexDocumentEdit[]> {
 		let serialized: string;
 		try {

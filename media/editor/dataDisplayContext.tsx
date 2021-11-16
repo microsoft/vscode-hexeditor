@@ -50,9 +50,9 @@ export class DisplayContext {
 	}
 
 	/**
-	 * Emitter that fires when the given byte is hovered or unhovered.
+	 * Emitter that fires when the given byte is focused or unfocused.
 	 */
-	public onDidChangeFocus(element: FocusedElement, listener: (isHovered: boolean) => void): IDisposable {
+	public onDidChangeFocus(element: FocusedElement, listener: (isFocused: boolean) => void): IDisposable {
 		if (this.focusChangeHandlers.has(element.key)) {
 			throw new Error(`Duplicate focus change handler for byte ${element.byte}`);
 		}
@@ -74,14 +74,14 @@ export class DisplayContext {
 	}
 
 	/**
-	 * Gets the currently hovered byte, if any.
+	 * Gets the currently focused byte, if any.
 	 */
 	public get focusedElement(): FocusedElement | undefined {
 		return this._focusedByte;
 	}
 
 	/**
-	 * Updates the currently hovered byte.
+	 * Updates the currently focused byte.
 	 */
 	public set focusedElement(element: FocusedElement | undefined ) {
 		if (this._focusedByte?.key === element?.key) {
