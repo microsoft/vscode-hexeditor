@@ -140,9 +140,8 @@
   },
   "dependencies": {
     "@linaria/react": "^3.0.0-beta.13",
-    "@microsoft/fast-react-wrapper": "^0.1.15",
     "@vscode/codicons": "0.0.26",
-    "@vscode/webview-ui-toolkit": "^0.8.4",
+    "@vscode/streamsearch": "connor4312/streamsearch",
     "cockatiel": "^2.0.2",
     "js-base64": "^3.7.2",
     "react": "^17.0.2",

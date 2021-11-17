@@ -3,7 +3,7 @@
 
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
-import { HexDocumentEdit, HexDocumentEditOp, HexDocumentModel } from "../shared/hexDocumentModel";
+import { HexDocumentEdit, HexDocumentModel } from "../shared/hexDocumentModel";
 import { Backup } from "./backup";
 import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
@@ -44,20 +44,28 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	// Last save time
 	public lastSave = Date.now();
 
-	public readonly searchProvider: SearchProvider;
+	/** Search provider for the document. */
+	public readonly searchProvider = new SearchProvider();
 
-	private constructor(
+	constructor(
 		private model: HexDocumentModel,
 		public readonly isLargeFile: boolean,
 		public readonly baseAddress: number,
 	) {
 		super();
-		this.searchProvider = new SearchProvider(this);
 	}
 
 	/** @inheritdoc */
 	public get uri(): vscode.Uri {
 		return vscode.Uri.parse(this.model.uri);
+	}
+
+	/**
+	 * Reads data including edits from the model, returning an iterable of
+	 * Uint8Array chunks.
+	 */
+	public readWithEdits(offset: number): AsyncIterableIterator<Uint8Array>	{
+		return this.model.readWithEdits(offset);
 	}
 
 	/**
@@ -213,59 +221,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			}
 		};
 	}
-
-	/**
-	 * @description Handles replacement within the document when the user clicks the replace / replace all button
-	 * @param {number[]} replacement The new values which will be replacing the old
-	 * @param {number[][]} replaceOffsets The offsets to replace with replacement
-	 * @param {boolean} preserveCase Whether or not to preserve case
-	 * @returns {HexDocumentEdit[]} the new edits so we can send them back to the webview for application
-	 */
-	public async replace(replacement: number[], replaceOffsets: number[][], preserveCase: boolean): Promise<HexDocumentEdit[]> {
-		const allEdits: HexDocumentEdit[] = [];
-		// We only want to call this once as it's sort of expensive so we save it
-		let offset = 0;
-		for await (const chunk of this.model.readWithEdits()) {
-			for (const offsets of replaceOffsets) {
-				const edits: HexDocumentEdit[] = [];
-				// Similar to copy and paste we do the most conservative replacement
-				// i.e if the replacement is smaller we don't try to fill the whole selection
-				for (let i = 0; i < replacement.length && i < offsets.length; i++) {
-					const adjustedOffset = offsets[i] - offset;
-					// If we preserve case we make sure that the characters match the case of the original values
-					if (preserveCase) {
-						const replacementChar = String.fromCharCode(replacement[i]);
-						const currentDocumentChar = String.fromCharCode(chunk[adjustedOffset]);
-						// We need to check that the inverse isn't true because things like numbers return true for both
-						if (currentDocumentChar.toUpperCase() === currentDocumentChar && currentDocumentChar.toLowerCase() != currentDocumentChar) {
-							replacement[i] = replacementChar.toUpperCase().charCodeAt(0);
-						} else if (currentDocumentChar.toLowerCase() === currentDocumentChar && currentDocumentChar.toUpperCase() != currentDocumentChar) {
-							replacement[i] = replacementChar.toLowerCase().charCodeAt(0);
-						}
-					}
-
-					// If they're not the same as what is displayed then we add it as an edit as something has been replaced
-					if (replacement[i] !== chunk[adjustedOffset]) {
-						const edit: HexDocumentEdit = {
-							op: HexDocumentEditOp.Replace,
-							offset: chunk[adjustedOffset],
-							opId: 0,
-							previous: new Uint8Array([chunk[adjustedOffset]]),
-							value: new Uint8Array([replacement[i]]),
-						};
-						edits.push(edit);
-						allEdits.push(edit);
-					}
-				}
-			}
-
-			offset += chunk.length;
-		}
-		// After the replacement is complete we add it to the document's edit queue
-		if (allEdits.length !== 0) this.makeEdits(allEdits);
-		return allEdits;
-	}
-
 
 	/**
 	 * Utility function to convert a Uri query string into a map

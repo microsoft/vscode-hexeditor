@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import React, { useEffect, Suspense } from "react";
+import React, { useEffect, Suspense, useMemo } from "react";
 import { render } from "react-dom";
-import { RecoilRoot, useRecoilState, useRecoilValue } from "recoil";
+import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { FromWebviewMessage, MessageHandler, ToWebviewMessage, WebviewMessageHandler } from "../../shared/protocol";
 import { useTheme } from "./hooks";
 import { ScrollContainer } from "./scrollContainer";
@@ -11,6 +11,7 @@ import * as select from "./state";
 import { DataHeader } from "./dataDisplay";
 import { styled } from "@linaria/react";
 import { FindWidget } from "./findWidget";
+import { DataDisplayContext, DisplayContext } from "./dataDisplayContext";
 
 const Container = styled.div`
 	display: flex;
@@ -47,6 +48,9 @@ const Root: React.FC = () => {
 		return () => window.removeEventListener("resize", listener);
 	}, [theme]);
 
+	const setEdit = useSetRecoilState(select.edits);
+	const ctx = useMemo(() => new DisplayContext(setEdit), []);
+
 	const isLargeFile = useRecoilValue(select.isLargeFile);
 	const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
 
@@ -56,11 +60,13 @@ const Root: React.FC = () => {
 		</div>;
 	}
 
-	return <Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
-		<FindWidget />
-		<DataHeader width={dimensions.rowByteWidth} />
-		<ScrollContainer />
-	</Container>;
+	return <DataDisplayContext.Provider value={ctx}>
+		<Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
+			<FindWidget />
+			<DataHeader width={dimensions.rowByteWidth} />
+			<ScrollContainer />
+		</Container>
+	</DataDisplayContext.Provider>;
 };
 
 

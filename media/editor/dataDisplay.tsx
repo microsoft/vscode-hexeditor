@@ -6,7 +6,7 @@ import { styled } from "@linaria/react";
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
-import { DataDisplayContext, DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
+import { DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
@@ -22,7 +22,7 @@ const Address = styled.div`
 	line-height: var(--cell-size);
 `;
 
-const dataCellCls = css`
+export const dataCellCls = css`
 	font-family: var(--vscode-editor-font-family);
 	width: var(--cell-size);
 	height: var(--cell-size);
@@ -103,9 +103,7 @@ export const DataDisplay: React.FC = () => {
 	const fileSize = useRecoilValue(select.fileSize);
 	const editTimeline = useRecoilValue(select.editTimeline);
 	const lastSavedEdit = useRecoilValue(select.lastSavedEdit);
-
-	const setEdit = useSetRecoilState(select.edits);
-	const ctx = useMemo(() => new DisplayContext(setEdit), []);
+	const ctx = useDisplayContext();
 
 	useEffect(() => {
 		const l = () => { ctx.isSelecting = false; };
@@ -236,13 +234,11 @@ export const DataDisplay: React.FC = () => {
 		}
 	};
 
-	return <DataDisplayContext.Provider value={ctx}>
-		<div
-			ref={containerRef}
-			className={dataDisplayCls}
-			onKeyDown={onKeyDown}
-		><DataRows /></div>
-	</DataDisplayContext.Provider> ;
+	return <div
+		ref={containerRef}
+		className={dataDisplayCls}
+		onKeyDown={onKeyDown}
+	><DataRows /></div>;
 };
 
 const DataRows: React.FC = () => {
@@ -285,8 +281,6 @@ const DataRow: React.FC<{ top: number; offset: number; width: number }> = ({ top
 		</Suspense>
 	</div>
 );
-
-let opIdCounter = 0;
 
 const keysToOctets = new Map([
 	["0", 0x0], ["1", 0x1], ["2", 0x2], ["3", 0x3], ["4", 0x4], ["5", 0x5],
@@ -392,7 +386,7 @@ const DataCell: React.FC<{
 		setFirstOctetOfEdit(undefined);
 		ctx.edit({
 			op: HexDocumentEditOp.Replace,
-			opId: opIdCounter++,
+			opId: DisplayContext.opIdCounter++,
 			previous: new Uint8Array([byte]),
 			value: new Uint8Array([val]),
 			offset: byte,

@@ -35,6 +35,8 @@ export class FocusedElement {
  * this ended up introducing performance issues with very many components.
  */
 export class DisplayContext {
+	public static opIdCounter = Date.now();
+
 	private _selection: Range[] = [];
 	private _hoveredByte?: FocusedElement;
 	private _focusedByte?: FocusedElement;
@@ -198,8 +200,8 @@ export class DisplayContext {
 	/**
 	 * Appends a new edit to the document.
 	 */
-	public edit(edit: HexDocumentEdit): void {
-		this.setEdits(prev => [...prev, edit]);
+	public edit(edits: HexDocumentEdit | readonly HexDocumentEdit[]): void {
+		this.setEdits(prev => prev.concat(edits));
 	}
 
 	/**

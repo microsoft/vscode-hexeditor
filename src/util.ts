@@ -30,3 +30,14 @@ export async function openOffsetInput(): Promise<string | undefined> {
  */
 export const getCorrectArrayBuffer = (u8: Uint8Array): ArrayBuffer =>
 	u8.byteLength === u8.buffer.byteLength ? u8.buffer : u8.buffer.slice(0, u8.byteLength);
+
+
+/** Returns the number of bytes in the str when interpreted as utf-8 */
+export const utf8Length = (str: string): number => {
+	if (typeof Buffer !== "undefined") {
+		return Buffer.byteLength(str);
+	} else {
+	// todo: maybe doing some loops by hand here would be faster? does it matter?
+	return new Blob([str]).size;
+	}
+};

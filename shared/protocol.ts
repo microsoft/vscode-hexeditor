@@ -3,14 +3,12 @@
  *--------------------------------------------------------*/
 
 import { HexDocumentEdit } from "./hexDocumentModel";
-import { SearchOptions, SearchResults } from "./search";
 
 export const enum MessageType {
 	//#region to webview
 	ReadyResponse,
 	ReadRangeResponse,
 	SearchResponse,
-	ReplaceResponse,
 	SetEdits,
 	Saved,
 	Changed,
@@ -25,7 +23,6 @@ export const enum MessageType {
 	ReadRangeRequest,
 	MakeEdits,
 	SearchRequest,
-	ReplaceRequest,
 	CancelSearch,
 	ClearDataInspector,
 	SetInspectByte,
@@ -52,14 +49,20 @@ export interface ReadRangeResponseMessage {
 	data: ArrayBuffer;
 }
 
-export interface SearchResponseMessage {
-	type: MessageType.SearchResponse;
-	results: SearchResults;
+export interface SearchResult {
+	from: number;
+	to: number;
+	previous: Uint8Array;
 }
 
-export interface ReplaceResponseMessage {
-	type: MessageType.ReplaceResponse;
-	edits: HexDocumentEdit[];
+export interface SearchResultsWithProgress {
+	results: SearchResult[];
+	progress: number;
+}
+
+export interface SearchResponseMessage {
+	type: MessageType.SearchResponse;
+	results: SearchResultsWithProgress;
 }
 
 /** Notifies the document is saved, any pending edits should be flushed */
@@ -105,7 +108,6 @@ export type ToWebviewMessage =
 	| ReadyResponseMessage
 	| ReadRangeResponseMessage
 	| SearchResponseMessage
-	| ReplaceResponseMessage
 	| SavedMessage
 	| ChangedMessage
 	| GoToOffsetMessage
@@ -131,16 +133,8 @@ export interface MakeEditsMessage {
 
 export interface SearchRequestMessage {
 	type: MessageType.SearchRequest;
-	searchType: "ascii" | "hex";
-	query: string;
-	options: SearchOptions;
-}
-
-export interface ReplaceRequestMessage {
-	type: MessageType.ReplaceRequest;
-	query: number[];
-	offsets: number[][];
-	preserveCase: boolean;
+	query: { literal: Uint8Array } | { re: string };
+	caseSensitive: boolean;
 }
 
 export interface CancelSearchMessage {
@@ -168,7 +162,6 @@ export type FromWebviewMessage =
 	| CancelSearchMessage
 	| ClearDataInspectorMessage
 	| SetInspectByteMessage
-	| ReplaceRequestMessage
 	| ReadyRequestMessage;
 
 export type ExtensionHostMessageHandler = MessageHandler<ToWebviewMessage, FromWebviewMessage>;

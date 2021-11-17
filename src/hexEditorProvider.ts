@@ -7,7 +7,7 @@ import { ExtensionHostMessageHandler, FromWebviewMessage, MessageHandler, Messag
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
-import { SearchResults } from "./searchRequest";
+import { LiteralSearchRequest, ISearchRequest, RegexSearchRequest } from "./searchRequest";
 import { getCorrectArrayBuffer, randomString } from "./util";
 import { WebviewCollection } from "./webViewCollection";
 
@@ -108,7 +108,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		_token: vscode.CancellationToken
 	): Promise<void> {
 		const messageHandler: ExtensionHostMessageHandler = new MessageHandler(
-			message => this.onMessage(document, message),
+			message => this.onMessage(messageHandler, document, message),
 			message => webviewPanel.webview.postMessage(message),
 		);
 
@@ -243,7 +243,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		return p;
 	}
 
-	private async onMessage(document: HexDocument, message: FromWebviewMessage): Promise<undefined | ToWebviewMessage> {
+	private async onMessage(
+		messaging: ExtensionHostMessageHandler,
+		document: HexDocument,
+		message: FromWebviewMessage,
+	): Promise<undefined | ToWebviewMessage> {
 		switch (message.type) {
 			// If it's a packet request
 			case MessageType.ReadyRequest:
@@ -262,19 +266,17 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				document.makeEdits(message.edits);
 				return;
 			case MessageType.CancelSearch:
-				document.searchProvider.cancelRequest();
+				document.searchProvider.cancel();
 				return;
 			case MessageType.SearchRequest:
-				let results: SearchResults;
-				if (message.searchType === "ascii") {
-					results = await document.searchProvider.createNewRequest().textSearch(message.query, message.options);
+				let request: ISearchRequest;
+				if ("re" in message.query) {
+					request = new RegexSearchRequest(document, message.query.re, message.caseSensitive);
 				} else {
-					results = await document.searchProvider.createNewRequest().hexSearch(message.query as any);
+					request = new LiteralSearchRequest(document, message.query.literal, message.caseSensitive);
 				}
-				return { type: MessageType.SearchResponse, results };
-			case MessageType.ReplaceRequest:
-				const edits = await document.replace(message.query, message.offsets, message.preserveCase);
-				return { type: MessageType.ReplaceResponse, edits };
+				document.searchProvider.start(messaging, request);
+				return;
 			case MessageType.ClearDataInspector:
 				this._dataInspectorView.handleEditorMessage({ method: "reset" });
 				break;

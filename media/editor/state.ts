@@ -4,7 +4,7 @@
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, editsEqual, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
-import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, ToWebviewMessage } from "../../shared/protocol";
+import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
 import { Range } from "./util";
 
 declare function acquireVsCodeApi(): ({ postMessage(msg: unknown): void });
@@ -205,6 +205,10 @@ export const editedDataPages = selectorFamily({
 
 		return target.subarray(0, soFar);
 	},
+	cachePolicy_UNSTABLE: {
+		eviction: "lru",
+		maxSize: 1024,
+	},
 });
 
 const rawDataPages = selectorFamily({
@@ -219,4 +223,24 @@ const rawDataPages = selectorFamily({
 
 		return new Uint8Array(response.data);
 	},
+	cachePolicy_UNSTABLE: {
+		eviction: "lru",
+		maxSize: 1024,
+	},
 });
+
+export const searchResults = atom<SearchResultsWithProgress>({
+	key: "searchResults",
+	default: {
+		results: [],
+		progress: 1,
+	},
+	effects_UNSTABLE: [
+		fx => {
+			registerHandler(MessageType.SearchResponse, msg => {
+				fx.setSelf(msg.results);
+			});
+		}
+	],
+});
+

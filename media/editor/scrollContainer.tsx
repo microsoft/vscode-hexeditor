@@ -27,10 +27,29 @@ export const ScrollContainer: React.FC = () => {
 
 	const [scrollTop, setScrollTop] = useState(0);
 
+	const expandBoundsToContain = useCallback((newOffset: number) => {
+		const windowSize = select.getDisplayedBytes(dimension);
+
+		// Expand the scroll bounds if the new position is too close to the
+		// start or end of the selection, based on the loadThreshold.
+		setBounds(old => {
+			if (newOffset - old.start < windowSize * loadThreshold && old.start > 0) {
+				return new Range(Math.max(0, old.start - windowSize), old.end);
+			} else if (old.end - newOffset < windowSize * (1 + loadThreshold)) {
+				return new Range(old.start, Math.min(fileSize ?? Infinity, old.end + windowSize));
+			} else {
+				return old;
+			}
+		});
+	}, [dimension, fileSize]);
+
 	useEffect(() => {
-		if (previousOffset.current !== offset) {
-			setScrollTop(dimension.rowPxHeight * (offset - bounds.start) / dimension.rowByteWidth);
+		if (previousOffset.current === offset) {
+			return;
 		}
+
+		expandBoundsToContain(offset);
+		setScrollTop(dimension.rowPxHeight * (offset - bounds.start) / dimension.rowByteWidth);
 	}, [offset]);
 
 	const onScroll = useCallback((scrollTop: number) => {
@@ -39,21 +58,9 @@ export const ScrollContainer: React.FC = () => {
 		const newScrollTop = Math.floor(scrollTop / dimension.rowPxHeight) * dimension.rowPxHeight;
 		previousOffset.current = newOffset;
 		setOffset(newOffset);
+		expandBoundsToContain(newOffset);
 		setScrollTop(newScrollTop);
-
-		const windowSize = select.getDisplayedBytes(dimension);
-		setBounds(bounds => {
-			// Expand the scroll bounds if the new position is too close to the
-			// start or end of the selection, based on the loadThreshold.
-			if (newOffset - bounds.start < windowSize * loadThreshold && bounds.start > 0) {
-				return new Range(Math.max(0, bounds.start - windowSize), bounds.end);
-			} else if (bounds.end - newOffset < windowSize * (1 + loadThreshold)) {
-				return new Range(bounds.start, Math.min(fileSize ?? Infinity, bounds.end + windowSize));
-			} else {
-				return bounds;
-			}
-		});
-	}, [dimension]);
+	}, [dimension, expandBoundsToContain]);
 
 	return (
 		<VirtualScrollContainer
