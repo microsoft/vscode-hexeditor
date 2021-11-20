@@ -99,14 +99,14 @@ const VsIconButtonInner = styled.button`
 		cursor: auto;
 	}
 
+	&:hover {
+		background: var(--vscode-toolbar-hoverBackground);
+	}
+
 	&[aria-checked="true"] {
 		background: var(--vscode-inputOption-activeBackground);
 		outline: 1px solid var(--vscode-inputOption-activeBorder);
 		color: var(--vscode-inputOption-activeForeground);
-	}
-
-	&:hover {
-		background: var(--vscode-toolbar-hoverBackground);
 	}
 
 	&:focus {
