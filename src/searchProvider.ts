@@ -20,7 +20,7 @@ export class SearchProvider {
 
 		(async () => {
 			for await (const results of request.search()) {
-				messaging.sendEvent({ type: MessageType.SearchResponse, results });
+				messaging.sendEvent({ type: MessageType.SearchProgress, data: results });
 			}
 		})();
 	}

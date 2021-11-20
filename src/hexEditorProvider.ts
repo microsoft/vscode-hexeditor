@@ -268,9 +268,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.SearchRequest:
 				let request: ISearchRequest;
 				if ("re" in message.query) {
-					request = new RegexSearchRequest(document, message.query.re, message.caseSensitive);
+					request = new RegexSearchRequest(document, message.query.re, message.caseSensitive, message.cap);
 				} else {
-					request = new LiteralSearchRequest(document, message.query.literal, message.caseSensitive);
+					request = new LiteralSearchRequest(document, message.query.literal, message.caseSensitive, message.cap);
 				}
 				document.searchProvider.start(messaging, request);
 				return;

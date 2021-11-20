@@ -12,7 +12,7 @@ import SearchStop from "@vscode/codicons/src/icons/search-stop.svg";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
-import { MessageType } from "../../shared/protocol";
+import { MessageType, SearchResultsWithProgress } from "../../shared/protocol";
 import { dataCellCls } from "./dataDisplay";
 import { FocusedElement, useDisplayContext } from "./dataDisplayContext";
 import * as select from "./state";
@@ -41,11 +41,16 @@ const InputRow = styled.div`
 	margin-top: 4px;
 `;
 
-const ResultBadge = styled.div`
+const resultBadgeCls = css`
 	margin: 0 0 0 3px;
 	padding: 2px 0 0 2px;
 	min-width: 69px;
 	font-size: 0.9em;
+	white-space: nowrap;
+
+	> a {
+		cursor: pointer;
+	}
 `;
 
 const visibleCls = css`
@@ -55,9 +60,12 @@ const visibleCls = css`
 
 const textFieldCls = css`flex-grow: 1`;
 
-const queryDebounce = 300;
+const queryDebounce = 200;
 
-const numberFormat = new Intl.NumberFormat();
+const defaultResultCap = 10_000;
+
+const resultCountFormat = new Intl.NumberFormat(undefined, { notation: "compact" });
+const selectedFormat = new Intl.NumberFormat();
 
 const getQueryBytes = (query: string, isBinaryMode: boolean) => isBinaryMode ? hexDecode(query) : new TextEncoder().encode(query);
 
@@ -68,18 +76,20 @@ export const FindWidget: React.FC = () => {
 	const [isBinaryMode, setIsBinaryMode] = useState(false);
 	const [isRegexp, setIsRegexp] = useState(false);
 	const [isCaseSensitive, setIsCaseSensitive] = useState(false);
-	const results = useRecoilValue(select.searchResults);
+	const [results, setResults]= useRecoilState(select.searchResults);
 	const [selectedResult, setSelectedResult] = useState<number>();
 	const [offset, setOffset] = useRecoilState(select.offset);
 	const dimensions = useRecoilValue(select.dimensions);
 	const ctx = useDisplayContext();
 	const textFieldRef = useRef<HTMLInputElement | null>(null);
+	const [isUncapped, setUncapped] = useState(false);
 	/** Element that was focused before the find widget was shown */
 	const previouslyFocusedElement = useRef<FocusedElement>();
 
 	const onQueryChange = useCallback(
 		(evt: React.ChangeEvent<HTMLInputElement>) => {
 			setQuery(isBinaryMode ? evt.target.value.replace(/[^0-9a-f]/g, "") : evt.target.value);
+			setUncapped(false);
 			setSelectedResult(undefined);
 		},
 		[isBinaryMode],
@@ -117,8 +127,10 @@ export const FindWidget: React.FC = () => {
 		let started = false;
 		const timeout = setTimeout(() => {
 			started = true;
+			setResults({ progress: 0, results: [] });
 			select.messageHandler.sendRequest({
 				type: MessageType.SearchRequest,
+				cap: isUncapped ? undefined : defaultResultCap,
 				query: !isBinaryMode && isRegexp
 					? { re: query }
 					: { literal: getQueryBytes(query, isBinaryMode) },
@@ -133,14 +145,14 @@ export const FindWidget: React.FC = () => {
 				clearTimeout(timeout);
 			}
 		};
-	}, [query, isCaseSensitive, isRegexp, isBinaryMode]);
+	}, [query, isCaseSensitive, isUncapped, isRegexp, isBinaryMode]);
 
 	const closeWidget = () => {
 		const prev = previouslyFocusedElement.current;
 		if (prev !== undefined && select.isByteVisible(dimensions, offset, prev.byte)) {
 			ctx.focusedElement = prev;
 		} else {
-			document.querySelector<HTMLElement>(dataCellCls)?.focus();
+			document.querySelector<HTMLElement>(`.${dataCellCls}`)?.focus();
 		}
 
 		setVisible(false);
@@ -214,8 +226,6 @@ export const FindWidget: React.FC = () => {
 		})));
 	};
 
-	const resultCountStr = numberFormat.format(results.results.length);
-
 	return <Wrapper tabIndex={visible ? undefined : -1} className={clsx(visible && visibleCls)}>
 		{results.progress < 1 && <VsProgressIndicator />}
 		<InputRow>
@@ -238,15 +248,7 @@ export const FindWidget: React.FC = () => {
 					<CaseSensitive />
 				</VsIconCheckbox>
 			</VsTextFieldGroup>
-			<ResultBadge>
-				{results.progress < 1
-					? `Found ${resultCountStr}...`
-					: !results.results.length
-						? "No results"
-						: selectedResult !== undefined
-							? `${numberFormat.format(selectedResult + 1)} of ${resultCountStr}`
-							: `${resultCountStr} results`}
-			</ResultBadge>
+			<ResultBadge onUncap={() => setUncapped(true)} results={results} selectedResult={selectedResult} />
 			<VsIconButton title="Cancel Search" disabled={results.progress === 1} onClick={stopSearch}>
 				<SearchStop />
 			</VsIconButton>
@@ -277,4 +279,26 @@ export const FindWidget: React.FC = () => {
 			</VsIconButton>
 		</InputRow>
 	</Wrapper>;
+};
+
+
+const ResultBadge: React.FC<{
+	results: SearchResultsWithProgress;
+	selectedResult: number | undefined;
+	onUncap(): void;
+}> = ({ results, selectedResult, onUncap }) => {
+	const resultCountStr = resultCountFormat.format(results.results.length);
+	const resultCountComponent = results.capped
+		? <a role="button" title={`More than ${results.results.length} results, click to find all`} onClick={onUncap}>{resultCountStr}+</a>
+		: <span title={`${results.results.length} results`}>{resultCountStr}</span>;
+
+		return <div className={resultBadgeCls}>
+			{results.progress < 1
+				? `Found ${resultCountStr}...`
+				: !results.results.length
+					? "No results"
+					: selectedResult !== undefined
+						? <>{selectedFormat.format(selectedResult + 1)} of {resultCountComponent}</>
+						: <>{resultCountComponent} results</>}
+		</div>;
 };

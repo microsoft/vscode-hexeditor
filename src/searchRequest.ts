@@ -15,16 +15,28 @@ export interface ISearchRequest extends Disposable {
 class ResultsCollector {
 	private static readonly targetUpdateInterval = 1000;
 
-	constructor(private readonly filesize: number | undefined) {}
+	public get capped() {
+		return this.cap === 0;
+	}
+
+	constructor(
+		private readonly filesize: number | undefined,
+		private cap: number | undefined,
+	) {}
 
 	public fileOffset = 0;
 
 	private lastYieldedTime = Date.now();
-	private readonly results: SearchResult[] = [];
+	private results: SearchResult[] = [];
 
 	/** Adds results to the collector */
 	public push(previous: Uint8Array, from: number, to: number) {
-		this.results.push({ from, to, previous });
+		if (this.cap === undefined) {
+			this.results.push({ from, to, previous });
+		} else if (this.cap > 0) {
+			this.results.push({ from, to, previous });
+			this.cap--;
+		}
 	}
 
 	/** Returns the results to yield right now, if any */
@@ -32,7 +44,9 @@ class ResultsCollector {
 		const now = Date.now();
 		if (now - this.lastYieldedTime > ResultsCollector.targetUpdateInterval) {
 			this.lastYieldedTime = now;
-			return { progress: this.filesize ? this.fileOffset / this.filesize : 0, results: this.results };
+			const results = this.results;
+			this.results = [];
+			return { progress: this.filesize ? this.fileOffset / this.filesize : 0, results };
 		}
 
 		return undefined;
@@ -40,7 +54,7 @@ class ResultsCollector {
 
 	/** Returns the final set of results */
 	public final(): SearchResultsWithProgress {
-		return { progress: 1, results: this.results };
+		return { progress: 1, capped: this.capped, results: this.results };
 	}
 }
 
@@ -66,6 +80,7 @@ export class LiteralSearchRequest implements ISearchRequest {
 		private readonly document: HexDocument,
 		private readonly originalNeedle: Uint8Array,
 		private readonly isCaseSensitive: boolean,
+		private readonly cap: number | undefined,
 	) {
 		if (!isCaseSensitive) {
 			this.searchNeedle = new Uint8Array(this.originalNeedle);
@@ -80,8 +95,8 @@ export class LiteralSearchRequest implements ISearchRequest {
 
 	/** @inheritdoc */
 	public async *search(): AsyncIterableIterator<SearchResultsWithProgress> {
-		const { isCaseSensitive, originalNeedle, searchNeedle, document } = this;
-		const collector = new ResultsCollector(await document.size());
+		const { isCaseSensitive, originalNeedle, searchNeedle, document, cap } = this;
+		const collector = new ResultsCollector(await document.size(), cap);
 
 		const streamSearch = new StreamSearch(searchNeedle, (match, data) => {
 			if (data) {
@@ -94,7 +109,8 @@ export class LiteralSearchRequest implements ISearchRequest {
 		});
 
 		for await (const chunk of document.readWithEdits(0)) {
-			if (this.cancelled) {
+			if (this.cancelled || collector.capped) {
+				yield collector.final();
 				return;
 			}
 
@@ -139,6 +155,7 @@ export class RegexSearchRequest implements ISearchRequest {
 		private readonly document: HexDocument,
 		reSource: string,
 		caseSensitive: boolean,
+		private readonly cap: number | undefined,
 	) {
 		this.re = new RegExp(reSource, caseSensitive ? "g" : "ig");
 	}
@@ -156,10 +173,11 @@ export class RegexSearchRequest implements ISearchRequest {
 		const { re, document } = this;
 		const decoder = new TextDecoder();
 		const encoder = new TextEncoder();
-		const collector = new ResultsCollector(await document.size());
+		const collector = new ResultsCollector(await document.size(), this.cap);
 
 		for await (const chunk of document.readWithEdits(0)) {
-			if (this.cancelled) {
+			if (this.cancelled || collector.capped) {
+				yield collector.final();
 				return;
 			}
 

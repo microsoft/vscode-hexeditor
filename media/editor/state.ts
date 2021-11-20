@@ -239,8 +239,11 @@ export const searchResults = atom<SearchResultsWithProgress>({
 	},
 	effects_UNSTABLE: [
 		fx => {
-			registerHandler(MessageType.SearchResponse, msg => {
-				fx.setSelf(msg.results);
+			registerHandler(MessageType.SearchProgress, msg => {
+				fx.setSelf(prev => prev instanceof DefaultValue
+					? msg.data
+					: { progress: msg.data.progress, capped: msg.data.capped, results: prev.results.concat(msg.data.results) }
+				);
 			});
 		}
 	],

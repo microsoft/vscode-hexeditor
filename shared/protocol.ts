@@ -8,7 +8,7 @@ export const enum MessageType {
 	//#region to webview
 	ReadyResponse,
 	ReadRangeResponse,
-	SearchResponse,
+	SearchProgress,
 	SetEdits,
 	Saved,
 	Changed,
@@ -58,11 +58,12 @@ export interface SearchResult {
 export interface SearchResultsWithProgress {
 	results: SearchResult[];
 	progress: number;
+	capped?: boolean;
 }
 
-export interface SearchResponseMessage {
-	type: MessageType.SearchResponse;
-	results: SearchResultsWithProgress;
+export interface SearchProgressMessage {
+	type: MessageType.SearchProgress;
+	data: SearchResultsWithProgress;
 }
 
 /** Notifies the document is saved, any pending edits should be flushed */
@@ -107,7 +108,7 @@ export interface PopDisplayedOffsetMessage {
 export type ToWebviewMessage =
 	| ReadyResponseMessage
 	| ReadRangeResponseMessage
-	| SearchResponseMessage
+	| SearchProgressMessage
 	| SavedMessage
 	| ChangedMessage
 	| GoToOffsetMessage
@@ -134,6 +135,7 @@ export interface MakeEditsMessage {
 export interface SearchRequestMessage {
 	type: MessageType.SearchRequest;
 	query: { literal: Uint8Array } | { re: string };
+	cap: number | undefined;
 	caseSensitive: boolean;
 }
 
