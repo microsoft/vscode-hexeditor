@@ -351,7 +351,9 @@ const DataCell: React.FC<{
 	const isFocused = useIsFocused(focusedElement);
 	useEffect(() => {
 		if (isFocused) {
-			elRef.current?.focus();
+			if (document.hasFocus()) {
+				elRef.current?.focus();
+			}
 		} else {
 			setFirstOctetOfEdit(undefined);
 		}
@@ -394,10 +396,15 @@ const DataCell: React.FC<{
 		});
 	}, [byte, isChar, firstOctetOfEdit]);
 
+	const onFocus = useCallback(() => {
+		ctx.focusedElement = focusedElement;
+	}, [focusedElement]);
+
 	return (
 		<span
 			ref={elRef}
 			tabIndex={0}
+			onFocus={onFocus}
 			className={clsx(
 				dataCellCls,
 				className,

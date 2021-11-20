@@ -190,6 +190,10 @@ export class DisplayContext {
 
 	constructor(private readonly setEdits: SetterOrUpdater<readonly HexDocumentEdit[]>) {
 		registerHandler(MessageType.SetFocusedByte, msg => {
+			if (!document.hasFocus()) {
+				window.focus();
+			}
+
 			this.focusedElement = new FocusedElement(false, msg.offset);
 			this.setSelectionRanges([Range.single(msg.offset)]);
 		});
