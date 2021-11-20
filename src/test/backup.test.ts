@@ -9,8 +9,8 @@ import { getTempFile } from "./util";
 
 describe("Backup", () => {
 	const edits: HexDocumentEdit[] = [
-		{ op: HexDocumentEditOp.Delete, offset: 3, opId: 0, previous: new Uint8Array([3, 4, 5]) },
-		{ op: HexDocumentEditOp.Replace, offset: 1, opId: 0, value: new Uint8Array([10, 11, 12]), previous: new Uint8Array([1, 2, 6]) },
+		{ op: HexDocumentEditOp.Delete, offset: 3, previous: new Uint8Array([3, 4, 5]) },
+		{ op: HexDocumentEditOp.Replace, offset: 1, value: new Uint8Array([10, 11, 12]), previous: new Uint8Array([1, 2, 6]) },
 	];
 
 	it("round trips", async () => {

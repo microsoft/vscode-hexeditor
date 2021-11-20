@@ -39,7 +39,7 @@ export interface ReadyResponseMessage {
 	type: MessageType.ReadyResponse;
 	initialOffset: number;
 	edits: readonly HexDocumentEdit[];
-	lastSavedEdit: number;
+	unsavedEditIndex: number;
 	fileSize: number | undefined;
 	isLargeFile: boolean;
 }
@@ -68,7 +68,7 @@ export interface SearchResponseMessage {
 /** Notifies the document is saved, any pending edits should be flushed */
 export interface SavedMessage {
 	type: MessageType.Saved;
-	lastEditId: number;
+	unsavedEditIndex: number;
 }
 
 /** Notifies that the underlying file is changed. Webview should throw away and re-request state. */

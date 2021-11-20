@@ -3,7 +3,7 @@
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
-import { buildEditTimeline, editsEqual, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
+import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
 import { Range } from "./util";
 
@@ -146,25 +146,23 @@ export const edits = atom<readonly HexDocumentEdit[]>({
 			});
 
 			registerHandler(MessageType.SetEdits, msg => {
-				if (!editsEqual(fx.getLoadable(fx.node).getValue(), msg.edits)) {
-					fx.setSelf(msg.edits);
-				}
+				fx.setSelf(msg.edits);
 			});
 		}
 	]
 });
 
-export const lastSavedEdit = atom({
-	key: "lastSavedEdit",
+export const unsavedEditIndex = atom({
+	key: "unsavedEditIndex",
 	default: selector({
-		key: "initialLastSavedEdit",
-		get: ({ get }) => get(readyQuery).lastSavedEdit,
+		key: "initialUnsavedEditIndex",
+		get: ({ get }) => get(readyQuery).unsavedEditIndex,
 	}),
 
 	effects_UNSTABLE: [
 		fx => {
 			registerHandler(MessageType.Saved, msg => {
-				fx.setSelf(msg.lastEditId);
+				fx.setSelf(msg.unsavedEditIndex);
 			});
 		},
 	]

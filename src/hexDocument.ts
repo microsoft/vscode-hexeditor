@@ -3,7 +3,7 @@
 
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
-import { HexDocumentEdit, HexDocumentModel } from "../shared/hexDocumentModel";
+import { HexDocumentEdit, HexDocumentEditReference, HexDocumentModel } from "../shared/hexDocumentModel";
 import { Backup } from "./backup";
 import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
@@ -116,23 +116,11 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 */
 	public readonly onDidChangeContent = this._onDidChangeDocument.event;
 
-	private readonly _onDidChange = this._register(new vscode.EventEmitter<{
-		undo(): void;
-		redo(): void;
-	}>());
-
 	/**
-	 * Fired to tell VS Code that an edit has occured in the document.
-	 *
-	 * This updates the document's dirty indicator.
+	 * @see HexDocumentModel.isSynced
 	 */
-	public readonly onDidChange = this._onDidChange.event;
-
-	/**
-	 * Gets whether there are unsaved edits.
-	 */
-	public get isUnsaved(): boolean {
-		return this.model.unsavedEdits.length > 0;
+	public get isSynced(): boolean {
+		return this.model.isSynced;
 	}
 	/**
 	 * Edits made in the document.
@@ -144,17 +132,15 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	/**
 	 * Gets the opId of the last saved edit.
 	 */
-	public get lastSavedEdit(): number {
-		return this.model.lastSavedEdit;
+	public get unsavedEditIndex(): number {
+		return this.model.unsavedEditIndex;
 	}
 
 	/**
-	 * Called when the user edits the document in a webview.
-	 *
-	 * This fires an event to notify VS Code that the document has been edited.
+	 * @see HexDocumentModel.makeEdits
 	 */
-	public makeEdits(edits: readonly HexDocumentEdit[]): void {
-		this._onDidChange.fire(this.model.makeEdits(edits));
+	public makeEdits(edits: readonly HexDocumentEdit[]): HexDocumentEditReference {
+		return this.model.makeEdits(edits);
 	}
 
 	/**
@@ -168,6 +154,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * Called by VS Code when the user saves the document.
 	 */
 	public async save(_cancellation?: vscode.CancellationToken): Promise<void> {
+		this.lastSave = Date.now();
 		await this.model.save();
 	}
 
@@ -184,8 +171,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		}
 
 		const newFile = accessFile(targetResource);
-		await newFile.writeStream(this.model.readWithEdits());
 		this.lastSave = Date.now();
+		await newFile.writeStream(this.model.readWithEdits());
 		this.model = new HexDocumentModel({
 			accessor: newFile,
 			isFiniteSize: true,

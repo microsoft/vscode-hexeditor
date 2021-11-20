@@ -14,7 +14,7 @@ import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
 import { dataCellCls } from "./dataDisplay";
-import { DisplayContext, useDisplayContext } from "./dataDisplayContext";
+import { useDisplayContext } from "./dataDisplayContext";
 import * as select from "./state";
 import { clsx, hexDecode, Range } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
@@ -190,7 +190,6 @@ export const FindWidget: React.FC = () => {
 			ctx.edit({
 				op: HexDocumentEditOp.Replace,
 				offset: r.from,
-				opId: DisplayContext.opIdCounter++,
 				value: getQueryBytes(replace, isBinaryMode),
 				previous: r.previous,
 			});
@@ -198,11 +197,9 @@ export const FindWidget: React.FC = () => {
 	};
 
 	const replaceAll = () => {
-		const opId = DisplayContext.opIdCounter++;
 		ctx.edit(results.results.map((r): HexDocumentReplaceEdit => ({
 			op: HexDocumentEditOp.Replace,
 			offset: r.from,
-			opId,
 			value: getQueryBytes(replace, isBinaryMode),
 			previous: r.previous,
 		})));

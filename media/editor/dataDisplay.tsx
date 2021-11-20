@@ -6,7 +6,7 @@ import { styled } from "@linaria/react";
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
-import { DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
+import { FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
@@ -102,7 +102,7 @@ export const DataDisplay: React.FC = () => {
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
 	const editTimeline = useRecoilValue(select.editTimeline);
-	const lastSavedEdit = useRecoilValue(select.lastSavedEdit);
+	const unsavedEditIndex = useRecoilValue(select.unsavedEditIndex);
 	const ctx = useDisplayContext();
 
 	useEffect(() => {
@@ -156,7 +156,7 @@ export const DataDisplay: React.FC = () => {
 		for (let i = 0; i < editTimeline.ranges.length; i++) {
 			const range = editTimeline.ranges[i];
 			// todo: eventually support delete decorations?
-			if (range.op !== EditRangeOp.Insert || range.opId <= lastSavedEdit) {
+			if (range.op !== EditRangeOp.Insert || range.editIndex < unsavedEditIndex) {
 				continue;
 			}
 
@@ -165,7 +165,7 @@ export const DataDisplay: React.FC = () => {
 			}
 		}
 		ctx.unsavedRanges = unsavedRanges;
-	}, [editTimeline, lastSavedEdit]);
+	}, [editTimeline, unsavedEditIndex]);
 
 	const onKeyDown = (e: React.KeyboardEvent) => {
 		const current = ctx.focusedElement || FocusedElement.zero;
@@ -294,10 +294,10 @@ for (const [key, value] of keysToOctets) {
 
 const DataCell: React.FC<{
 	byte: number;
+	value: number;
 	isChar: boolean;
-	value: string;
 	className?: string;
-}> = ({ byte, value, className, isChar }) => {
+}> = ({ byte, value, className, children, isChar }) => {
 	const elRef = useRef<HTMLSpanElement | null>(null);
 	const focusedElement = new FocusedElement(isChar, byte);
 	const ctx = useDisplayContext();
@@ -352,6 +352,8 @@ const DataCell: React.FC<{
 	useEffect(() => {
 		if (isFocused) {
 			elRef.current?.focus();
+		} else {
+			setFirstOctetOfEdit(undefined);
 		}
 	}, [isFocused]);
 
@@ -363,11 +365,11 @@ const DataCell: React.FC<{
 			return;
 		}
 
-		let val: number;
+		let newValue: number;
 		if (isChar && e.key.length === 1) {
-			val = e.key.charCodeAt(0);
+			newValue = e.key.charCodeAt(0);
 		} else if (keysToOctets.has(e.key)) {
-			val = keysToOctets.get(e.key)!;
+			newValue = keysToOctets.get(e.key)!;
 		} else {
 			return;
 		}
@@ -377,18 +379,17 @@ const DataCell: React.FC<{
 		if (isChar) {
 			// b is final
 		} else if (firstOctetOfEdit !== undefined) {
-			val = firstOctetOfEdit << 4 | val;
+			newValue = firstOctetOfEdit << 4 | newValue;
 		} else {
-			return setFirstOctetOfEdit(val);
+			return setFirstOctetOfEdit(newValue);
 		}
 
 		ctx.focusedElement = ctx.focusedElement?.shift(1);
 		setFirstOctetOfEdit(undefined);
 		ctx.edit({
 			op: HexDocumentEditOp.Replace,
-			opId: DisplayContext.opIdCounter++,
-			previous: new Uint8Array([byte]),
-			value: new Uint8Array([val]),
+			previous: new Uint8Array([value]),
+			value: new Uint8Array([newValue]),
 			offset: byte,
 		});
 	}, [byte, isChar, firstOctetOfEdit]);
@@ -408,7 +409,9 @@ const DataCell: React.FC<{
 			onMouseUp={onMouseUp}
 			onMouseLeave={onMouseLeave}
 			onKeyDown={onKeyDown}
-		>{value}</span>
+		>{firstOctetOfEdit !== undefined
+			? firstOctetOfEdit.toString(16).toUpperCase()
+			: children}</span>
 	);
 };
 
@@ -456,8 +459,8 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 				key={i}
 				byte={boffset}
 				isChar={false}
-				value={value.toString(16).padStart(2, "0").toUpperCase()}
-			/>);
+				value={value}
+			>{value.toString(16).padStart(2, "0").toUpperCase()}</DataCell>);
 
 			const char = getAsciiCharacter(value);
 			chars.push(<DataCell
@@ -465,8 +468,8 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 				byte={boffset}
 				isChar={true}
 				className={char === undefined ? nonGraphicCharCls : undefined}
-				value={char === undefined ? "." : char}
-			/>);
+				value={value}
+			>{char === undefined ? "." : char}</DataCell>);
 		}
 		return { bytes, chars };
 	}, [memoValue]);

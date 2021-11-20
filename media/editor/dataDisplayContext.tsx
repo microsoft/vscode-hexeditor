@@ -35,8 +35,6 @@ export class FocusedElement {
  * this ended up introducing performance issues with very many components.
  */
 export class DisplayContext {
-	public static opIdCounter = Date.now();
-
 	private _selection: Range[] = [];
 	private _hoveredByte?: FocusedElement;
 	private _focusedByte?: FocusedElement;

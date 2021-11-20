@@ -43,14 +43,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const document = await HexDocument.create(uri, openContext, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
 
-		listeners.push(document.onDidChange(e => {
-			// Tell VS Code that the document has been edited by the user.
-			this._onDidChangeCustomDocument.fire({
-				document,
-				...e,
-			});
-		}));
-
 		listeners.push(document.onDidChangeContent(() => {
 			// Update all webviews when the document changes
 			for (const { messaging } of this.webviews.get(document.uri)) {
@@ -62,7 +54,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		listeners.push(watcher);
 		listeners.push(watcher.onDidChange(e => {
 			if (e.fsPath === uri.fsPath) {
-				if (document.isUnsaved) {
+				if (!document.isSynced) {
 					const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
 					vscode.window.showWarningMessage(message, "Overwrite", "Revert").then((selected) => {
 						if (selected === "Overwrite") {
@@ -152,7 +144,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 		// Update all webviews that a save has just occured
 		for (const { messaging } of this.webviews.get(document.uri)) {
-			messaging.sendEvent({ type: MessageType.Saved, lastEditId: document.lastSavedEdit });
+			messaging.sendEvent({ type: MessageType.Saved, unsavedEditIndex: document.unsavedEditIndex });
 		}
 	}
 
@@ -255,7 +247,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					type: MessageType.ReadyResponse,
 					initialOffset: document.baseAddress,
 					edits: document.edits,
-					lastSavedEdit: document.lastSavedEdit,
+					unsavedEditIndex: document.unsavedEditIndex,
 					fileSize: await document.size(),
 					isLargeFile: document.isLargeFile,
 				};
@@ -263,7 +255,12 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				const data = await document.readBuffer(message.offset, message.bytes);
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
 			case MessageType.MakeEdits:
-				document.makeEdits(message.edits);
+				const ref = document.makeEdits(message.edits);
+				this._onDidChangeCustomDocument.fire({
+					document,
+					undo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: ref.undo() }),
+					redo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: ref.redo() }),
+				});
 				return;
 			case MessageType.CancelSearch:
 				document.searchProvider.cancel();
