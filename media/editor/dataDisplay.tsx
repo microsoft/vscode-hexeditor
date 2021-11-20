@@ -400,11 +400,16 @@ const DataCell: React.FC<{
 		ctx.focusedElement = focusedElement;
 	}, [focusedElement]);
 
+	const onBlur = useCallback(() => {
+		ctx.focusedElement = undefined;
+	}, []);
+
 	return (
 		<span
 			ref={elRef}
 			tabIndex={0}
 			onFocus={onFocus}
+			onBlur={onBlur}
 			className={clsx(
 				dataCellCls,
 				className,

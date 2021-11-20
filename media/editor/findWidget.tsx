@@ -14,7 +14,7 @@ import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
 import { dataCellCls } from "./dataDisplay";
-import { useDisplayContext } from "./dataDisplayContext";
+import { FocusedElement, useDisplayContext } from "./dataDisplayContext";
 import * as select from "./state";
 import { clsx, hexDecode, Range } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
@@ -74,6 +74,8 @@ export const FindWidget: React.FC = () => {
 	const dimensions = useRecoilValue(select.dimensions);
 	const ctx = useDisplayContext();
 	const textFieldRef = useRef<HTMLInputElement | null>(null);
+	/** Element that was focused before the find widget was shown */
+	const previouslyFocusedElement = useRef<FocusedElement>();
 
 	const onQueryChange = useCallback(
 		(evt: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,6 +99,7 @@ export const FindWidget: React.FC = () => {
 		const l = (evt: KeyboardEvent) => {
 			if (evt.key === "f" && (evt.metaKey || evt.ctrlKey)) {
 				setVisible(true);
+				previouslyFocusedElement.current = ctx.focusedElement;
 				textFieldRef.current?.focus();
 				evt.preventDefault();
 			}
@@ -132,10 +135,16 @@ export const FindWidget: React.FC = () => {
 		};
 	}, [query, isCaseSensitive, isRegexp, isBinaryMode]);
 
-	const closeWidget = useCallback(() => {
+	const closeWidget = () => {
+		const prev = previouslyFocusedElement.current;
+		if (prev !== undefined && select.isByteVisible(dimensions, offset, prev.byte)) {
+			ctx.focusedElement = prev;
+		} else {
+			document.querySelector<HTMLElement>(dataCellCls)?.focus();
+		}
+
 		setVisible(false);
-		document.querySelector<HTMLElement>(dataCellCls)?.focus();
-	}, []);
+	};
 
 	const onKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Escape") {
