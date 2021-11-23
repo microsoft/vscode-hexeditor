@@ -128,17 +128,17 @@
   "devDependencies": {
     "@types/node": "^15.6.2",
     "@types/vscode": "^1.56.0",
-    "@types/webpack-env": "^1.16.0",
-    "@typescript-eslint/eslint-plugin": "^4.26.0",
-    "@typescript-eslint/parser": "^4.26.0",
-    "esbuild": "^0.12.15",
-    "eslint": "^7.27.0",
-    "mocha": "^8.4.0",
-    "ts-loader": "^8.0.14",
-    "typescript": "^4.3.2"
+    "@types/webpack-env": "^1.16.3",
+    "@typescript-eslint/eslint-plugin": "^5.4.0",
+    "@typescript-eslint/parser": "^5.4.0",
+    "esbuild": "^0.13.15",
+    "eslint": "^8.3.0",
+    "mocha": "^9.1.3",
+    "ts-loader": "^9.2.6",
+    "typescript": "^4.5.2"
   },
   "dependencies": {
-    "@vscode/codicons": "0.0.20",
-    "vscode-extension-telemetry": "0.3.2"
+    "@vscode/codicons": "0.0.26",
+    "vscode-extension-telemetry": "0.4.3"
   }
 }
