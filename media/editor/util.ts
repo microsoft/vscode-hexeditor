@@ -182,10 +182,20 @@ export const clamp = (lower: number, x: number, upper: number): number => Math.m
 export const hexDecode = (str: string): Uint8Array => {
 	const value = new Uint8Array(Math.ceil(str.length / 2));
 	for (let i = 0; i < str.length; i += 2) {
-		value[i >>> 1] = parseHexDigit(str[i]) << 4 | parseHexDigit(str[i + 1]);
+		value[i >>> 1] = (parseHexDigit(str[i]) || 0) << 4 | (parseHexDigit(str[i + 1]) || 0);
 	}
 
 	return value;
+};
+
+export const isHexString = (s: string): boolean => {
+	for (const char of s) {
+		if (parseHexDigit(char) === undefined) {
+			return false;
+		}
+	}
+
+	return true;
 };
 
 const parseHexDigit = (s: string) => {
@@ -212,6 +222,6 @@ const parseHexDigit = (s: string) => {
 		case "E": return 14;
 		case "f": return 15;
 		case "F": return 15;
-		default: return 0;
+		default: return undefined;
 	}
 };

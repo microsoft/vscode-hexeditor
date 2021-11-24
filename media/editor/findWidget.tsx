@@ -14,11 +14,11 @@ import ChevronDown from "@vscode/codicons/src/icons/chevron-down.svg";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
-import { MessageType, SearchResultsWithProgress } from "../../shared/protocol";
+import { MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
 import { dataCellCls } from "./dataDisplay";
 import { FocusedElement, useDisplayContext } from "./dataDisplayContext";
 import * as select from "./state";
-import { clsx, hexDecode, Range } from "./util";
+import { clsx, hexDecode, isHexString, Range } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
 
 const Wrapper = styled.div`
@@ -68,6 +68,11 @@ const replaceToggleCls = css`
 	padding: 0 !important;
 `;
 
+const ControlsContainer = styled.div`
+	width: 0;
+	flex-grow: 1;
+`;
+
 const textFieldCls = css`flex-grow: 1`;
 
 const queryDebounce = 200;
@@ -77,7 +82,32 @@ const defaultResultCap = 10_000;
 const resultCountFormat = new Intl.NumberFormat(undefined, { notation: "compact" });
 const selectedFormat = new Intl.NumberFormat();
 
-const getQueryBytes = (query: string, isBinaryMode: boolean) => isBinaryMode ? hexDecode(query) : new TextEncoder().encode(query);
+const getSearchQueryOrError = (query: string, isBinaryMode: boolean, isRegexp: boolean): SearchRequestMessage["query"] | string => {
+	if (isBinaryMode) {
+		return isHexString(query)
+			? { literal: hexDecode(query) }
+			: "Only hexadecimal characters (0-9 and a-f) are allowed";
+	}
+
+	if (isRegexp) {
+		try {
+			new RegExp(query);
+		} catch (e) {
+			return (e as SyntaxError).message;
+		}
+
+		return { re: query };
+	}
+
+	return { literal: new TextEncoder().encode(query) };
+};
+
+const searchResultToEdit = (value: Uint8Array) => (r: SearchResult): HexDocumentReplaceEdit => ({
+	op: HexDocumentEditOp.Replace,
+	offset: r.from,
+	value,
+	previous: r.previous,
+});
 
 export const FindWidget: React.FC = () => {
 	const [visible, setVisible] = useState(false);
@@ -98,9 +128,12 @@ export const FindWidget: React.FC = () => {
 	/** Element that was focused before the find widget was shown */
 	const previouslyFocusedElement = useRef<FocusedElement>();
 
+	const queryOrError = getSearchQueryOrError(query, isBinaryMode, isRegexp);
+	const replaceOrError = getSearchQueryOrError(replace, isBinaryMode, false);
+
 	const onQueryChange = useCallback(
 		(evt: React.ChangeEvent<HTMLInputElement>) => {
-			setQuery(isBinaryMode ? evt.target.value.replace(/[^0-9a-f]/g, "") : evt.target.value);
+			setQuery(evt.target.value);
 			setUncapped(false);
 			setSelectedResult(undefined);
 		},
@@ -108,7 +141,7 @@ export const FindWidget: React.FC = () => {
 	);
 
 	const onReplaceChange = useCallback(
-		(evt: React.ChangeEvent<HTMLInputElement>) => setReplace(isBinaryMode ? evt.target.value.replace(/[^0-9a-f]/g, "") : evt.target.value),
+		(evt: React.ChangeEvent<HTMLInputElement>) => setReplace(evt.target.value),
 		[isBinaryMode],
 	);
 
@@ -136,6 +169,11 @@ export const FindWidget: React.FC = () => {
 			return;
 		}
 
+		if (typeof queryOrError === "string") {
+			return;
+		}
+
+
 		let started = false;
 		const timeout = setTimeout(() => {
 			started = true;
@@ -143,9 +181,7 @@ export const FindWidget: React.FC = () => {
 			select.messageHandler.sendRequest({
 				type: MessageType.SearchRequest,
 				cap: isUncapped ? undefined : defaultResultCap,
-				query: !isBinaryMode && isRegexp
-					? { re: query }
-					: { literal: getQueryBytes(query, isBinaryMode) },
+				query: queryOrError,
 				caseSensitive: isCaseSensitive,
 			});
 		}, queryDebounce);
@@ -218,24 +254,18 @@ export const FindWidget: React.FC = () => {
 	};
 
 	const replaceSelected = () => {
-		if (selectedResult) {
+		if (selectedResult && typeof replaceOrError !== "string" && "literal" in replaceOrError) {
 			const r = results.results[selectedResult];
-			ctx.edit({
-				op: HexDocumentEditOp.Replace,
-				offset: r.from,
-				value: getQueryBytes(replace, isBinaryMode),
-				previous: r.previous,
-			});
+			ctx.edit(searchResultToEdit(replaceOrError.literal)(r));
 		}
 	};
 
 	const replaceAll = () => {
-		ctx.edit(results.results.map((r): HexDocumentReplaceEdit => ({
-			op: HexDocumentEditOp.Replace,
-			offset: r.from,
-			value: getQueryBytes(replace, isBinaryMode),
-			previous: r.previous,
-		})).sort((a, b) => b.offset - a.offset));
+		if (typeof replaceOrError !== "string" && "literal" in replaceOrError) {
+			ctx.edit(results.results
+				.map(searchResultToEdit(replaceOrError.literal))
+				.sort((a, b) => b.offset - a.offset));
+		}
 	};
 
 	const toggleFindReplace = useCallback(() => setReplaceVisible(v => !v), []);
@@ -245,7 +275,7 @@ export const FindWidget: React.FC = () => {
 		<VsIconButton title="Toggle Replace" onClick={toggleFindReplace} className={replaceToggleCls}>
 			{replaceVisible ? <ChevronDown /> : <ChevronRight />}
 		</VsIconButton>
-		<div>
+		<ControlsContainer>
 			<InputRow>
 				<VsTextFieldGroup
 					buttons={3}
@@ -255,6 +285,7 @@ export const FindWidget: React.FC = () => {
 					value={query}
 					onChange={onQueryChange}
 					onKeyDown={onKeyDown}
+					error={typeof queryOrError === "string" ? queryOrError : undefined}
 				>
 					{!isBinaryMode && <VsIconCheckbox checked={isRegexp} onToggle={setIsRegexp} title="Regular Expression Search">
 						<RegexIcon />
@@ -288,15 +319,16 @@ export const FindWidget: React.FC = () => {
 					onChange={onReplaceChange}
 					onKeyDown={onKeyDown}
 					placeholder="Replace"
+					error={typeof replaceOrError === "string" ? replaceOrError : undefined}
 				/>
-				<VsIconButton disabled={selectedResult === undefined} onClick={replaceSelected} title="Replace Selected Match">
+				<VsIconButton disabled={typeof replaceOrError === "string" || selectedResult === undefined} onClick={replaceSelected} title="Replace Selected Match">
 					<Replace />
 				</VsIconButton>
-				<VsIconButton disabled={results.progress < 1 || !results.results.length} onClick={replaceAll} title="Replace All Matches">
+				<VsIconButton disabled={typeof replaceOrError === "string" || results.progress < 1 || !results.results.length} onClick={replaceAll} title="Replace All Matches">
 					<ReplaceAll />
 				</VsIconButton>
 			</InputRow>}
-		</div>
+		</ControlsContainer>
 	</Wrapper>;
 };
 

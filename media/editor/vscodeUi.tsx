@@ -1,5 +1,7 @@
 import { styled } from "@linaria/react";
+import { css } from "@linaria/core";
 import React from "react";
+import { clsx } from "./util";
 
 const VsTextFieldGroupInner = styled.div`
 	position: relative
@@ -19,7 +21,7 @@ const VsTextFieldGroupButtons = styled.div`
 `;
 
 export const VsTextFieldGroup =
-React.forwardRef<HTMLInputElement, { buttons: number; outerClassName?: string } & React.InputHTMLAttributes<HTMLInputElement>>(
+React.forwardRef<HTMLInputElement, { buttons: number; outerClassName?: string; error?: string } & React.InputHTMLAttributes<HTMLInputElement>>(
 	({ buttons, children, outerClassName, ...props }, ref) => (
 		<VsTextFieldGroupInner className={outerClassName}>
 			<VsTextField {...props} ref={ref} style={{ paddingRight: buttons * (iconButtonMargin + iconButtonSize) }} />
@@ -28,11 +30,39 @@ React.forwardRef<HTMLInputElement, { buttons: number; outerClassName?: string } 
 	)
 );
 
-export const VsTextField = styled.input`
+const VsTextFieldErrorMessage = styled.div`
+	display: none;
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	padding: .4em;
+	font-size: 12px;
+	line-height: 17px;
+	margin-top: -1px;
+	word-wrap: break-word;
+	border: 1px solid var(--vscode-inputValidation-errorBorder);
+	color: var(--vscode-inputValidation-errorForeground);
+	background: var(--vscode-inputValidation-errorBackground);
+	z-index: 1;
+`;
+
+const TextFieldWrapper = styled.div`
+	position: relative;
+	display: flex;
+
+	:focus-within ${VsTextFieldErrorMessage} {
+		display: block;
+	}
+`;
+
+const VsTextFieldInner = styled.input`
 	background: var(--vscode-input-background);
 	border: 1px solid var(--vscode-input-border, transparent);
 	color: var(--vscode-input-foreground);
 	padding: 2px 4px;
+	width: 0;
+	flex-grow: 1;
 
 	::placeholder {
 		color: var(--vscode-input-placeholderForeground);
@@ -43,6 +73,17 @@ export const VsTextField = styled.input`
 		border-color: var(--vscode-focusBorder);
 	}
 `;
+
+const vsTextFieldErrorCls = css`
+	border-color: var(--vscode-inputValidation-errorBorder) !important;
+`;
+
+export const VsTextField = React.forwardRef<HTMLInputElement, { error?: string } & React.InputHTMLAttributes<HTMLInputElement>>(({ error, className, ...props }, ref) =>
+	<TextFieldWrapper>
+		<VsTextFieldInner {...props} ref={ref} className={clsx(className, !!error && vsTextFieldErrorCls)} />
+		{error && <VsTextFieldErrorMessage>{error}</VsTextFieldErrorMessage>}
+	</TextFieldWrapper>
+);
 
 export const VsProgressIndicator = styled.div`
 	position: absolute;
