@@ -8,7 +8,11 @@ import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessa
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { Range } from "./util";
 
-declare function acquireVsCodeApi(): ({ postMessage(msg: unknown): void });
+declare function acquireVsCodeApi(): ({
+	postMessage(msg: unknown): void;
+	getState(): any;
+	setState(value: any): void;
+});
 
 export const vscode = acquireVsCodeApi();
 
@@ -35,9 +39,9 @@ export const fileSize = selector({
 	get: ({ get }) => get(readyQuery).fileSize,
 });
 
-const initialOffset = selector({
+const initialOffset = selector<number>({
 	key: "initialOffset",
-	get: ({ get }) => get(readyQuery).initialOffset,
+	get: ({ get }) => vscode.getState()?.offset ?? get(readyQuery).initialOffset,
 });
 
 export const isLargeFile = selector({
@@ -84,6 +88,10 @@ export const offset = atom({
 		fx => {
 			let stashedOffset: number | undefined;
 
+			fx.onSet(offset => {
+				vscode.setState({ ...vscode.getState(), offset });
+			});
+
 			registerHandler(MessageType.StashDisplayedOffset, () => {
 				stashedOffset = fx.getLoadable(fx.node).getValue();
 			});
@@ -106,7 +114,7 @@ export const offset = atom({
 /** Size of data pages, in bytes */
 export const dataPageSize = atom({
 	key: "dataPageSize",
-	default: 1024
+	default: 128 * 1024
 });
 
 /**

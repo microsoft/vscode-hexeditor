@@ -168,7 +168,7 @@ export class HexDocumentModel {
 	/**
 	 * Reads bytes in their edited state starting at the given offset.
 	 */
-	public readWithEdits(fromOffset = 0, chunkSize = 1024): AsyncIterableIterator<Uint8Array>	{
+	public readWithEdits(fromOffset = 0, chunkSize = 128 * 1024): AsyncIterableIterator<Uint8Array>	{
 		return readUsingRanges(this.accessor, this.getEditTimeline().ranges, fromOffset, chunkSize);
 	}
 

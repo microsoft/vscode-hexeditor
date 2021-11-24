@@ -20,6 +20,7 @@ import { FocusedElement, useDisplayContext } from "./dataDisplayContext";
 import * as select from "./state";
 import { clsx, hexDecode, isHexString, parseHexDigit, Range } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
+import { usePersistedState } from "./hooks";
 
 const Wrapper = styled.div`
 	position: absolute;
@@ -155,13 +156,13 @@ const searchResultToEdit = (value: Uint8Array) => (r: SearchResult): HexDocument
 });
 
 export const FindWidget: React.FC = () => {
-	const [visible, setVisible] = useState(false);
-	const [replaceVisible, setReplaceVisible] = useState(false);
-	const [query, setQuery] = useState("");
-	const [replace, setReplace] = useState("");
-	const [isBinaryMode, setIsBinaryMode] = useState(false);
-	const [isRegexp, setIsRegexp] = useState(false);
-	const [isCaseSensitive, setIsCaseSensitive] = useState(false);
+	const [visible, setVisible] = usePersistedState("find.visible", false);
+	const [replaceVisible, setReplaceVisible] = usePersistedState("find.replacevisible", false);
+	const [query, setQuery] = usePersistedState("find.query", "");
+	const [replace, setReplace] = usePersistedState("find.replace", "");
+	const [isBinaryMode, setIsBinaryMode] = usePersistedState("find.isBinaryMode", false);
+	const [isRegexp, setIsRegexp] = usePersistedState("find.isRegexp", false);
+	const [isCaseSensitive, setIsCaseSensitive] = usePersistedState("find.isCaseSensitive", false);
 	const [results, setResults]= useRecoilState(select.searchResults);
 	const [selectedResult, setSelectedResult] = useState<number>();
 	const [offset, setOffset] = useRecoilState(select.offset);

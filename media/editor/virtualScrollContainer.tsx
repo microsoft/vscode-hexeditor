@@ -113,7 +113,7 @@ export const VirtualScrollContainer: React.FC<{
 	const onScrollWithOffset = (pageY: number, offset: number) => {
 		// This is just the `handleTop` assignment from above solved for the
 		// scrollTop where handleTop = `pageY - offset - size.top`.
-		const newScrollTop = (pageY - offset - size.top) / (size.height - handleHeight) * (scrollHeight - size.height) - scrollStart;
+		const newScrollTop = (pageY - offset - size.top) / (size.height - handleHeight) * (scrollHeight - size.height);
 		onScroll(clampScroll(newScrollTop));
 	};
 

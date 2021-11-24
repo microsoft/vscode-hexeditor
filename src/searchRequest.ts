@@ -105,7 +105,7 @@ export class LiteralSearchRequest implements ISearchRequest {
 	}
 }
 
-const regexSearchWindow = 5 * 1024;
+const regexSearchWindow = 8 * 1024;
 
 /**
  * Request that handles searching for text regexes. This works on a window of
