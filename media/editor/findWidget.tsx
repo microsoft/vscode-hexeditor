@@ -9,6 +9,8 @@ import RegexIcon from "@vscode/codicons/src/icons/regex.svg";
 import ReplaceAll from "@vscode/codicons/src/icons/replace-all.svg";
 import Replace from "@vscode/codicons/src/icons/replace.svg";
 import SearchStop from "@vscode/codicons/src/icons/search-stop.svg";
+import ChevronRight from "@vscode/codicons/src/icons/chevron-right.svg";
+import ChevronDown from "@vscode/codicons/src/icons/chevron-down.svg";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
@@ -30,15 +32,16 @@ const Wrapper = styled.div`
 	border: 1px solid var(--vscode-contrastBorder);
 	color: var(--vscode-editorWidget-foreground);
 	background: var(--vscode-editorWidget-background);
-	padding: 0 4px 4px;
+	padding: 2px;
 	z-index: 1;
+	display: flex;
 `;
 
 const InputRow = styled.div`
 	display: flex;
 	align-items: center;
 	justify-content: start;
-	margin-top: 4px;
+	margin: 2px 0;
 `;
 
 const resultBadgeCls = css`
@@ -58,6 +61,13 @@ const visibleCls = css`
 	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
 `;
 
+const replaceToggleCls = css`
+	align-self: stretch;
+	height: initial !important;
+	margin: 1px !important;
+	padding: 0 !important;
+`;
+
 const textFieldCls = css`flex-grow: 1`;
 
 const queryDebounce = 200;
@@ -71,6 +81,7 @@ const getQueryBytes = (query: string, isBinaryMode: boolean) => isBinaryMode ? h
 
 export const FindWidget: React.FC = () => {
 	const [visible, setVisible] = useState(false);
+	const [replaceVisible, setReplaceVisible] = useState(false);
 	const [query, setQuery] = useState("");
 	const [replace, setReplace] = useState("");
 	const [isBinaryMode, setIsBinaryMode] = useState(false);
@@ -227,58 +238,65 @@ export const FindWidget: React.FC = () => {
 		})).sort((a, b) => b.offset - a.offset));
 	};
 
+	const toggleFindReplace = useCallback(() => setReplaceVisible(v => !v), []);
+
 	return <Wrapper tabIndex={visible ? undefined : -1} className={clsx(visible && visibleCls)}>
 		{results.progress < 1 && <VsProgressIndicator />}
-		<InputRow>
-			<VsTextFieldGroup
-				buttons={3}
-				ref={textFieldRef}
-				outerClassName={textFieldCls}
-				placeholder={isBinaryMode ? "Find Bytes (hex)" : "Find Text"}
-				value={query}
-				onChange={onQueryChange}
-				onKeyDown={onKeyDown}
-			>
-				{!isBinaryMode && <VsIconCheckbox checked={isRegexp} onToggle={setIsRegexp} title="Regular Expression Search">
-					<RegexIcon />
-				</VsIconCheckbox>}
-				<VsIconCheckbox checked={isBinaryMode} onToggle={setIsBinaryMode} title="Search in Binary Mode">
-					<BinaryFile />
-				</VsIconCheckbox>
-				<VsIconCheckbox checked={isCaseSensitive} onToggle={setIsCaseSensitive} title="Case Sensitive">
-					<CaseSensitive />
-				</VsIconCheckbox>
-			</VsTextFieldGroup>
-			<ResultBadge onUncap={() => setUncapped(true)} results={results} selectedResult={selectedResult} />
-			<VsIconButton title="Cancel Search" disabled={results.progress === 1} onClick={stopSearch}>
-				<SearchStop />
-			</VsIconButton>
-			<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(-1)} title="Previous Match">
-				<ArrowUp />
-			</VsIconButton>
-			<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(1)} title="Next Match">
-				<ArrowDown />
-			</VsIconButton>
-			<VsIconButton title="Close Widget (Esc)" onClick={closeWidget}>
-				<Close />
-			</VsIconButton>
-		</InputRow>
-		<InputRow>
-			<VsTextFieldGroup
-				outerClassName={textFieldCls}
-				buttons={0}
-				value={replace}
-				onChange={onReplaceChange}
-				onKeyDown={onKeyDown}
-				placeholder="Replace"
-			/>
-			<VsIconButton disabled={selectedResult === undefined} onClick={replaceSelected} title="Replace Selected Match">
-				<Replace />
-			</VsIconButton>
-			<VsIconButton disabled={results.progress < 1 || !results.results.length} onClick={replaceAll} title="Replace All Matches">
-				<ReplaceAll />
-			</VsIconButton>
-		</InputRow>
+		<VsIconButton title="Toggle Replace" onClick={toggleFindReplace} className={replaceToggleCls}>
+			{replaceVisible ? <ChevronDown /> : <ChevronRight />}
+		</VsIconButton>
+		<div>
+			<InputRow>
+				<VsTextFieldGroup
+					buttons={3}
+					ref={textFieldRef}
+					outerClassName={textFieldCls}
+					placeholder={isBinaryMode ? "Find Bytes (hex)" : "Find Text"}
+					value={query}
+					onChange={onQueryChange}
+					onKeyDown={onKeyDown}
+				>
+					{!isBinaryMode && <VsIconCheckbox checked={isRegexp} onToggle={setIsRegexp} title="Regular Expression Search">
+						<RegexIcon />
+					</VsIconCheckbox>}
+					<VsIconCheckbox checked={isBinaryMode} onToggle={setIsBinaryMode} title="Search in Binary Mode">
+						<BinaryFile />
+					</VsIconCheckbox>
+					<VsIconCheckbox checked={isCaseSensitive} onToggle={setIsCaseSensitive} title="Case Sensitive">
+						<CaseSensitive />
+					</VsIconCheckbox>
+				</VsTextFieldGroup>
+				<ResultBadge onUncap={() => setUncapped(true)} results={results} selectedResult={selectedResult} />
+				<VsIconButton title="Cancel Search" disabled={results.progress === 1} onClick={stopSearch}>
+					<SearchStop />
+				</VsIconButton>
+				<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(-1)} title="Previous Match">
+					<ArrowUp />
+				</VsIconButton>
+				<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(1)} title="Next Match">
+					<ArrowDown />
+				</VsIconButton>
+				<VsIconButton title="Close Widget (Esc)" onClick={closeWidget}>
+					<Close />
+				</VsIconButton>
+			</InputRow>
+			{replaceVisible && <InputRow>
+				<VsTextFieldGroup
+					outerClassName={textFieldCls}
+					buttons={0}
+					value={replace}
+					onChange={onReplaceChange}
+					onKeyDown={onKeyDown}
+					placeholder="Replace"
+				/>
+				<VsIconButton disabled={selectedResult === undefined} onClick={replaceSelected} title="Replace Selected Match">
+					<Replace />
+				</VsIconButton>
+				<VsIconButton disabled={results.progress < 1 || !results.results.length} onClick={replaceAll} title="Replace All Matches">
+					<ReplaceAll />
+				</VsIconButton>
+			</InputRow>}
+		</div>
 	</Wrapper>;
 };
 
