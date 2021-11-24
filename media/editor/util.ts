@@ -198,7 +198,7 @@ export const isHexString = (s: string): boolean => {
 	return true;
 };
 
-const parseHexDigit = (s: string) => {
+export const parseHexDigit = (s: string): number | undefined => {
 	switch (s) {
 		case "0": return 0;
 		case "1": return 1;

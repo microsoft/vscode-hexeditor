@@ -2,10 +2,10 @@
 // Licensed under the MIT license.
 
 import { HexDocument } from "./hexDocument";
-import StreamSearch from "@vscode/streamsearch";
-import { SearchResult, SearchResultsWithProgress } from "../shared/protocol";
+import { LiteralSearchQuery, RegExpSearchQuery, SearchResult, SearchResultsWithProgress } from "../shared/protocol";
 import { Disposable } from "vscode";
 import { utf8Length } from "./util";
+import { caseInsensitiveEquivalency, LiteralSearch, Wildcard } from "./literalSearch";
 
 /** Type that defines a search request created from the {@link SearchProvider} */
 export interface ISearchRequest extends Disposable {
@@ -58,34 +58,16 @@ class ResultsCollector {
 	}
 }
 
-// Table that maps from ASCII character codes to a transformed case-insensitive code.
-const caseInsensitiveTable = new Uint8Array(256);
-for (let i = 0; i < 256; i++) {
-	caseInsensitiveTable[i] = String.fromCharCode(i).toUpperCase().charCodeAt(0);
-}
-
-/** In-place transformation that makes the buffer case-insensitive */
-const transformToInsensitive = (buf: Uint8Array) => {
-	for (let i = 0; i < buf.length; i++) {
-		buf[i] = caseInsensitiveTable[buf[i]];
-	}
-};
-
 /** Request that handles searching for byte or text literals. */
 export class LiteralSearchRequest implements ISearchRequest {
 	private cancelled = false;
-	private readonly searchNeedle = this.originalNeedle;
 
 	constructor(
 		private readonly document: HexDocument,
-		private readonly originalNeedle: Uint8Array,
+		private readonly query: LiteralSearchQuery,
 		private readonly isCaseSensitive: boolean,
 		private readonly cap: number | undefined,
 	) {
-		if (!isCaseSensitive) {
-			this.searchNeedle = new Uint8Array(this.originalNeedle);
-			transformToInsensitive(this.searchNeedle);
-		}
 	}
 
 	/** @inheritdoc */
@@ -95,18 +77,14 @@ export class LiteralSearchRequest implements ISearchRequest {
 
 	/** @inheritdoc */
 	public async *search(): AsyncIterableIterator<SearchResultsWithProgress> {
-		const { isCaseSensitive, originalNeedle, searchNeedle, document, cap } = this;
+		const { isCaseSensitive, query, document, cap } = this;
 		const collector = new ResultsCollector(await document.size(), cap);
 
-		const streamSearch = new StreamSearch(searchNeedle, (match, data) => {
-			if (data) {
-				collector.fileOffset += data.length;
-			}
-			if (match) {
-				collector.push(originalNeedle, collector.fileOffset, collector.fileOffset + searchNeedle.length);
-				collector.fileOffset += searchNeedle.length;
-			}
-		});
+		const streamSearch = new LiteralSearch(
+			query.literal.map(c => c === "*" ? Wildcard : c),
+			(index, data) => collector.push(data, index, index + data.length),
+			isCaseSensitive ? caseInsensitiveEquivalency : undefined,
+		);
 
 		for await (const chunk of document.readWithEdits(0)) {
 			if (this.cancelled || collector.capped) {
@@ -114,14 +92,8 @@ export class LiteralSearchRequest implements ISearchRequest {
 				return;
 			}
 
-			if (!isCaseSensitive) {
-				const transformed = new Uint8Array(chunk);
-				transformToInsensitive(transformed);
-				streamSearch.push(transformed);
-			} else {
-				streamSearch.push(chunk);
-			}
-
+			streamSearch.push(chunk);
+			collector.fileOffset += chunk.length;
 
 			const toYield = collector.toYield();
 			if (toYield) {
@@ -153,11 +125,11 @@ export class RegexSearchRequest implements ISearchRequest {
 
 	constructor(
 		private readonly document: HexDocument,
-		reSource: string,
+		re: RegExpSearchQuery,
 		caseSensitive: boolean,
 		private readonly cap: number | undefined,
 	) {
-		this.re = new RegExp(reSource, caseSensitive ? "g" : "ig");
+		this.re = new RegExp(re.re, caseSensitive ? "g" : "ig");
 	}
 
 	/** @inheritdoc */

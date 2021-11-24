@@ -1,9 +1,31 @@
 export const Wildcard = Symbol("Wildcard");
 
-const nextStateIn = (chunk: Uint8Array, state: number, byte: number) => chunk[256] ? state + 1 : chunk[byte];
+export const identityEquivalency = new Uint8Array(0xFF);
+for (let i = 0; i < 0xFF; i++) {
+	identityEquivalency[i] = i;
+}
+
+export const caseInsensitiveEquivalency = new Uint8Array(0xFF);
+for (let i = 0; i < 0xFF; i++) {
+	caseInsensitiveEquivalency[i] = String.fromCharCode(i).toUpperCase().charCodeAt(0);
+}
 
 /**
- * A DFA-based literal search implementation.
+ * A simple literal search implementation with support for placeholders. I've
+ * attempted to use or adapt several string search algorithms for use here,
+ * such as Boyer-Moore and a DFA approach, but was not able to find one that
+ * worked with placeholders.
+ *
+ * A DFA can work with wildcards easily enough, and an implementation of that
+ * can be found in commit 5bcc7b4e, but I don't think placeholders can be
+ * efficiently encoded into the DFA in that approach. Eventually that just
+ * becomes a regex engine...
+ *
+ * Note that streamsearch (connor4312/streamsearch) is 70% faster than this,
+ * but doesn't have support for the equivalency table or placeholders. We could
+ * add a happy path that uses that library if no placeholders are present, but
+ * I've opted for simplicity for the moment. This operates at
+ * around 50 MB/s on my macbook.
  */
 export class LiteralSearch {
 	/** Rolling window of the last bytes, used to emit matched text */
@@ -14,13 +36,13 @@ export class LiteralSearch {
 	private readonly needleLen = 0;
 	/** Index in the source stream we're at. */
 	private index = 0;
-
-	private readonly dfa: readonly Uint8Array[];
-	private state = 0;
+	/** Amount of usable data in the buffer. Reset whenever a match happens */
+	private usableBuffer = 0;
 
 	constructor(
-		needle: readonly (typeof Wildcard | Uint8Array)[],
+		private readonly needle: readonly (typeof Wildcard | Uint8Array)[],
 		private readonly onMatch: (index: number, match: Uint8Array) => void,
+		private readonly equivalencyTable = identityEquivalency,
 	) {
 		for (const chunk of needle) {
 			if (chunk === Wildcard) {
@@ -31,48 +53,47 @@ export class LiteralSearch {
 		}
 
 		this.buffer = new Uint8Array(this.needleLen);
-
-		const dfa = this.dfa = new Array<Uint8Array>(this.needleLen + 1);
-		for (let state = 0; state < dfa.length; state++) {
-			dfa[state] = new Uint8Array(0xFF + 1);
-		}
-
-		let lps = -1;
-		let state = 0;
-		for (const chunk of needle) {
-			if (chunk === Wildcard) {
-				if (lps !== -1) { dfa[state].set(dfa[lps]); }
-				dfa[state].fill(state + 1);
-				lps = state;
-				state++;
-			} else {
-				for (let j = 0; j < chunk.length; j++) {
-					if (lps !== -1) { dfa[state].set(dfa[lps]); }
-					dfa[state][chunk[j]] = state + 1;
-					lps = lps === -1 ? 0 : dfa[lps][chunk[j]];
-					state++;
-				}
-			}
-		}
 	}
 
 	push(chunk: Uint8Array): void {
-		const { dfa, needleLen, buffer } = this;
+		const { needleLen, buffer } = this;
 		for (let i = 0; i < chunk.length; i++) {
-			this.state = dfa[this.state][chunk[i]];
 			buffer[this.index++ % needleLen] = chunk[i];
+			this.usableBuffer++;
+			this.attemptMatch();
+		}
+	}
 
-			if (this.state === dfa.length - 1) {
-				this.state = 0;
-				if (!this.matchTmpBuf) {
-					this.matchTmpBuf = new Uint8Array(needleLen);
+	private attemptMatch() {
+		const { needle, needleLen, buffer, index, equivalencyTable } = this;
+		if (this.usableBuffer < needleLen) {
+			return;
+		}
+
+		let k = 0;
+		for (let i = 0; i < needle.length; i++) {
+			const chunk = needle[i];
+			if (chunk === Wildcard) {
+				k++;
+				continue;
+			}
+
+			for (let j = 0; j < chunk.length; j++) {
+				if (equivalencyTable[chunk[j]] !== equivalencyTable[buffer[(index + k) % needleLen]]) {
+					return;
 				}
-
-				const split = this.index % needleLen;
-				this.matchTmpBuf.set(buffer.subarray(split), 0);
-				this.matchTmpBuf.set(buffer.subarray(0, split), needleLen - split);
-				this.onMatch(this.index - needleLen, this.matchTmpBuf);
+				k++;
 			}
 		}
+
+		if (!this.matchTmpBuf) {
+			this.matchTmpBuf = new Uint8Array(needleLen);
+		}
+
+		const split = this.index % needleLen;
+		this.matchTmpBuf.set(buffer.subarray(split), 0);
+		this.matchTmpBuf.set(buffer.subarray(0, split), needleLen - split);
+		this.onMatch(this.index - needleLen, this.matchTmpBuf);
+		this.usableBuffer = 0;
 	}
 }

@@ -14,11 +14,11 @@ import ChevronDown from "@vscode/codicons/src/icons/chevron-down.svg";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
-import { MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
+import { LiteralSearchQuery, MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
 import { dataCellCls } from "./dataDisplay";
 import { FocusedElement, useDisplayContext } from "./dataDisplayContext";
 import * as select from "./state";
-import { clsx, hexDecode, isHexString, Range } from "./util";
+import { clsx, hexDecode, isHexString, parseHexDigit, Range } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
 
 const Wrapper = styled.div`
@@ -82,11 +82,56 @@ const defaultResultCap = 10_000;
 const resultCountFormat = new Intl.NumberFormat(undefined, { notation: "compact" });
 const selectedFormat = new Intl.NumberFormat();
 
+/**
+ * Parses a query like "AABB??DD" into a query looking for
+ * `[[170, 187], "*", [221]]`.
+ */
+const parseHexStringWithPlaceholders = (str: string): LiteralSearchQuery | undefined => {
+	const value = new Uint8Array(Math.ceil(str.length / 2));
+	let valueStart = 0;
+	let valueEnd = 0;
+
+	const query: LiteralSearchQuery = { literal: [] };
+	for (let i = 0; i < str.length; i += 2) {
+		if (str[i] === "?" && (i + 1 === str.length || str[i + 1] === "?")) {
+			if (valueEnd > valueStart) {
+				query.literal.push(value.subarray(valueStart, valueEnd));
+				valueStart = valueEnd;
+			}
+
+			query.literal.push("*");
+			continue;
+		}
+
+		const a = parseHexDigit(str[i]);
+		const b = i + 1 === str.length ? 0 : parseHexDigit(str[i + 1]);
+		if (a === undefined || b === undefined) {
+			return undefined;
+		}
+
+		value[valueEnd++] = a << 4 | b;
+	}
+
+	if (valueEnd > valueStart) {
+		query.literal.push(value.subarray(valueStart, valueEnd));
+	}
+
+	return query;
+};
+
+const getReplaceOrError = (replace: string, isBinaryMode: boolean) => {
+	if (isBinaryMode) {
+		return isHexString(replace)
+			? hexDecode(replace)
+			: "Only hexadecimal characters (0-9 and a-f) are allowed";
+	}
+
+	return new TextEncoder().encode(replace);
+};
+
 const getSearchQueryOrError = (query: string, isBinaryMode: boolean, isRegexp: boolean): SearchRequestMessage["query"] | string => {
 	if (isBinaryMode) {
-		return isHexString(query)
-			? { literal: hexDecode(query) }
-			: "Only hexadecimal characters (0-9 and a-f) are allowed";
+		return parseHexStringWithPlaceholders(query) || "Only hexadecimal characters (0-9, a-f, and ?? placeholders) are allowed";
 	}
 
 	if (isRegexp) {
@@ -99,7 +144,7 @@ const getSearchQueryOrError = (query: string, isBinaryMode: boolean, isRegexp: b
 		return { re: query };
 	}
 
-	return { literal: new TextEncoder().encode(query) };
+	return { literal: [new TextEncoder().encode(query)] };
 };
 
 const searchResultToEdit = (value: Uint8Array) => (r: SearchResult): HexDocumentReplaceEdit => ({
@@ -129,7 +174,7 @@ export const FindWidget: React.FC = () => {
 	const previouslyFocusedElement = useRef<FocusedElement>();
 
 	const queryOrError = getSearchQueryOrError(query, isBinaryMode, isRegexp);
-	const replaceOrError = getSearchQueryOrError(replace, isBinaryMode, false);
+	const replaceOrError = getReplaceOrError(replace, isBinaryMode);
 
 	const onQueryChange = useCallback(
 		(evt: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,7 +217,6 @@ export const FindWidget: React.FC = () => {
 		if (typeof queryOrError === "string") {
 			return;
 		}
-
 
 		let started = false;
 		const timeout = setTimeout(() => {
@@ -254,16 +298,16 @@ export const FindWidget: React.FC = () => {
 	};
 
 	const replaceSelected = () => {
-		if (selectedResult && typeof replaceOrError !== "string" && "literal" in replaceOrError) {
+		if (selectedResult && typeof replaceOrError !== "string") {
 			const r = results.results[selectedResult];
-			ctx.edit(searchResultToEdit(replaceOrError.literal)(r));
+			ctx.edit(searchResultToEdit(replaceOrError)(r));
 		}
 	};
 
 	const replaceAll = () => {
-		if (typeof replaceOrError !== "string" && "literal" in replaceOrError) {
+		if (typeof replaceOrError !== "string") {
 			ctx.edit(results.results
-				.map(searchResultToEdit(replaceOrError.literal))
+				.map(searchResultToEdit(replaceOrError))
 				.sort((a, b) => b.offset - a.offset));
 		}
 	};

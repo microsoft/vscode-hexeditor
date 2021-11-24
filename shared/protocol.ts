@@ -132,9 +132,13 @@ export interface MakeEditsMessage {
 	edits: ISerializedEdits;
 }
 
+export type LiteralSearchQuery = { literal: (Uint8Array | "*")[] };
+
+export type RegExpSearchQuery = { re: string };
+
 export interface SearchRequestMessage {
 	type: MessageType.SearchRequest;
-	query: { literal: Uint8Array } | { re: string };
+	query: LiteralSearchQuery | RegExpSearchQuery;
 	cap: number | undefined;
 	caseSensitive: boolean;
 }

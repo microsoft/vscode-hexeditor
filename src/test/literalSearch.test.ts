@@ -26,7 +26,7 @@ describe("literal search", () => {
 		expect(matches).to.deep.equal(testMatches);
 	});
 
-	it.only("is sane for wildcards", () => {
+	it("is sane for wildcards", () => {
 		const searcher = new LiteralSearch([
 			new TextEncoder().encode("lab"),
 			Wildcard,
@@ -58,8 +58,6 @@ describe("literal search", () => {
 				const searcher = new LiteralSearch([left, ...middle, right], addMatch);
 				searcher.push(haystack);
 
-				console.log(new TextDecoder().decode(left) + "*".repeat(k) + new TextDecoder().decode(right));
-				console.log(JSON.stringify(matches));
 				for (const match of testMatches) {
 					expect(matches).to.deep.contain(match);
 				}
