@@ -82,6 +82,7 @@ export const FindWidget: React.FC = () => {
 	const dimensions = useRecoilValue(select.dimensions);
 	const ctx = useDisplayContext();
 	const textFieldRef = useRef<HTMLInputElement | null>(null);
+	const edits = useRecoilValue(select.edits);
 	const [isUncapped, setUncapped] = useState(false);
 	/** Element that was focused before the find widget was shown */
 	const previouslyFocusedElement = useRef<FocusedElement>();
@@ -145,7 +146,7 @@ export const FindWidget: React.FC = () => {
 				clearTimeout(timeout);
 			}
 		};
-	}, [query, isCaseSensitive, isUncapped, isRegexp, isBinaryMode]);
+	}, [query, isCaseSensitive, isUncapped, isRegexp, isBinaryMode, edits]);
 
 	const closeWidget = () => {
 		const prev = previouslyFocusedElement.current;
@@ -223,7 +224,7 @@ export const FindWidget: React.FC = () => {
 			offset: r.from,
 			value: getQueryBytes(replace, isBinaryMode),
 			previous: r.previous,
-		})));
+		})).sort((a, b) => b.offset - a.offset));
 	};
 
 	return <Wrapper tabIndex={visible ? undefined : -1} className={clsx(visible && visibleCls)}>

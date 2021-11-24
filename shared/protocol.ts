@@ -2,7 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import { HexDocumentEdit } from "./hexDocumentModel";
+import { ISerializedEdits } from "./serialization";
 
 export const enum MessageType {
 	//#region to webview
@@ -38,7 +38,7 @@ export interface WebviewMessage<T> {
 export interface ReadyResponseMessage {
 	type: MessageType.ReadyResponse;
 	initialOffset: number;
-	edits: readonly HexDocumentEdit[];
+	edits: ISerializedEdits;
 	unsavedEditIndex: number;
 	fileSize: number | undefined;
 	isLargeFile: boolean;
@@ -80,7 +80,7 @@ export interface ChangedMessage {
 /** Sets the edits that should be applied to the document */
 export interface SetEditsMessage {
 	type: MessageType.SetEdits;
-	edits: readonly HexDocumentEdit[];
+	edits: ISerializedEdits;
 }
 
 /** Sets the displayed offset. */
@@ -129,7 +129,7 @@ export interface ReadRangeMessage {
 
 export interface MakeEditsMessage {
 	type: MessageType.MakeEdits;
-	edits: readonly HexDocumentEdit[];
+	edits: ISerializedEdits;
 }
 
 export interface SearchRequestMessage {

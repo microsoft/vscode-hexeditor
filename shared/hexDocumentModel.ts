@@ -3,7 +3,7 @@
  *--------------------------------------------------------*/
 
 import { Policy } from "cockatiel";
-import { FileAccessor } from  "./fileAccessor";
+import { FileAccessor } from "./fileAccessor";
 import { binarySearch } from "./util/binarySearch";
 import { once } from "./util/once";
 
@@ -271,7 +271,7 @@ export async function *readUsingRanges(readable: Pick<FileAccessor, "read">, ran
 		}
 
 		// range.op === Read
-		const until = i + 1 < ranges.length ? ranges[i + 1].offset : Infinity;
+		const until = range.roffset + (i + 1 < ranges.length ? ranges[i + 1].offset : Infinity) - range.offset;
 		let roffset = range.roffset + Math.max(0, fromOffset - range.offset);
 		while (roffset < until) {
 			const bytes = await readable.read(roffset, buf.subarray(0, Math.min(buf.length, until - roffset)));
@@ -314,9 +314,9 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 
 	/** Shifts the offset of all ranges after i by the amount */
 	const shiftAfter = (i: number, byAmount: number) => {
+		sizeDelta += byAmount;
 		for (; i < ranges.length; i++) {
 			ranges[i].offset += byAmount;
-			sizeDelta += byAmount;
 		}
 	};
 
@@ -348,9 +348,8 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 					: { op: EditRangeOp.Skip, editIndex, offset: edit.offset },
 				after
 			);
-			if (edit.op !== HexDocumentEditOp.Replace) {
-				shiftAfter(i + 2, -edit.previous.length);
-			}
+
+			shiftAfter(i + 2, (edit.op === HexDocumentEditOp.Replace ? edit.value.length : 0) - edit.previous.length);
 		}
 	}
 

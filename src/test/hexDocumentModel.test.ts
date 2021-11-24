@@ -3,7 +3,8 @@
  *--------------------------------------------------------*/
 
 import { expect } from "chai";
-import { HexDocumentEditOp, HexDocumentModel } from "../../shared/hexDocumentModel";
+import { EditRangeOp, HexDocumentEdit, HexDocumentEditOp, HexDocumentModel, IEditTimeline } from "../../shared/hexDocumentModel";
+import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { getTestFileAccessor, pseudoRandom } from "./util";
 
 describe("HexDocumentModel", () => {
@@ -15,6 +16,42 @@ describe("HexDocumentModel", () => {
 			accessor: await getTestFileAccessor(new Uint8Array(original)),
 			supportsLengthChanges: false,
 			isFiniteSize: true,
+		});
+	});
+
+	describe("edit timeline", () => {
+		it("keeps offsets in replacements", () => {
+			model.makeEdits([
+				{ op: HexDocumentEditOp.Replace, offset: 6, value: new Uint8Array([16]), previous: new Uint8Array([6, 7, 8]) },
+				{ op: HexDocumentEditOp.Replace, offset: 1, value: new Uint8Array([11]), previous: new Uint8Array([1, 2, 3]) },
+			]);
+
+			const timeline: IEditTimeline = (model as any).getEditTimeline();
+
+			expect(timeline).to.deep.equal({
+				sizeDelta: -4,
+				ranges: [
+					{ op: EditRangeOp.Read, editIndex: 1, roffset: 0, offset: 0 },
+					{ op: EditRangeOp.Insert, editIndex: 1, offset: 1, value: new Uint8Array([11]) },
+					{ op: EditRangeOp.Read, editIndex: 1, roffset: 4, offset: 2 },
+					{ op: EditRangeOp.Insert, editIndex: 0, offset: 4, value: new Uint8Array([16]) },
+					{ op: EditRangeOp.Read, editIndex: 0, roffset: 9, offset: 5 },
+				],
+			});
+		});
+	});
+
+	describe("serialization", () => {
+		it("round trips", () => {
+			const edits: HexDocumentEdit[] = [
+				{ op: HexDocumentEditOp.Insert, offset: 2, value: new Uint8Array([10, 11, 12]) },
+				{ op: HexDocumentEditOp.Replace, offset: 2, value: new Uint8Array([10, 11, 12]), previous: new Uint8Array([1, 2, 3]) },
+				{ op: HexDocumentEditOp.Delete, offset: 3, previous: new Uint8Array([3, 4, 5]) },
+			];
+
+			const s = serializeEdits(edits);
+			expect(deserializeEdits(s)).to.deep.equal(edits);
+			expect(s.data.length).to.equal(9); // sum of unique values
 		});
 	});
 
@@ -93,6 +130,14 @@ describe("HexDocumentModel", () => {
 					throw e;
 				}
 			}
+		});
+
+		it("works with multiple replacements", async () => {
+			model.makeEdits([
+				{ op: HexDocumentEditOp.Replace, offset: 6, value: new Uint8Array([16]), previous: new Uint8Array([6, 7, 8]) },
+				{ op: HexDocumentEditOp.Replace, offset: 1, value: new Uint8Array([11]), previous: new Uint8Array([1, 2, 3]) },
+			]);
+			await assertContents(new Uint8Array([0, 11, 4, 5, 16, 9]));
 		});
 
 		it("overlaps replace on delete", async () => {

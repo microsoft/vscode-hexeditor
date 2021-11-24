@@ -4,10 +4,11 @@
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { ExtensionHostMessageHandler, FromWebviewMessage, MessageHandler, MessageType, ToWebviewMessage } from "../shared/protocol";
+import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
-import { LiteralSearchRequest, ISearchRequest, RegexSearchRequest } from "./searchRequest";
+import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
 import { getCorrectArrayBuffer, randomString } from "./util";
 import { WebviewCollection } from "./webViewCollection";
 
@@ -246,7 +247,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				return {
 					type: MessageType.ReadyResponse,
 					initialOffset: document.baseAddress,
-					edits: document.edits,
+					edits: serializeEdits(document.edits),
 					unsavedEditIndex: document.unsavedEditIndex,
 					fileSize: await document.size(),
 					isLargeFile: document.isLargeFile,
@@ -255,11 +256,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				const data = await document.readBuffer(message.offset, message.bytes);
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
 			case MessageType.MakeEdits:
-				const ref = document.makeEdits(message.edits);
+				const ref = document.makeEdits(deserializeEdits(message.edits));
 				this._onDidChangeCustomDocument.fire({
 					document,
-					undo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: ref.undo() }),
-					redo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: ref.redo() }),
+					undo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.undo()) }),
+					redo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.redo()) }),
 				});
 				return;
 			case MessageType.CancelSearch:

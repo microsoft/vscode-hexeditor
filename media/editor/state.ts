@@ -5,6 +5,7 @@
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
+import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { Range } from "./util";
 
 declare function acquireVsCodeApi(): ({ postMessage(msg: unknown): void });
@@ -128,29 +129,34 @@ export const scrollBounds = atom<Range>({
 	}),
 });
 
+const initialEdits = selector({
+	key: "initialEdits",
+	get: ({ get }) => deserializeEdits(get(readyQuery).edits),
+});
 /**
  * List of edits made locally and not synced with the extension host.
  */
 export const edits = atom<readonly HexDocumentEdit[]>({
 	key: "edits",
-	default: selector({
-		key: "initialEdits",
-		get: ({ get }) => get(readyQuery).edits,
-	}),
+	default: initialEdits,
 
 	effects_UNSTABLE: [
 		fx => {
-			fx.onSet((newEdits, oldEdits) => {
-				if (oldEdits instanceof DefaultValue || newEdits.length > oldEdits.length) {
+			fx.onSet((newEdits, oldEditsOrDefault) => {
+				const oldEdits = oldEditsOrDefault instanceof DefaultValue
+					? fx.getLoadable(initialEdits).getValue()
+					: oldEditsOrDefault;
+
+				if (newEdits.length > oldEdits.length) {
 					messageHandler.sendEvent({
 						type: MessageType.MakeEdits,
-						edits: newEdits.slice(oldEdits instanceof Array ? oldEdits.length : 0),
+						edits: serializeEdits(newEdits.slice(oldEdits.length)),
 					});
 				}
 			});
 
 			registerHandler(MessageType.SetEdits, msg => {
-				fx.setSelf(msg.edits);
+				fx.setSelf(deserializeEdits(msg.edits));
 			});
 		}
 	]
