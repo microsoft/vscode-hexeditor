@@ -109,12 +109,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		super.dispose();
 	}
 
-	private readonly _onDidChangeDocument = this._register(new vscode.EventEmitter<void>());
+	private readonly _onDidRevert = this._register(new vscode.EventEmitter<void>());
 
 	/**
-	 * Fired to notify webviews that the document has changed.
+	 * Fired to notify webviews that the document has changed and the file
+	 * should be reloaded.
 	 */
-	public readonly onDidChangeContent = this._onDidChangeDocument.event;
+	public readonly onDidRevert = this._onDidRevert.event;
 
 	/**
 	 * @see HexDocumentModel.isSynced
@@ -185,7 +186,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 */
 	async revert(_token?: vscode.CancellationToken): Promise<void> {
 		this.model.revert();
-		this._onDidChangeDocument.fire();
+		this._onDidRevert.fire();
 	}
 
 	/**

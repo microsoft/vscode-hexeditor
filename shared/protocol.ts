@@ -11,7 +11,7 @@ export const enum MessageType {
 	SearchProgress,
 	SetEdits,
 	Saved,
-	Changed,
+	ReloadFromDisk,
 	StashDisplayedOffset,
 	GoToOffset,
 	SetFocusedByte,
@@ -73,8 +73,8 @@ export interface SavedMessage {
 }
 
 /** Notifies that the underlying file is changed. Webview should throw away and re-request state. */
-export interface ChangedMessage {
-	type: MessageType.Changed;
+export interface ReloadMessage {
+	type: MessageType.ReloadFromDisk;
 }
 
 /** Sets the edits that should be applied to the document */
@@ -110,7 +110,7 @@ export type ToWebviewMessage =
 	| ReadRangeResponseMessage
 	| SearchProgressMessage
 	| SavedMessage
-	| ChangedMessage
+	| ReloadMessage
 	| GoToOffsetMessage
 	| SetEditsMessage
 	| SetFocusedByteMessage

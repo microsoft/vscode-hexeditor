@@ -60,6 +60,10 @@ class SimpleFileAccessor implements FileAccessor {
 		return vscode.workspace.fs.writeFile(vscode.Uri.parse(this.uri), contents);
 	}
 
+	public invalidate(): void {
+		this.contents = undefined;
+	}
+
 	dispose() {
 		this.contents = undefined;
 	}

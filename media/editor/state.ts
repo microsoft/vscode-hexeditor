@@ -44,6 +44,19 @@ const initialOffset = selector<number>({
 	get: ({ get }) => vscode.getState()?.offset ?? get(readyQuery).initialOffset,
 });
 
+// Atom used to invalidate data when a reload is requested.
+const reloadGeneration = atom({
+	key: "reloadGeneration",
+	default: 0,
+	effects_UNSTABLE: [
+		fx => {
+			registerHandler(MessageType.ReloadFromDisk, () => {
+				fx.setSelf(Date.now());
+			});
+		},
+	],
+});
+
 export const isLargeFile = selector({
 	key: "isLargeFile",
 	get: ({ get }) => get(readyQuery).isLargeFile,
@@ -230,6 +243,8 @@ export const editedDataPages = selectorFamily({
 const rawDataPages = selectorFamily({
 	key: "rawDataPages",
 	get: (pageNumber: number) => async ({ get }) => {
+		get(reloadGeneration); // used to trigger invalidation
+
 		const pageSize = get(dataPageSize);
 		const response = await messageHandler.sendRequest<ReadRangeResponseMessage>({
 			type: MessageType.ReadRangeRequest,

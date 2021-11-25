@@ -44,10 +44,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const document = await HexDocument.create(uri, openContext, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
 
-		listeners.push(document.onDidChangeContent(() => {
-			// Update all webviews when the document changes
+		listeners.push(document.onDidRevert(() => {
 			for (const { messaging } of this.webviews.get(document.uri)) {
-				messaging.sendEvent({ type: MessageType.Changed });
+				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() } });
+				messaging.sendEvent({ type: MessageType.ReloadFromDisk });
 			}
 		}));
 

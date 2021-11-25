@@ -203,7 +203,9 @@ export class HexDocumentModel {
 	public revert(): void {
 		this._unsavedEditIndex = 0;
 		this._edits = [];
+		this.accessor.invalidate?.();
 		this.getEditTimeline.forget();
+		this.getSizeInner.forget();
 	}
 
 	/**
