@@ -2,7 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 import { promises as fs } from "fs";
@@ -29,3 +29,10 @@ afterEach(async () => {
 	await Promise.all(testFiles.map(fs.unlink));
 	testFiles = [];
 });
+
+/** Simple, slow, seedable pseudo-random number generator */
+export const pseudoRandom = (seed: string | Buffer): () => number => () => {
+	const digest = createHash("md5").update(seed).digest();
+	seed = digest;
+	return digest.readUInt32BE() / 0xFF_FF_FF_FF;
+};

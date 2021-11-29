@@ -20,6 +20,6 @@ export interface FileAccessor {
 	writeBulk(ops: readonly FileWriteOp[]): Promise<void>;
 	/** Updates the file by replacing it with the contents of the stream. */
 	writeStream(stream: AsyncIterable<Uint8Array>, cancellation?: vscode.CancellationToken): Promise<void>;
-	/** Copies the file to the target URI */
-	copy(to: string): Promise<void>;
+	/** Signalled when a full reload is requested. Cached data should be forgotten. */
+	invalidate?(): void;
 }

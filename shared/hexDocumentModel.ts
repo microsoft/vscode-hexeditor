@@ -2,9 +2,10 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import { FileAccessor } from  "./fileAccessor";
+import { Policy } from "cockatiel";
+import { FileAccessor } from "./fileAccessor";
 import { binarySearch } from "./util/binarySearch";
-import { memoizeLast } from "./util/memoize";
+import { once } from "./util/once";
 
 export const enum HexDocumentEditOp {
 	Insert,
@@ -14,7 +15,6 @@ export const enum HexDocumentEditOp {
 
 export interface GenericHexDocumentEdit {
 	op: HexDocumentEditOp;
-	opId: number;
 	offset: number;
 }
 
@@ -37,9 +37,13 @@ export interface HexDocumentInsertEdit  extends GenericHexDocumentEdit {
 
 export type HexDocumentEdit = HexDocumentInsertEdit | HexDocumentDeleteEdit | HexDocumentReplaceEdit;
 
+/**
+ * Reference returned from a hexdocument edit. Undo and redo return the
+ * edit(s) that were applied as part of the undo/redo operation.
+ */
 export interface HexDocumentEditReference {
-	undo(): void;
-	redo(): void;
+	undo(): readonly HexDocumentEdit[];
+	redo(): readonly HexDocumentEdit[];
 }
 
 const reverseEdit = (edit: HexDocumentEdit): HexDocumentEdit => {
@@ -63,26 +67,36 @@ export interface HexDocumentModelOptions {
 	isFiniteSize: boolean;
 }
 
-const enum RangeOp { Read, Skip, Insert }
+export const enum EditRangeOp { Read, Skip, Insert }
 
-type Range =
-	| { op: RangeOp.Read, offset: number; roffset: number }
-	| { op: RangeOp.Skip, offset: number; }
-	| { op: RangeOp.Insert; offset: number; value: Uint8Array};
+export type EditRange =
+	/** Read from "roffset" in the file, starting at "offset" in the edited version */
+	| { op: EditRangeOp.Read; editIndex: number; offset: number; roffset: number }
+	/** Skip starting at "offset" in the edited version of the file */
+	| { op: EditRangeOp.Skip; editIndex: number; offset: number; }
+	/** Insert "value" at the "offset" in th edited version of the file */
+	| { op: EditRangeOp.Insert; editIndex: number; offset: number; value: Uint8Array};
+
+export interface IEditTimeline {
+	/** Instructions on how to read the file, in order. */
+	ranges: readonly EditRange[];
+	/** Difference in file size as a result of the edits that were made. */
+	sizeDelta: number;
+}
 
 export class HexDocumentModel {
 	public readonly supportsLengthChanges: boolean;
 	public readonly isFiniteSize: boolean;
 	private readonly accessor: FileAccessor;
+	/** Guard to make sure only one save operation happens at a time */
+	private readonly saveGuard = Policy.bulkhead(1, Infinity);
 	/** First index in the _edits array that's unsaved */
-	private unsavedEditIndex = 0;
-	private generation = 0;
+	private _unsavedEditIndex = 0;
 	private _edits: HexDocumentEdit[];
-	private _editTimeline?: { sizeDelta: number, ranges: readonly Range[] };
 
 	constructor(options: HexDocumentModelOptions) {
 		this._edits = options.edits ? options.edits.saved.concat(options.edits.unsaved) : [];
-		this.unsavedEditIndex = options.edits?.saved.length ?? 0;
+		this._unsavedEditIndex = options.edits?.saved.length ?? 0;
 		this.supportsLengthChanges = options.supportsLengthChanges;
 		this.isFiniteSize = options.isFiniteSize;
 		this.accessor = options.accessor;
@@ -104,7 +118,7 @@ export class HexDocumentModel {
 			return undefined;
 		}
 
-		const diskSize = await this.getSizeInner(this.generation);
+		const diskSize = await this.getSizeInner();
 		if (diskSize === undefined) {
 			return undefined;
 		}
@@ -128,10 +142,19 @@ export class HexDocumentModel {
 	}
 
 	/**
-	 * Gets whether there are unsaved edits on the model.
+	 * Gets the index of the first unsaved edit. This may be equal to
+	 * the edits length if the model is synced.
 	 */
-	public get isDirty(): boolean {
-		return this._edits.length > 0;
+	public get unsavedEditIndex(): number {
+		return this._unsavedEditIndex;
+	}
+
+	/**
+	 * Returns false if there are changes made on the model that have not
+	 * yet been saved.
+	 */
+	public get isSynced(): boolean {
+		return this.unsavedEditIndex === this.edits.length;
 	}
 
 	/**
@@ -145,40 +168,44 @@ export class HexDocumentModel {
 	/**
 	 * Reads bytes in their edited state starting at the given offset.
 	 */
-	public readWithEdits(fromOffset = 0, chunkSize = 1024): AsyncIterableIterator<Uint8Array>	{
-		return this.readUsingRanges(this.getEditTimeline().ranges, fromOffset, chunkSize);
+	public readWithEdits(fromOffset = 0, chunkSize = 128 * 1024): AsyncIterableIterator<Uint8Array>	{
+		return readUsingRanges(this.accessor, this.getEditTimeline().ranges, fromOffset, chunkSize);
 	}
 
 	/**
 	 * Persists changes to the file.
 	 */
-	public async save(): Promise<void> {
-		if (!this._edits.length) {
-			return;
-		}
+	public save(): Promise<void> {
+		return this.saveGuard.execute(async () => {
+			const toSave = this._edits.slice(this.unsavedEditIndex);
+			if (toSave.length === 0) {
+				return;
+			}
 
-		const edits = this._edits;
-		const { ranges } = this.getEditTimeline();
-		this.revert();
 
-		// for length changes, we must rewrite the entire file. Or at least from
-		// the offset of the first edit. For replacements we can selectively write.
-		if (!edits.some(e => e.op !== HexDocumentEditOp.Replace)) {
-			await this.accessor.writeBulk(edits.map(e => ({ offset: e.offset, data: (e as HexDocumentReplaceEdit).value })));
-		} else {
-			await this.accessor.writeStream(this.readUsingRanges(ranges, 0));
-		}
+			// for length changes, we must rewrite the entire file. Or at least from
+			// the offset of the first edit. For replacements we can selectively write.
+			if (!toSave.some(e => e.op !== HexDocumentEditOp.Replace || e.previous.length !== e.value.length)) {
+				await this.accessor.writeBulk(toSave.map(e => ({ offset: e.offset, data: (e as HexDocumentReplaceEdit).value })));
+			} else {
+				// todo: technically only need to rewrite starting from the first edit
+				await this.accessor.writeStream(this.readWithEdits());
+			}
 
-		this.unsavedEditIndex = this._edits.length;
+			this._unsavedEditIndex += toSave.length;
+			this.getSizeInner.forget();
+		});
 	}
 
 	/**
 	 * Reverts to the contents last saved on disk, discarding edits,
 	 */
 	public revert(): void {
-		this.unsavedEditIndex = 0;
+		this._unsavedEditIndex = 0;
 		this._edits = [];
-		this._editTimeline = undefined;
+		this.accessor.invalidate?.();
+		this.getEditTimeline.forget();
+		this.getSizeInner.forget();
 	}
 
 	/**
@@ -186,142 +213,147 @@ export class HexDocumentModel {
 	 * called once all subsequently made edits have also been undone, and
 	 * vise versa for `redo`.
 	 */
-	public makeEdits(edits: HexDocumentEdit[]): HexDocumentEditReference {
-		let currentIndex = this._edits.length;
+	public makeEdits(edits: readonly HexDocumentEdit[]): HexDocumentEditReference {
+		const index = this._edits.length;
 		this._edits.push(...edits);
-		this._editTimeline = undefined;
+		this.getEditTimeline.forget();
 
 		return {
 			undo: () => {
-				if (this.unsavedEditIndex <= currentIndex) {
-					this._edits.splice(currentIndex, edits.length);
+				// If the file wasn't saved, just removed the pending edits.
+				// Otherwise, append reversed edits.
+				if (this.unsavedEditIndex <= index) {
+					this._edits.splice(index, edits.length);
 				} else {
 					this._edits.push(...edits.map(reverseEdit));
 				}
-				this._editTimeline = undefined;
+				this.getEditTimeline.forget();
+				return this._edits;
 			},
 			redo: () => {
-				currentIndex = this._edits.length;
 				this._edits.push(...edits);
-				this._editTimeline = undefined;
+				this.getEditTimeline.forget();
+				return this._edits;
 			},
 		};
 	}
 
-	private async *readUsingRanges(ranges: readonly Range[], fromOffset: number, chunkSize = 1024): AsyncIterableIterator<Uint8Array>	{
-		const buf = new Uint8Array(chunkSize);
-		const readAccessor = this.accessor;
-		for (let i = 0; i < ranges.length; i++) {
-			const range = ranges[i];
-			if (range.op === RangeOp.Skip) {
-				continue;
-			}
-
-			if (range.op === RangeOp.Insert) {
-				const readLast = (range.offset + range.value.length) - fromOffset;
-				if (readLast <= 0) {
-					continue;
-				}
-
-				const toYield = readLast < range.value.length ? range.value.subarray(-readLast) : range.value;
-				if (toYield.length > 0) {
-					yield toYield;
-				}
-				continue;
-			}
-
-			// range.op === Read
-			const until = i + 1 < ranges.length ? ranges[i + 1].offset - range.offset : Infinity;
-			let roffset = range.roffset + Math.max(0, fromOffset - range.offset);
-			while (roffset < until) {
-				const bytes = await readAccessor.read(roffset, buf.subarray(0, Math.min(buf.length, until - roffset)));
-				if (bytes === 0) {
-					break; // EOF
-				}
-				yield buf.subarray(0, bytes);
-				roffset += bytes;
-			}
-		}
-	}
-
 	/**
-	 * Gets the size of the file on disk. Takes the current generation, so that
-	 * the file is re-read whenever the generation changes.
+	 * Gets the size of the file on disk.
 	 */
-	private readonly getSizeInner =
-		memoizeLast((_generation: number) => this.accessor.getSize());
+	private readonly getSizeInner = once(() => this.accessor.getSize());
 
 	/**
 	 * Gets instructions for returning file data. Returns a list of contiguous
 	 * `Range` instances. Each "range" issues instructions until the next
 	 * "offset". This can be used to generate file data.
 	 */
-	private getEditTimeline() {
-		if (this._editTimeline) {
-			return this._editTimeline;
+	private readonly getEditTimeline = once(() => buildEditTimeline(this._edits));
+}
+
+export async function *readUsingRanges(readable: Pick<FileAccessor, "read">, ranges: readonly EditRange[], fromOffset = 0, chunkSize = 1024): AsyncIterableIterator<Uint8Array>	{
+	const buf = new Uint8Array(chunkSize);
+	for (let i = 0; i < ranges.length; i++) {
+		const range = ranges[i];
+		if (range.op === EditRangeOp.Skip) {
+			continue;
 		}
 
-		// Serialize all edits to a single, continuous "timeline", which we'll
-		// iterate through in order to read data and yield bytes.
-		const ranges: Range[] = [{ op: RangeOp.Read, roffset: 0, offset: 0 }];
-
-		/** Splits the "range" into two parts at the given byte within the range */
-		const getSplit = (split: Range, atByte: number): { before: Range, after: Range } => {
-			if (split.op === RangeOp.Read) {
-				return {
-					before: { op: RangeOp.Read, roffset: split.roffset, offset: split.offset },
-					after:	{ op: RangeOp.Read, roffset: split.roffset + atByte, offset: split.offset + atByte },
-				};
-			} else if (split.op === RangeOp.Skip) {
-				return {
-					before: { op: RangeOp.Skip,  offset: split.offset },
-					after:	{ op: RangeOp.Skip, offset: split.offset + atByte },
-				};
-			} else {
-				return {
-					before: { op: RangeOp.Insert, offset: split.offset, value: split.value.subarray(0, atByte) },
-					after: { op: RangeOp.Insert, offset: split.offset + atByte, value: split.value.subarray(atByte) },
-				};
+		if (range.op === EditRangeOp.Insert) {
+			const readLast = (range.offset + range.value.length) - fromOffset;
+			if (readLast <= 0) {
+				continue;
 			}
-		};
 
-		const searcher = binarySearch<Range>(r => r.offset + 0.5);
-		let sizeDelta = 0;
-
-		/** Shifts the offset of all ranges after i by the amount */
-		const shiftAfter = (i: number, byAmount: number) => {
-			for (; i < ranges.length; i++) {
-				ranges[i].offset += byAmount;
-				sizeDelta += byAmount;
+			const toYield = readLast < range.value.length ? range.value.subarray(-readLast) : range.value;
+			if (toYield.length > 0) {
+				yield toYield;
 			}
-		};
-
-		for (const edit of this._edits) {
-			const i = searcher(edit.offset, ranges) - 1;
-			const split = ranges[i];
-
-			if (edit.op === HexDocumentEditOp.Insert) {
-				const { before, after } = getSplit(split, edit.offset - split.offset);
-				ranges.splice(i, 1, before, { op: RangeOp.Insert, offset: edit.offset, value: edit.value }, after);
-				shiftAfter(i + 2, edit.value.length);
-			} else if (edit.op === HexDocumentEditOp.Delete || edit.op === HexDocumentEditOp.Replace) {
-				const { before } = getSplit(split, edit.previous.length);
-				const until = searcher(edit.offset + edit.previous.length, ranges) - 1;
-				const { after } = getSplit(ranges[until], edit.offset + edit.previous.length - ranges[until].offset);
-				ranges.splice(
-					i, until - i + 1,
-					before,
-					edit.op === HexDocumentEditOp.Replace
-						? { op: RangeOp.Insert, offset: edit.offset, value: edit.value }
-						: { op: RangeOp.Skip, offset: edit.offset },
-					after
-				);
-				if (edit.op !== HexDocumentEditOp.Replace) {
-					shiftAfter(i + 2, -edit.previous.length);
-				}
-			}
+			continue;
 		}
 
-		return this._editTimeline = { ranges, sizeDelta };
+		// range.op === Read
+		const until = range.roffset + (i + 1 < ranges.length ? ranges[i + 1].offset : Infinity) - range.offset;
+		let roffset = range.roffset + Math.max(0, fromOffset - range.offset);
+		while (roffset < until) {
+			const bytes = await readable.read(roffset, buf.subarray(0, Math.min(buf.length, until - roffset)));
+			if (bytes === 0) {
+				break; // EOF
+			}
+			yield buf.subarray(0, bytes);
+			roffset += bytes;
+		}
 	}
 }
+
+export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimeline => {
+	// Serialize all edits to a single, continuous "timeline", which we'll
+	// iterate through in order to read data and yield bytes.
+	const ranges: EditRange[] = [{ op: EditRangeOp.Read, editIndex: -1, roffset: 0, offset: 0 }];
+
+	/** Splits the "range" into two parts at the given byte within the range */
+	const getSplit = (editIndex: number, split: EditRange, atByte: number): { before: EditRange, after: EditRange } => {
+		if (split.op === EditRangeOp.Read) {
+			return {
+				before: { op: EditRangeOp.Read, editIndex, roffset: split.roffset, offset: split.offset },
+				after:	{ op: EditRangeOp.Read, editIndex, roffset: split.roffset + atByte, offset: split.offset + atByte },
+			};
+		} else if (split.op === EditRangeOp.Skip) {
+			return {
+				before: { op: EditRangeOp.Skip, editIndex, offset: split.offset },
+				after:	{ op: EditRangeOp.Skip, editIndex, offset: split.offset + atByte },
+			};
+		} else {
+			return {
+				before: { op: EditRangeOp.Insert, editIndex, offset: split.offset, value: split.value.subarray(0, atByte) },
+				after: { op: EditRangeOp.Insert, editIndex, offset: split.offset + atByte, value: split.value.subarray(atByte) },
+			};
+		}
+	};
+
+	const searcher = binarySearch<EditRange>(r => r.offset);
+	let sizeDelta = 0;
+
+	/** Shifts the offset of all ranges after i by the amount */
+	const shiftAfter = (i: number, byAmount: number) => {
+		sizeDelta += byAmount;
+		for (; i < ranges.length; i++) {
+			ranges[i].offset += byAmount;
+		}
+	};
+
+	for (let editIndex = 0; editIndex < edits.length; editIndex++) {
+		const edit = edits[editIndex];
+		let i = searcher(edit.offset, ranges);
+		if (i === ranges.length || ranges[i].offset > edit.offset) {
+			i--;
+		}
+		const split = ranges[i];
+
+		if (edit.op === HexDocumentEditOp.Insert) {
+			const { before, after } = getSplit(editIndex, split, edit.offset - split.offset);
+			ranges.splice(i, 1, before, { op: EditRangeOp.Insert, editIndex, offset: edit.offset, value: edit.value }, after);
+			shiftAfter(i + 2, edit.value.length);
+		} else if (edit.op === HexDocumentEditOp.Delete || edit.op === HexDocumentEditOp.Replace) {
+			const { before } = getSplit(editIndex, split, edit.offset - split.offset);
+			let until = searcher(edit.offset + edit.previous.length, ranges);
+			if (until === ranges.length || ranges[until].offset > edit.offset) {
+				until--;
+			}
+
+			const { after } = getSplit(editIndex, ranges[until], edit.offset + edit.previous.length - ranges[until].offset);
+			ranges.splice(
+				i, until - i + 1,
+				before,
+				edit.op === HexDocumentEditOp.Replace
+					? { op: EditRangeOp.Insert, editIndex, offset: edit.offset, value: edit.value }
+					: { op: EditRangeOp.Skip, editIndex, offset: edit.offset },
+				after
+			);
+
+			shiftAfter(i + 2, (edit.op === HexDocumentEditOp.Replace ? edit.value.length : 0) - edit.previous.length);
+		}
+	}
+
+	return { ranges, sizeDelta };
+};

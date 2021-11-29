@@ -1,15 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import React, { useEffect, Suspense } from "react";
+import React, { Suspense, useMemo, useLayoutEffect } from "react";
 import { render } from "react-dom";
-import { RecoilRoot, useRecoilState, useRecoilValue } from "recoil";
-import { FromWebviewMessage, MessageHandler, ToWebviewMessage, WebviewMessageHandler } from "../../shared/protocol";
+import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
 import { useTheme } from "./hooks";
 import { ScrollContainer } from "./scrollContainer";
 import * as select from "./state";
 import { DataHeader } from "./dataDisplay";
 import { styled } from "@linaria/react";
+import { FindWidget } from "./findWidget";
+import { DataDisplayContext, DisplayContext } from "./dataDisplayContext";
 
 const Container = styled.div`
 	display: flex;
@@ -31,20 +32,29 @@ const Container = styled.div`
 `;
 
 const Root: React.FC = () => {
-	const [dimensions, setDimensions] = useRecoilState(select.dimensions);
+	const setDimensions = useSetRecoilState(select.dimensions);
 	const theme = useTheme();
-	useEffect(() => {
-		const listener = () => setDimensions({
+
+	useLayoutEffect(() => {
+		const applyDimensions = () => setDimensions({
 			width: window.innerWidth,
 			height: window.innerHeight,
 			rowPxHeight: parseInt(theme["font-size"]) + 8,
 			rowByteWidth: 16
 		});
 
-		window.addEventListener("resize", listener);
-		listener();
-		return () => window.removeEventListener("resize", listener);
+		window.addEventListener("resize", applyDimensions);
+		applyDimensions();
+		return () => window.removeEventListener("resize", applyDimensions);
 	}, [theme]);
+
+	return <Suspense fallback='Loading...'><Editor /></Suspense>;
+};
+
+const Editor: React.FC = () => {
+	const dimensions = useRecoilValue(select.dimensions);
+	const setEdit = useSetRecoilState(select.edits);
+	const ctx = useMemo(() => new DisplayContext(setEdit), []);
 
 	const isLargeFile = useRecoilValue(select.isLargeFile);
 	const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
@@ -55,24 +65,16 @@ const Root: React.FC = () => {
 		</div>;
 	}
 
-	return <Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
-		<DataHeader width={dimensions.rowByteWidth} />
-		<ScrollContainer />
-	</Container>;
+	return <DataDisplayContext.Provider value={ctx}>
+		<Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
+			<FindWidget />
+			<DataHeader width={dimensions.rowByteWidth} />
+			<ScrollContainer />
+		</Container>
+	</DataDisplayContext.Provider>;
 };
 
 
-render(<RecoilRoot><Suspense fallback='Loading...'><Root /></Suspense></RecoilRoot>, document.body);
-
-const handleMessage = async (_message: ToWebviewMessage): Promise<FromWebviewMessage | undefined> => {
-	return undefined; // todo
-};
-
-const messageHandler: WebviewMessageHandler = new MessageHandler(
-	handleMessage,
-	msg => window.postMessage(msg)
-);
-
-window.addEventListener("message", msg => messageHandler.handleMessage(msg.data));
+render(<RecoilRoot><Root /></RecoilRoot>, document.body);
 
 

@@ -1,90 +1,76 @@
 import { css } from "@linaria/core";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import * as select from "./state";
 import { Range } from "./util";
 import { DataDisplay } from "./dataDisplay";
+import { VirtualScrollContainer } from "./virtualScrollContainer";
 
 const wrapperCls = css`
-	overflow-y: scroll;
-	overflow-x: hidden;
 	flex-grow: 1;
 	flex-basis: 0;
-	position: relative;
 `;
 
-const heightCls = css``;
-
+/**
+ * "Overscroll" of data that the hex editor will try to load. For example, if
+ * this is set to 2, then two additional window heights of data will be loaded
+ * before and after the currently displayed data.
+ */
 const loadThreshold = 0.5;
-
-const getBoundScrollHeight = (bounds: Range, dimension: select.IDimensions) =>
-	Math.ceil(bounds.size / dimension.rowByteWidth) * dimension.rowPxHeight + dimension.height / 2;
 
 export const ScrollContainer: React.FC = () => {
 	const dimension = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
-	const previousBounds = useRef<Range>();
 	const [bounds, setBounds] = useRecoilState(select.scrollBounds);
-	const [container, setContainer] = useState<HTMLDivElement | null>(null);
 	const [offset, setOffset] = useRecoilState(select.offset);
+	const previousOffset = useRef<number>();
 
-	const recalculateHeight = () => {
-		if (!container) {
+	const [scrollTop, setScrollTop] = useState(0);
+
+	const expandBoundsToContain = useCallback((newOffset: number) => {
+		const windowSize = select.getDisplayedBytes(dimension);
+
+		// Expand the scroll bounds if the new position is too close to the
+		// start or end of the selection, based on the loadThreshold.
+		setBounds(old => {
+			if (newOffset - old.start < windowSize * loadThreshold && old.start > 0) {
+				return new Range(Math.max(0, old.start - windowSize), old.end);
+			} else if (old.end - newOffset < windowSize * (1 + loadThreshold)) {
+				return new Range(old.start, Math.min(fileSize ?? Infinity, old.end + windowSize));
+			} else {
+				return old;
+			}
+		});
+	}, [dimension, fileSize]);
+
+	useEffect(() => {
+		if (previousOffset.current === offset) {
 			return;
 		}
 
-		const newHeight = getBoundScrollHeight(bounds, dimension);
-		const heightEl = container.querySelector(`.${heightCls}`) as HTMLDivElement;
-		heightEl.style.height = `${newHeight}px`;
+		expandBoundsToContain(offset);
+		setScrollTop(dimension.rowPxHeight * (offset - bounds.start) / dimension.rowByteWidth);
+	}, [offset]);
 
-		// If data was added at the top, adjust scrolling so it stays in the same place
-		if (previousBounds.current && previousBounds.current.start !== bounds.start) {
-			heightEl.scrollTop += newHeight - getBoundScrollHeight(previousBounds.current!, dimension);
-		}
-
-		previousBounds.current = bounds;
-	};
-
-	// update the scrollable height when bounds changes
-	useEffect(recalculateHeight, [container, bounds, dimension]);
-
-	// initially, or on byte width change, adjust the scroll position.
-	useEffect(() => {
-		if (container) {
-			container.scrollTop = (offset - bounds.start) / dimension.rowByteWidth * dimension.rowPxHeight;
-		}
-	}, [container, dimension]);
-
-	// when scrolling, update the offset
-	useEffect(() => {
-		if (!container) {
-			return;
-		}
-
-		const l = () => {
-			const newOffset = bounds.start + Math.floor(container.scrollTop / dimension.rowPxHeight) * dimension.rowByteWidth;
-			setOffset(newOffset);
-			const windowSize = select.getDisplayedBytes(dimension);
-
-			setBounds(bounds => {
-				if (newOffset - bounds.start < windowSize * loadThreshold && bounds.start > 0) {
-					return new Range(Math.max(0, bounds.start - windowSize), bounds.end);
-				} else if (bounds.end - newOffset < windowSize * (1 + loadThreshold)) {
-					return new Range(bounds.start, Math.min(fileSize ?? Infinity, bounds.end + windowSize));
-				} else {
-					return bounds;
-				}
-			});
-		};
-
-		container.addEventListener("scroll", l, { passive: true });
-		return () => container.removeEventListener("scroll", l);
-	}, [container, dimension]);
+	const onScroll = useCallback((scrollTop: number) => {
+		// On scroll, figure out the offset displayed at the new position.
+		const newOffset = bounds.start + Math.floor(scrollTop / dimension.rowPxHeight) * dimension.rowByteWidth;
+		const newScrollTop = Math.floor(scrollTop / dimension.rowPxHeight) * dimension.rowPxHeight;
+		previousOffset.current = newOffset;
+		setOffset(newOffset);
+		expandBoundsToContain(newOffset);
+		setScrollTop(newScrollTop);
+	}, [dimension, expandBoundsToContain]);
 
 	return (
-		<div className={wrapperCls} ref={setContainer}>
+		<VirtualScrollContainer
+			className={wrapperCls}
+			scrollTop={scrollTop}
+			scrollStart={dimension.rowPxHeight * (bounds.start / dimension.rowByteWidth)}
+			scrollEnd={dimension.rowPxHeight * (bounds.end / dimension.rowByteWidth) + dimension.height / 2}
+			onScroll={onScroll}
+		>
 			<DataDisplay />
-			<div className={heightCls} />
-		</div>
+		</VirtualScrollContainer>
 	);
 };

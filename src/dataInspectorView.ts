@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import { getNonce } from "./util";
+import { randomString } from "./util";
 
 export class DataInspectorView implements vscode.WebviewViewProvider {
 	public static readonly viewType = "hexEditor.dataInspectorView";
@@ -82,7 +82,7 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
 		const scriptURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.js"));
 		const styleURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.css"));
 		const endianness = vscode.workspace.getConfiguration().get("hexeditor.defaultEndianness") as string;
-		const nonce = getNonce();
+		const nonce = randomString();
 		return `<!DOCTYPE html>
             <html lang="en">
             <head>

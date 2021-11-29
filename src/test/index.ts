@@ -3,6 +3,8 @@ import Mocha from "mocha";
 const fileImports = [
 	() => import("./backup.test"),
 	() => import("./hexDocumentModel.test"),
+	() => import("./searchRequest.test"),
+	() => import("./literalSearch.test"),
 ];
 
 export async function run(): Promise<void> {

@@ -4,8 +4,8 @@
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { DataInspectorView } from "./dataInspectorView";
+import { showGoToOffset } from "./goToOffset";
 import { HexEditorProvider } from "./hexEditorProvider";
-import { openOffsetInput } from "./util";
 
 // Telemetry information
 const extensionID = "ms-vscode.hexeditor";
@@ -29,11 +29,9 @@ export function activate(context: vscode.ExtensionContext): void {
 	const openWithCommand = vscode.commands.registerTextEditorCommand("hexEditor.openFile", (textEditor: vscode.TextEditor) => {
 		vscode.commands.executeCommand("vscode.openWith", textEditor.document.uri, "hexEditor.hexedit");
 	});
-	const goToOffsetCommand = vscode.commands.registerCommand("hexEditor.goToOffset", async () => {
-		const offset = await openOffsetInput();
-		// Notify the current webview that the user wants to go to a specific offset
-		if (offset && HexEditorProvider.currentWebview) {
-			HexEditorProvider.currentWebview.postMessage({ type: "goToOffset", body: { offset } });
+	const goToOffsetCommand = vscode.commands.registerCommand("hexEditor.goToOffset", () => {
+		if (HexEditorProvider.currentWebview) {
+			showGoToOffset(HexEditorProvider.currentWebview);
 		}
 	});
 	context.subscriptions.push(goToOffsetCommand);

@@ -3,17 +3,12 @@
 
 import { css } from "@linaria/core";
 import { styled } from "@linaria/react";
-import React, { Suspense, useCallback, useEffect, useMemo, useRef } from "react";
-import { useRecoilState, useRecoilValue } from "recoil";
-import { ByteData } from "./byteData";
-import { DataDisplayContext, DisplayContext, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected } from "./dataDisplayContext";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRecoilValue, useSetRecoilState } from "recoil";
+import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
+import { FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import * as select from "./state";
-import { clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
-
-export interface VirtualizedPacket {
-	offset: number;
-	data: ByteData;
-}
+import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
 const Header = styled.div`
 	font-weight: bold;
@@ -27,14 +22,18 @@ const Address = styled.div`
 	line-height: var(--cell-size);
 `;
 
-const dataCellCls = css`
+export const dataCellCls = css`
 	font-family: var(--vscode-editor-font-family);
 	width: var(--cell-size);
 	height: var(--cell-size);
 	line-height: var(--cell-size);
 	text-align: center;
 	display: inline-block;
-	text-transform: uppercase;
+
+	&:focus {
+		outline-offset: 1px;
+		outline: var(--vscode-focusBorder) 2px solid;
+	}
 `;
 
 const DataCellGroup = styled.div`
@@ -57,9 +56,8 @@ const dataCellSelectedCls = css`
 	color: var(--vscode-editor-selectionForeground);
 `;
 
-const dataCellFocusedCls = css`
-	outline-offset: 1px;
-	outline: var(--vscode-focusBorder) 2px solid;
+const dataCellUnsavedCls = css`
+	background: var(--vscode-minimapGutter-modifiedBackground);
 `;
 
 const EmptyDataCell = () => (
@@ -71,7 +69,7 @@ const EmptyDataCell = () => (
 );
 
 const Byte: React.FC<{ value: number }> = ({ value }) => (
-	<span className={dataCellCls}>{value.toString(16).padStart(2, "0")}</span>
+	<span className={dataCellCls}>{value.toString(16).padStart(2, "0").toUpperCase()}</span>
 );
 
 // why 'sticky' here? Well ultimately we want the rows to be fixed inside the
@@ -99,17 +97,75 @@ export const DataHeader: React.FC<{ width: number }> = ({ width }) => (
 
 export const DataDisplay: React.FC = () => {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [offset, setOffset] = useRecoilState(select.offset);
-	const [scrollBounds, setScrollBounds] = useRecoilState(select.scrollBounds);
+	const setOffset = useSetRecoilState(select.offset);
+	const setScrollBounds = useSetRecoilState(select.scrollBounds);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
-	const ctx = useMemo(() => new DisplayContext(), []);
+	const editTimeline = useRecoilValue(select.editTimeline);
+	const unsavedEditIndex = useRecoilValue(select.unsavedEditIndex);
+	const ctx = useDisplayContext();
 
 	useEffect(() => {
 		const l = () => { ctx.isSelecting = false; };
 		window.addEventListener("mouseup", l, { passive: true });
 		return () => window.removeEventListener("mouseup", l);
 	}, []);
+
+	// When the focused byte changes, make sure it's in view
+	useEffect(() => {
+		const disposable = ctx.onDidChangeAnyFocus(byte => {
+			if (!byte) {
+				return;
+			}
+
+			const displayedBytes = select.getDisplayedBytes(dimensions);
+			const byteRowStart = select.startOfRowContainingByte(byte, dimensions);
+			let newOffset: number;
+
+			setOffset(offset => {
+				// If the focused byte is before the selected byte, adjust upwards.
+				// If the focused byte is off the window, adjust the offset so it's displayed
+				if (byte < offset) {
+					return newOffset = byteRowStart;
+				} else if (byte - offset >= displayedBytes) {
+					return newOffset = byteRowStart - displayedBytes + dimensions.rowByteWidth;
+				} else {
+					return offset;
+				}
+			});
+
+			if (newOffset! !== undefined) {
+				// Ensure the scroll bounds contain the new offset.
+				setScrollBounds(scrollBounds => {
+					if (newOffset < scrollBounds.start) {
+						return scrollBounds.expandToContain(newOffset);
+					} else if (newOffset > scrollBounds.end) {
+						return scrollBounds.expandToContain(newOffset + displayedBytes * 2);
+					} else {
+						return scrollBounds;
+					}
+				});
+			}
+		});
+		return () => disposable.dispose();
+	}, [dimensions]);
+
+	// Whenever the edit timeline changes, update unsaved ranges.
+	useEffect(() => {
+		const unsavedRanges: Range[] = [];
+		for (let i = 0; i < editTimeline.ranges.length; i++) {
+			const range = editTimeline.ranges[i];
+			// todo: eventually support delete decorations?
+			if (range.op !== EditRangeOp.Insert || range.editIndex < unsavedEditIndex) {
+				continue;
+			}
+
+			if (range.value.byteLength > 0) {
+				unsavedRanges.push(new Range(range.offset, range.offset + range.value.byteLength));
+			}
+		}
+		ctx.unsavedRanges = unsavedRanges;
+	}, [editTimeline, unsavedEditIndex]);
 
 	const onKeyDown = (e: React.KeyboardEvent) => {
 		const current = ctx.focusedElement || FocusedElement.zero;
@@ -118,88 +174,71 @@ export const DataDisplay: React.FC = () => {
 		let delta = 0;
 		switch (e.key) {
 			case "ArrowLeft":
-			case "j":
 				delta = -1;
 				break;
 			case "ArrowRight":
-			case "k":
 				delta = 1;
 				break;
 			case "ArrowDown":
-			case "h":
 				delta = dimensions.rowByteWidth;
 				break;
 			case "ArrowUp":
-			case "g":
 				delta = -dimensions.rowByteWidth;
 				break;
 			case "Home":
 				delta = -current.byte;
 				break;
 			case "End":
-				delta = fileSize === undefined ?  displayedBytes : - current.byte - 1;
+				delta = fileSize === undefined ? displayedBytes : fileSize - current.byte - 1;
 				break;
 			case "PageUp":
 				delta = -displayedBytes;
 				break;
 			case "PageDown":
+			case "Space":
 				delta = displayedBytes;
 				break;
 		}
 
-		if (e.ctrlKey || e.metaKey) {
-			delta *= 10;
+		if (e.altKey) {
+			delta *= 8;
 		}
 
-		const next = new FocusedElement(current.char, Math.min(Math.max(0, current.byte + delta), fileSize ?? Infinity));
+		const next = new FocusedElement(current.char, clamp(0, current.byte + delta, fileSize ?? Infinity));
 		if (next.key === current.key) {
 			return;
 		}
 
 		e.preventDefault();
+		e.stopPropagation();
 		ctx.focusedElement = next;
 
 		if (e.shiftKey) {
 			const srange = ctx.selection[0];
+			// On a shift key, expand the selection to include the byte. If there
+			// was no previous selection, create one. If the old selection didn't
+			// include the newly focused byte, expand it. Otherwise, adjust the
+			// closer of the start or end of the selection to the focused byte
+			// (allows shrinking the selection.)
 			if (!srange) {
-				return [Range.inclusive(current.byte, next.byte)];
+				ctx.setSelectionRanges([Range.inclusive(current.byte, next.byte)]);
+			} else if (!srange.includes(next.byte)) {
+				ctx.replaceLastSelectionRange(srange.expandToContain(next.byte));
+			} else {
+				const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
+				const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
+				ctx.addSelectionRange(nextRange);
 			}
-
-			if (!srange.includes(next.byte)) {
-				return ctx.replaceLastSelectionRange(srange.expandToContain(next.byte));
-			}
-
-			const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
-			const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
-			return ctx.addSelectionRange(nextRange);
-		}
-
-		const byteRowStart = Math.floor(next.byte / dimensions.rowByteWidth) * dimensions.rowByteWidth;
-
-		let newOffset: number;
-		if (next.byte < offset) {
-			newOffset = byteRowStart;
-		} else if (next.byte - offset >= displayedBytes) {
-			newOffset = byteRowStart - displayedBytes;
 		} else {
-			return;
-		}
-
-		setOffset(newOffset);
-		if (newOffset < scrollBounds.start) {
-			setScrollBounds(scrollBounds.expandToContain(newOffset));
-		} else if (newOffset > scrollBounds.end) {
-			setScrollBounds(scrollBounds.expandToContain(newOffset + displayedBytes * 2));
+			ctx.setSelectionRanges([Range.single(next.byte)]);
 		}
 	};
 
-	return <DataDisplayContext.Provider value={ctx}>
-		<div
-			ref={containerRef}
-			className={dataDisplayCls}
-			onKeyDown={onKeyDown}
-		><DataRows /></div>
-	</DataDisplayContext.Provider> ;
+	return <div
+		ref={containerRef}
+		className={dataDisplayCls}
+		onKeyDown={onKeyDown}
+	><DataRows /></div>;
 };
 
 const DataRows: React.FC = () => {
@@ -243,15 +282,24 @@ const DataRow: React.FC<{ top: number; offset: number; width: number }> = ({ top
 	</div>
 );
 
+const keysToOctets = new Map([
+	["0", 0x0], ["1", 0x1], ["2", 0x2], ["3", 0x3], ["4", 0x4], ["5", 0x5],
+	["6", 0x6], ["7", 0x7], ["8", 0x8], ["9", 0x9], ["a", 0xa], ["b", 0xb],
+	["c", 0xc], ["d", 0xd], ["e", 0xe], ["f", 0xf],
+]);
+
+for (const [key, value] of keysToOctets) {
+	keysToOctets.set(key.toUpperCase(), value);
+}
+
 const DataCell: React.FC<{
 	byte: number;
+	value: number;
 	isChar: boolean;
-	value: string;
 	className?: string;
-}> = ({ byte, value, className, isChar }) => {
+}> = ({ byte, value, className, children, isChar }) => {
 	const elRef = useRef<HTMLSpanElement | null>(null);
 	const focusedElement = new FocusedElement(isChar, byte);
-
 	const ctx = useDisplayContext();
 
 	const onMouseEnter = useCallback(() => {
@@ -271,7 +319,7 @@ const DataCell: React.FC<{
 			if (e.ctrlKey || e.metaKey) {
 				ctx.addSelectionRange(Range.single(byte));
 			} else {
-				ctx.replaceSelectionRanges([Range.single(byte)]);
+				ctx.setSelectionRanges([Range.single(byte)]);
 			}
 		}
 	}, [byte]);
@@ -291,37 +339,91 @@ const DataCell: React.FC<{
 			if (e.ctrlKey || e.metaKey) {
 				ctx.addSelectionRange(Range.inclusive(asc ? pb + 1 : pb, byte));
 			} else {
-				ctx.replaceSelectionRanges([Range.inclusive(asc ? pb : pb + 1, byte)]);
+				ctx.setSelectionRanges([Range.inclusive(asc ? pb : pb + 1, byte)]);
 			}
 		} else if (e.ctrlKey || e.metaKey) {
 			ctx.addSelectionRange(Range.single(byte));
 		} else {
-			ctx.replaceSelectionRanges([Range.single(byte)]);
+			ctx.setSelectionRanges([Range.single(byte)]);
 		}
 	}, [focusedElement.key, byte]);
 
 	const isFocused = useIsFocused(focusedElement);
 	useEffect(() => {
 		if (isFocused) {
-			elRef.current?.focus();
+			if (document.hasFocus()) {
+				elRef.current?.focus();
+			}
+		} else {
+			setFirstOctetOfEdit(undefined);
 		}
 	}, [isFocused]);
+
+	// Filling in a byte cell requires two octets to be entered. This stores
+	// the first octet, and is reset if the user stops editing.
+	const [firstOctetOfEdit, setFirstOctetOfEdit] = useState<number>();
+	const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+		if (e.metaKey || e.ctrlKey || e.altKey) {
+			return;
+		}
+
+		let newValue: number;
+		if (isChar && e.key.length === 1) {
+			newValue = e.key.charCodeAt(0);
+		} else if (keysToOctets.has(e.key)) {
+			newValue = keysToOctets.get(e.key)!;
+		} else {
+			return;
+		}
+
+		e.stopPropagation();
+
+		if (isChar) {
+			// b is final
+		} else if (firstOctetOfEdit !== undefined) {
+			newValue = firstOctetOfEdit << 4 | newValue;
+		} else {
+			return setFirstOctetOfEdit(newValue);
+		}
+
+		ctx.focusedElement = ctx.focusedElement?.shift(1);
+		setFirstOctetOfEdit(undefined);
+		ctx.edit({
+			op: HexDocumentEditOp.Replace,
+			previous: new Uint8Array([value]),
+			value: new Uint8Array([newValue]),
+			offset: byte,
+		});
+	}, [byte, isChar, firstOctetOfEdit]);
+
+	const onFocus = useCallback(() => {
+		ctx.focusedElement = focusedElement;
+	}, [focusedElement]);
+
+	const onBlur = useCallback(() => {
+		ctx.focusedElement = undefined;
+	}, []);
 
 	return (
 		<span
 			ref={elRef}
 			tabIndex={0}
+			onFocus={onFocus}
+			onBlur={onBlur}
 			className={clsx(
 				dataCellCls,
 				className,
 				useIsHovered(focusedElement) && dataCellHoveredCls,
 				useIsSelected(byte) && dataCellSelectedCls,
-				isFocused && dataCellFocusedCls,
+				useIsUnsaved(byte) && dataCellUnsavedCls,
 			)}
 			onMouseEnter={onMouseEnter}
 			onMouseUp={onMouseUp}
 			onMouseLeave={onMouseLeave}
-		>{value}</span>
+			onKeyDown={onKeyDown}
+		>{firstOctetOfEdit !== undefined
+			? firstOctetOfEdit.toString(16).toUpperCase()
+			: children}</span>
 	);
 };
 
@@ -333,15 +435,21 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 	const endPageNo = Math.floor((offset + width) / dataPageSize);
 	const endPageStartsAt = endPageNo * dataPageSize;
 
-	const startPage = useRecoilValue(select.dataPages(startPageNo));
-	const endPage = useRecoilValue(select.dataPages(endPageNo));
+	const startPage = useRecoilValue(select.editedDataPages(startPageNo));
+	const endPage = useRecoilValue(select.editedDataPages(endPageNo));
+
 	let memoValue = "";
-	const rawBytes = new Uint8Array(width);
+	let rawBytes = new Uint8Array(width);
 	for (let i = 0; i < width; i++) {
 		const boffset = offset + i;
 		const value = boffset >= endPageStartsAt
 			? endPage[boffset - endPageStartsAt]
 			: startPage[boffset - startPageStartsAt];
+		if (value === undefined) {
+			rawBytes = rawBytes.subarray(0, i);
+			break;
+		}
+
 		memoValue += "," + value;
 		rawBytes[i] = value;
 	}
@@ -363,8 +471,8 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 				key={i}
 				byte={boffset}
 				isChar={false}
-				value={value.toString(16).padStart(2, "0")}
-			/>);
+				value={value}
+			>{value.toString(16).padStart(2, "0").toUpperCase()}</DataCell>);
 
 			const char = getAsciiCharacter(value);
 			chars.push(<DataCell
@@ -372,8 +480,8 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 				byte={boffset}
 				isChar={true}
 				className={char === undefined ? nonGraphicCharCls : undefined}
-				value={char === undefined ? "." : char}
-			/>);
+				value={value}
+			>{char === undefined ? "." : char}</DataCell>);
 		}
 		return { bytes, chars };
 	}, [memoValue]);
