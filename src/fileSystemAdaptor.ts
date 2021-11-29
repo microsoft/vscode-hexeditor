@@ -15,7 +15,7 @@ class SimpleFileAccessor implements FileAccessor {
 	protected contents?: Thenable<Uint8Array> | Uint8Array;
 	public readonly uri: string;
 
-	constructor( uri: vscode.Uri) {
+	constructor(uri: vscode.Uri) {
 		this.uri = uri.toString();
 	}
 
@@ -52,7 +52,7 @@ class SimpleFileAccessor implements FileAccessor {
 		await vscode.workspace.fs.writeFile(vscode.Uri.parse(this.uri), data);
 	}
 
-	async writeBulk(ops:readonly FileWriteOp[]): Promise<void> {
+	async writeBulk(ops: readonly FileWriteOp[]): Promise<void> {
 		const contents = await this.getContents();
 		for (const { data, offset } of ops) {
 			contents.set(data, offset);
@@ -60,9 +60,8 @@ class SimpleFileAccessor implements FileAccessor {
 		return vscode.workspace.fs.writeFile(vscode.Uri.parse(this.uri), contents);
 	}
 
-
-	async copy(to: string) {
-		await vscode.workspace.fs.copy(vscode.Uri.parse(this.uri), vscode.Uri.parse(to), { overwrite: true });
+	public invalidate(): void {
+		this.contents = undefined;
 	}
 
 	dispose() {

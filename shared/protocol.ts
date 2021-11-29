@@ -2,17 +2,20 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import { HexDocumentEdit } from "./hexDocumentModel";
-import { SearchOptions, SearchResults } from "./search";
+import { ISerializedEdits } from "./serialization";
 
 export const enum MessageType {
 	//#region to webview
 	ReadyResponse,
 	ReadRangeResponse,
-	SearchResponse,
-	ReplaceResponse,
+	SearchProgress,
+	SetEdits,
 	Saved,
-	Changed,
+	ReloadFromDisk,
+	StashDisplayedOffset,
+	GoToOffset,
+	SetFocusedByte,
+	PopDisplayedOffset,
 	//#endregion
 	//#region from webview
 	ReadyRequest,
@@ -20,9 +23,9 @@ export const enum MessageType {
 	ReadRangeRequest,
 	MakeEdits,
 	SearchRequest,
-	ReplaceRequest,
 	CancelSearch,
-	DataInspector,
+	ClearDataInspector,
+	SetInspectByte,
 	//#endregion
 }
 
@@ -33,44 +36,86 @@ export interface WebviewMessage<T> {
 }
 
 export interface ReadyResponseMessage {
-	type: MessageType.ReadyResponse,
+	type: MessageType.ReadyResponse;
+	initialOffset: number;
+	edits: ISerializedEdits;
+	unsavedEditIndex: number;
 	fileSize: number | undefined;
-	editorFontSize: number;
 	isLargeFile: boolean;
 }
 
 export interface ReadRangeResponseMessage {
 	type: MessageType.ReadRangeResponse;
-	data: Uint8Array;
+	data: ArrayBuffer;
 }
 
-export interface SearchResponseMessage {
-	type: MessageType.SearchResponse;
-	results: SearchResults;
+export interface SearchResult {
+	from: number;
+	to: number;
+	previous: Uint8Array;
 }
 
-export interface ReplaceResponseMessage {
-	type: MessageType.ReplaceResponse;
-	edits: HexDocumentEdit[];
+export interface SearchResultsWithProgress {
+	results: SearchResult[];
+	progress: number;
+	capped?: boolean;
+}
+
+export interface SearchProgressMessage {
+	type: MessageType.SearchProgress;
+	data: SearchResultsWithProgress;
 }
 
 /** Notifies the document is saved, any pending edits should be flushed */
 export interface SavedMessage {
 	type: MessageType.Saved;
+	unsavedEditIndex: number;
 }
 
 /** Notifies that the underlying file is changed. Webview should throw away and re-request state. */
-export interface ChangedMessage {
-	type: MessageType.Changed;
+export interface ReloadMessage {
+	type: MessageType.ReloadFromDisk;
+}
+
+/** Sets the edits that should be applied to the document */
+export interface SetEditsMessage {
+	type: MessageType.SetEdits;
+	edits: ISerializedEdits;
+}
+
+/** Sets the displayed offset. */
+export interface GoToOffsetMessage {
+	type: MessageType.GoToOffset;
+	offset: number;
+}
+
+/** Focuses a byte in the editor. */
+export interface SetFocusedByteMessage {
+	type: MessageType.SetFocusedByte;
+	offset: number;
+}
+
+/** Saves the current offset shown in the editor. */
+export interface StashDisplayedOffsetMessage {
+	type: MessageType.StashDisplayedOffset;
+}
+
+/** Restored a stashed offset. */
+export interface PopDisplayedOffsetMessage {
+	type: MessageType.PopDisplayedOffset;
 }
 
 export type ToWebviewMessage =
 	| ReadyResponseMessage
 	| ReadRangeResponseMessage
-	| SearchResponseMessage
-	| ReplaceResponseMessage
+	| SearchProgressMessage
 	| SavedMessage
-	| ChangedMessage;
+	| ReloadMessage
+	| GoToOffsetMessage
+	| SetEditsMessage
+	| SetFocusedByteMessage
+	| PopDisplayedOffsetMessage
+	| StashDisplayedOffsetMessage;
 
 export interface OpenDocumentMessage {
 	type: MessageType.OpenDocument;
@@ -84,30 +129,31 @@ export interface ReadRangeMessage {
 
 export interface MakeEditsMessage {
 	type: MessageType.MakeEdits;
-	edits: HexDocumentEdit[];
+	edits: ISerializedEdits;
 }
+
+export type LiteralSearchQuery = { literal: (Uint8Array | "*")[] };
+
+export type RegExpSearchQuery = { re: string };
 
 export interface SearchRequestMessage {
 	type: MessageType.SearchRequest;
-	searchType: "ascii" | "hex";
-	query: string;
-	options: SearchOptions;
-}
-
-export interface ReplaceRequestMessage {
-	type: MessageType.ReplaceRequest;
-	query: number[];
-	offsets: number[][];
-	preserveCase: boolean;
+	query: LiteralSearchQuery | RegExpSearchQuery;
+	cap: number | undefined;
+	caseSensitive: boolean;
 }
 
 export interface CancelSearchMessage {
 	type: MessageType.CancelSearch;
 }
 
-export interface DataInspectorMessage {
-	type: MessageType.DataInspector;
-	body: unknown;
+export interface ClearDataInspectorMessage {
+	type: MessageType.ClearDataInspector;
+}
+
+export interface SetInspectByteMessage {
+	type: MessageType.SetInspectByte;
+	offset: number;
 }
 
 export interface ReadyRequestMessage {
@@ -120,8 +166,8 @@ export type FromWebviewMessage =
 	| MakeEditsMessage
 	| SearchRequestMessage
 	| CancelSearchMessage
-	| DataInspectorMessage
-	| ReplaceRequestMessage
+	| ClearDataInspectorMessage
+	| SetInspectByteMessage
 	| ReadyRequestMessage;
 
 export type ExtensionHostMessageHandler = MessageHandler<ToWebviewMessage, FromWebviewMessage>;
@@ -135,7 +181,7 @@ export class MessageHandler<TTo, TFrom> {
 	private readonly pendingMessages = new Map<number, { resolve: (msg: TFrom) => void, reject: (err: Error) => void }>();
 
 	constructor(
-		private readonly messageHandler: (msg: TFrom) => Promise<TTo | undefined>,
+		public messageHandler: (msg: TFrom) => Promise<TTo | undefined>,
 		private readonly postMessage: (msg: WebviewMessage<TTo>) => void,
 	) {}
 

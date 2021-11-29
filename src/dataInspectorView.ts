@@ -2,12 +2,12 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import { getNonce } from "./util";
+import { randomString } from "./util";
 
 export class DataInspectorView implements vscode.WebviewViewProvider {
 	public static readonly viewType = "hexEditor.dataInspectorView";
 	private _view?: vscode.WebviewView;
-	private _lastMessage: any;
+	private _lastMessage: unknown;
 
 	constructor(private readonly _extensionURI: vscode.Uri) { }
 
@@ -50,7 +50,7 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
 	 * @description This is where all the messages from the editor enter the view provider
 	 * @param message The message from the main editor window
 	 */
-	public handleEditorMessage(message: any): void {
+	public handleEditorMessage(message: unknown): void {
 		// We save the last message as the webview constantly gets disposed of, but the provider still receives messages
 		this._lastMessage = message;
 		this._view?.webview.postMessage(message);
@@ -82,7 +82,7 @@ export class DataInspectorView implements vscode.WebviewViewProvider {
 		const scriptURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.js"));
 		const styleURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.css"));
 		const endianness = vscode.workspace.getConfiguration().get("hexeditor.defaultEndianness") as string;
-		const nonce = getNonce();
+		const nonce = randomString();
 		return `<!DOCTYPE html>
             <html lang="en">
             <head>

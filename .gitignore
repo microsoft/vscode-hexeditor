@@ -2,7 +2,7 @@ out
 node_modules
 .vscode-test/
 *.vsix
-dist/*.js
-dist/*.js.map
+dist
+!dist/inspector.css
 .DS_Store
 dist/web

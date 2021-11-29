@@ -18,8 +18,7 @@ let currentByteData: ByteData;
 	window.addEventListener("message", async e => {
 		switch (e.data.method) {
 			case "update":
-				if (e.data.byteData)
-					currentByteData = ByteData.constructFromMessage(e.data.byteData);
+				currentByteData = ByteData.constructFromMessage(e.data.data);
 				populateDataInspector(currentByteData, (document.getElementById("endianness") as HTMLSelectElement).value === "little");
 				return;
 			case "clear":

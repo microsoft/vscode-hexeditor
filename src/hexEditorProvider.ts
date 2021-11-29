@@ -4,11 +4,12 @@
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
 import { ExtensionHostMessageHandler, FromWebviewMessage, MessageHandler, MessageType, ToWebviewMessage } from "../shared/protocol";
+import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
-import { SearchResults } from "./searchRequest";
-import { getNonce } from "./util";
+import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
+import { getCorrectArrayBuffer, randomString } from "./util";
 import { WebviewCollection } from "./webViewCollection";
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
@@ -23,7 +24,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	}
 
 	private static readonly viewType = "hexEditor.hexedit";
-	public static currentWebview?: vscode.Webview;
+
+	/** Currently-focused hex editor, if any. */
+	public static currentWebview?: ExtensionHostMessageHandler;
 
 	private readonly webviews = new WebviewCollection();
 
@@ -41,18 +44,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const document = await HexDocument.create(uri, openContext, this._telemetryReporter);
 		const listeners: vscode.Disposable[] = [];
 
-		listeners.push(document.onDidChange(e => {
-			// Tell VS Code that the document has been edited by the user.
-			this._onDidChangeCustomDocument.fire({
-				document,
-				...e,
-			});
-		}));
-
-		listeners.push(document.onDidChangeContent(() => {
-			// Update all webviews when the document changes
+		listeners.push(document.onDidRevert(() => {
 			for (const { messaging } of this.webviews.get(document.uri)) {
-				messaging.sendEvent({ type: MessageType.Changed });
+				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() } });
+				messaging.sendEvent({ type: MessageType.ReloadFromDisk });
 			}
 		}));
 
@@ -60,7 +55,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		listeners.push(watcher);
 		listeners.push(watcher.onDidChange(e => {
 			if (e.fsPath === uri.fsPath) {
-				if (document.unsavedEdits.length > 0) {
+				if (!document.isSynced) {
 					const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
 					vscode.window.showWarningMessage(message, "Overwrite", "Revert").then((selected) => {
 						if (selected === "Overwrite") {
@@ -106,13 +101,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		_token: vscode.CancellationToken
 	): Promise<void> {
 		const messageHandler: ExtensionHostMessageHandler = new MessageHandler(
-			message => this.onMessage(document, message),
+			message => this.onMessage(messageHandler, document, message),
 			message => webviewPanel.webview.postMessage(message),
 		);
 
 		// Add the webview to our internal set of active webviews
 		this.webviews.add(document.uri, messageHandler, webviewPanel);
-		HexEditorProvider.currentWebview = webviewPanel.webview;
+		HexEditorProvider.currentWebview = messageHandler;
 
 		// Set the hex editor activity panel to be visible
 		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", true);
@@ -129,7 +124,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel.onDidChangeViewState(e => {
 			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible);
 			if (e.webviewPanel.visible) {
-				HexEditorProvider.currentWebview = e.webviewPanel.webview;
+				HexEditorProvider.currentWebview = messageHandler;
 				this._dataInspectorView.show({
 					autoReveal: true,
 					forceFocus: true
@@ -145,12 +140,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<HexDocument>>();
 	public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
 
-	public saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Thenable<void> {
+	public async saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Promise<void> {
+		await document.save(cancellation);
+
 		// Update all webviews that a save has just occured
 		for (const { messaging } of this.webviews.get(document.uri)) {
-			messaging.sendEvent({ type: MessageType.Saved });
+			messaging.sendEvent({ type: MessageType.Saved, unsavedEditIndex: document.unsavedEditIndex });
 		}
-		return document.save(cancellation);
 	}
 
 	public saveCustomDocumentAs(document: HexDocument, destination: vscode.Uri, cancellation: vscode.CancellationToken): Thenable<void> {
@@ -161,8 +157,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		return document.revert(cancellation);
 	}
 
-	public backupCustomDocument(document: HexDocument, context: vscode.CustomDocumentBackupContext, cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
-		return document.backup(context.destination, cancellation);
+	public backupCustomDocument(document: HexDocument, context: vscode.CustomDocumentBackupContext, _cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
+		return document.backup(context.destination);
 	}
 
 	/**
@@ -171,11 +167,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Convert the styles and scripts for the webview into webview URIs
 		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.js"));
-		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "hexEdit.css"));
-		const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "node_modules", "@vscode", "codicons", "dist", "codicon.css"));
+		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.css"));
 
 		// Use a nonce to whitelist which scripts can be run
-		const nonce = getNonce();
+		const nonce = randomString();
 
 		return /* html */`
 			<!DOCTYPE html>
@@ -192,7 +187,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 				<link href="${styleUri}" rel="stylesheet" />
-				<link href="${codiconsUri}" rel="stylesheet" />
 				<script nonce="${nonce}" src="${scriptUri}" defer></script>
 
 				<title>Hex Editor</title>
@@ -242,40 +236,54 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		return p;
 	}
 
-	private async onMessage(document: HexDocument, message: FromWebviewMessage): Promise<undefined | ToWebviewMessage> {
+	private async onMessage(
+		messaging: ExtensionHostMessageHandler,
+		document: HexDocument,
+		message: FromWebviewMessage,
+	): Promise<undefined | ToWebviewMessage> {
 		switch (message.type) {
 			// If it's a packet request
 			case MessageType.ReadyRequest:
 				return {
 					type: MessageType.ReadyResponse,
-					editorFontSize: vscode.workspace.getConfiguration("editor").get("fontSize") || 13,
+					initialOffset: document.baseAddress,
+					edits: serializeEdits(document.edits),
+					unsavedEditIndex: document.unsavedEditIndex,
 					fileSize: await document.size(),
 					isLargeFile: document.isLargeFile,
 				};
 			case MessageType.ReadRangeRequest:
-				const data = await document.readBufferWithEdits(message.offset, message.bytes);
-				return { type: MessageType.ReadRangeResponse, data };
+				const data = await document.readBuffer(message.offset, message.bytes);
+				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
 			case MessageType.MakeEdits:
-				document.makeEdit(message.edits);
+				const ref = document.makeEdits(deserializeEdits(message.edits));
+				this._onDidChangeCustomDocument.fire({
+					document,
+					undo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.undo()) }),
+					redo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.redo()) }),
+				});
 				return;
 			case MessageType.CancelSearch:
-				document.searchProvider.cancelRequest();
+				document.searchProvider.cancel();
 				return;
 			case MessageType.SearchRequest:
-				let results: SearchResults;
-				if (message.searchType === "ascii") {
-					results = await document.searchProvider.createNewRequest().textSearch(message.query, message.options);
+				let request: ISearchRequest;
+				if ("re" in message.query) {
+					request = new RegexSearchRequest(document, message.query, message.caseSensitive, message.cap);
 				} else {
-					results = await document.searchProvider.createNewRequest().hexSearch(message.query);
+					request = new LiteralSearchRequest(document, message.query, message.caseSensitive, message.cap);
 				}
-				return { type: MessageType.SearchResponse, results };
-			case MessageType.ReplaceRequest:
-				const edits = await document.replace(message.query, message.offsets, message.preserveCase);
-				return { type: MessageType.ReplaceResponse, edits };
+				document.searchProvider.start(messaging, request);
 				return;
-			case MessageType.DataInspector:
-				// This message was meant for the data inspector view so we forward it there
-				this._dataInspectorView.handleEditorMessage(message.body);
+			case MessageType.ClearDataInspector:
+				this._dataInspectorView.handleEditorMessage({ method: "reset" });
+				break;
+			case MessageType.SetInspectByte:
+				this._dataInspectorView.handleEditorMessage({
+					method: "update",
+					data: getCorrectArrayBuffer(await document.readBufferWithEdits(message.offset, 8))
+				});
+				break;
 		}
 	}
 }

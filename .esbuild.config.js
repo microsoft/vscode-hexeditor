@@ -1,7 +1,9 @@
 const esbuild = require('esbuild');
-const ImportGlobPlugin = require('esbuild-plugin-import-glob');
+const svgr = require('esbuild-plugin-svgr');
+const linaria = require('@linaria/esbuild');
 
-const watch = process.argv.find(a => a === '--watch') !== undefined;
+const watch = process.argv.includes('--watch');
+const minify = !watch || process.argv.includes('--minify');
 
 // Build the editor provider
 esbuild.build({
@@ -9,7 +11,8 @@ esbuild.build({
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	external: ['vscode'],
-	minify: !watch,
+	sourcemap: watch,
+	minify,
 	watch,
 	platform: 'node',
   outfile: 'dist/extension.js',
@@ -22,7 +25,7 @@ esbuild.build({
   bundle: true,
 	external: ['vscode', 'mocha', 'chai'],
 	sourcemap: watch,
-	minify: !watch,
+	minify,
 	watch,
 	platform: 'node',
   outfile: 'dist/test.js',
@@ -34,7 +37,7 @@ esbuild.build({
   bundle: true,
 	format: 'cjs',
 	external: ['vscode'],
-	minify: !watch,
+	minify,
 	watch,
 	platform: 'browser',
   outfile: 'dist/web/extension.js',
@@ -46,7 +49,8 @@ esbuild.build({
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	external: ['vscode'],
-	sourcemap: 'inline',
+	sourcemap: watch ? 'inline' : false,
+	minify,
 	watch,
 	platform: 'browser',
   outfile: 'dist/inspector.js',
@@ -54,12 +58,17 @@ esbuild.build({
 
 // Build the webview editors
 esbuild.build({
-  entryPoints: ['media/editor/hexEdit.ts'],
+  entryPoints: ['media/editor/hexEdit.tsx'],
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	external: ['vscode'],
-	sourcemap: 'inline',
+	sourcemap: watch ? 'inline' : false,
+	minify,
 	watch,
 	platform: 'browser',
   outfile: 'dist/editor.js',
+	plugins: [
+		svgr(),
+		linaria.default({ sourceMap: watch }),
+	],
 }).catch(() => process.exit(1))
