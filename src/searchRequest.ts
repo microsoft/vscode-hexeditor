@@ -6,6 +6,7 @@ import { LiteralSearchQuery, RegExpSearchQuery, SearchResult, SearchResultsWithP
 import { Disposable } from "vscode";
 import { utf8Length } from "./util";
 import { caseInsensitiveEquivalency, LiteralSearch, Wildcard } from "./literalSearch";
+import { Uint8ArrayMap } from "../shared/util/uint8ArrayMap";
 
 /** Type that defines a search request created from the {@link SearchProvider} */
 export interface ISearchRequest extends Disposable {
@@ -14,6 +15,7 @@ export interface ISearchRequest extends Disposable {
 
 class ResultsCollector {
 	private static readonly targetUpdateInterval = 1000;
+	private readonly buffers = new Uint8ArrayMap<Uint8Array>();
 
 	public get capped() {
 		return this.cap === 0;
@@ -30,7 +32,10 @@ class ResultsCollector {
 	private results: SearchResult[] = [];
 
 	/** Adds results to the collector */
-	public push(previous: Uint8Array, from: number, to: number) {
+	public push(previousRef: Uint8Array, from: number, to: number) {
+		// Copy the array, if new, since the search will return mutable references
+		const previous = this.buffers.set(previousRef, () => new Uint8Array(previousRef));
+
 		if (this.cap === undefined) {
 			this.results.push({ from, to, previous });
 		} else if (this.cap > 0) {
@@ -83,7 +88,7 @@ export class LiteralSearchRequest implements ISearchRequest {
 		const streamSearch = new LiteralSearch(
 			query.literal.map(c => c === "*" ? Wildcard : c),
 			(index, data) => collector.push(data, index, index + data.length),
-			isCaseSensitive ? caseInsensitiveEquivalency : undefined,
+			isCaseSensitive ? undefined: caseInsensitiveEquivalency,
 		);
 
 		for await (const chunk of document.readWithEdits(0)) {

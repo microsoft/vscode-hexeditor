@@ -19,7 +19,7 @@ Lorem ad ullamco ad deserunt voluptate ullamco et in commodo et exercitation dui
 	const expectMatches = async (req: ISearchRequest, expected: SearchResult[]) => {
 		let last: SearchResult[] | undefined;
 		for await (const result of req.search()) {
-			last = result.results;
+			last = result.results.map(r => ({ from: r.from, to: r.to, previous: r.previous }));
 		}
 
 		if (!last) {
@@ -54,25 +54,25 @@ Lorem ad ullamco ad deserunt voluptate ullamco et in commodo et exercitation dui
 
 	it("searches for literal", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new LiteralSearchRequest(doc, testNeedleBytes, true), expectedForTestNeedle);
+		await expectMatches(new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, true, undefined), expectedForTestNeedle);
 	});
 
 	it("searches for literal case insensitive", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new LiteralSearchRequest(doc, testNeedleBytes, false), [
+		await expectMatches(new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, false, undefined), [
 			...expectedForTestNeedle,
-			{ from: 1026, previous: testNeedleBytes, to: 1033 },
+			{ from: 1026, previous: new TextEncoder().encode("Laboris"), to: 1033 },
 		]);
 	});
 
 	it("searches for regex", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new RegexSearchRequest(doc, testNeedle, true), expectedForTestNeedle);
+		await expectMatches(new RegexSearchRequest(doc, { re: testNeedle }, true, undefined), expectedForTestNeedle);
 	});
 
 	it("searches for regex case insensitive", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new RegexSearchRequest(doc, testNeedle, false), [
+		await expectMatches(new RegexSearchRequest(doc, { re: testNeedle }, false, undefined), [
 			...expectedForTestNeedle,
 			{ from: 1026, previous: new TextEncoder().encode("Laboris"), to: 1033 },
 		]);

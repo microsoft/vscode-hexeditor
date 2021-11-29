@@ -1,9 +1,11 @@
 import { HexDocumentEdit, HexDocumentEditOp } from "./hexDocumentModel";
+import { Uint8ArrayMap } from "./util/uint8ArrayMap";
 
 export interface ISerializedEdits {
 	edits: readonly unknown[];
 	data: Uint8Array;
 }
+
 
 /**
  * Serializes edits for transfer, see vscode#137757.
@@ -14,28 +16,15 @@ export interface ISerializedEdits {
  */
 export const serializeEdits = (edits: readonly HexDocumentEdit[]): ISerializedEdits => {
 	let allocOffset = 0;
-	const allocTable = new Map<number, { buf: Uint8Array; offset: number }[]>();
+	const allocTable = new Uint8ArrayMap<number>();
 	const allocOrReuse = (buf: Uint8Array) => {
-		const hash = doHash(buf);
-		const existing = allocTable.get(hash);
-		if (!existing) {
-			const record = { buf, offset: allocOffset };
+		const offset = allocTable.set(buf, () => {
+			const offset = allocOffset;
 			allocOffset += buf.length;
-			allocTable.set(hash, [record]);
-			return { offset: record.offset, len: buf.length };
-		}
+			return offset;
+		});
 
-		for (const r of existing) {
-			if (arrEquals(r.buf, buf)) {
-				return { offset: r.offset, len: buf.length };
-			}
-		}
-
-
-		const record = { buf, offset: allocOffset };
-		allocOffset += buf.length;
-		existing.push(record);
-		return { offset: record.offset, len: buf.length };
+		return { offset, len: buf.length };
 	};
 
 	const newEdits: unknown[] = [];
@@ -50,10 +39,8 @@ export const serializeEdits = (edits: readonly HexDocumentEdit[]): ISerializedEd
 	}
 
 	const data = new Uint8Array(allocOffset);
-	for (const allocations of allocTable.values()) {
-		for (const { buf, offset } of allocations) {
-			data.set(buf, offset);
-		}
+	for (const [buf, offset] of allocTable.entries()) {
+		data.set(buf, offset);
 	}
 
 	return { data, edits: newEdits };
@@ -73,30 +60,3 @@ export const deserializeEdits = ({ edits, data }: ISerializedEdits): HexDocument
 		}
 	});
 };
-
-function arrEquals(a: Uint8Array, b: Uint8Array) {
-	if (a.length !== b.length) {
-		return false;
-	}
-	for (let i = 0; i < a.length; i++) {
-		if (a[i] !== b[i]) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-/** Simple hash from vscode core */
-function doHash(b: Uint8Array, hashVal = 0) {
-	hashVal = numberHash(149417, hashVal);
-	for (let i = 0, length = b.length; i < length; i++) {
-		hashVal = numberHash(b[i], hashVal);
-	}
-	return hashVal;
-}
-
-
-function numberHash(val: number, initialHashVal: number): number {
-	return (((initialHashVal << 5) - initialHashVal) + val) | 0;  // hashVal * 31 + ch, keep as int32
-}
