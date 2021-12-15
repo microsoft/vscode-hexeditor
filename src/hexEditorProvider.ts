@@ -42,9 +42,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		_token: vscode.CancellationToken
 	): Promise<HexDocument> {
 		const document = await HexDocument.create(uri, openContext, this._telemetryReporter);
-		const listeners: vscode.Disposable[] = [];
+		const disposables: vscode.Disposable[] = [];
 
-		listeners.push(document.onDidRevert(() => {
+		disposables.push(document.onDidRevert(() => {
 			for (const { messaging } of this.webviews.get(document.uri)) {
 				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() } });
 				messaging.sendEvent({ type: MessageType.ReloadFromDisk });
@@ -52,29 +52,33 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		}));
 
 		const watcher = vscode.workspace.createFileSystemWatcher(uri.fsPath);
-		listeners.push(watcher);
-		listeners.push(watcher.onDidChange(e => {
-			if (e.fsPath === uri.fsPath) {
-				if (!document.isSynced) {
-					const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
-					vscode.window.showWarningMessage(message, "Overwrite", "Revert").then((selected) => {
-						if (selected === "Overwrite") {
-							vscode.commands.executeCommand("workbench.action.files.save");
-						} else if (selected === "Revert") {
-							vscode.commands.executeCommand("workbench.action.files.revert");
-						}
-					});
-				} else {
-					// If we executed a save recently the change was probably caused by us
-					// we shouldn't trigger a revert to resync the document as it is already sync
-					const recentlySaved = Date.now() - document.lastSave < 500;
-					if (!recentlySaved) {
-						document.revert();
-					}
+		disposables.push(watcher);
+		disposables.push(watcher.onDidChange(async e => {
+			if (e.fsPath !== uri.fsPath) {
+				return;
+			}
+
+			if (document.isSynced) {
+				// If we executed a save recently the change was probably caused by us
+				// we shouldn't trigger a revert to resync the document as it is already sync
+				const recentlySaved = Date.now() - document.lastSave < 5_000;
+				if (!recentlySaved) {
+					document.revert();
 				}
+				return;
+			}
+
+			const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
+			const overwrite = "Overwrite";
+			const revert = "Revert";
+			const selected = await vscode.window.showWarningMessage(message, overwrite, revert);
+			if (selected === overwrite) {
+				vscode.commands.executeCommand("workbench.action.files.save");
+			} else if (selected === "Revert") {
+				vscode.commands.executeCommand("workbench.action.files.revert");
 			}
 		}));
-		listeners.push(watcher.onDidDelete(e => {
+		disposables.push(watcher.onDidDelete(e => {
 			if (e.toString() === uri.toString()) {
 				vscode.window.showWarningMessage("This file has been deleted! Saving now will create a new file on disk.", "Overwrite", "Close Editor").then((response) => {
 					if (response === "Overwrite") {
@@ -89,7 +93,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		document.onDidDispose(() => {
 			// Make the hex editor panel hidden since we're disposing of the webview
 			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", false);
-			disposeAll(listeners);
+			disposeAll(disposables);
 		});
 
 		return document;

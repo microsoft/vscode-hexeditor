@@ -158,6 +158,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public async save(_cancellation?: vscode.CancellationToken): Promise<void> {
 		this.lastSave = Date.now();
 		await this.model.save();
+		this.lastSave = Date.now();
 	}
 
 	/**
@@ -175,6 +176,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		const newFile = await accessFile(targetResource);
 		this.lastSave = Date.now();
 		await newFile.writeStream(this.model.readWithEdits());
+		this.lastSave = Date.now();
 		this.model.dispose();
 		this.model = new HexDocumentModel({
 			accessor: newFile,
