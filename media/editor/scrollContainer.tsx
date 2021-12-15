@@ -49,13 +49,14 @@ export const ScrollContainer: React.FC = () => {
 		}
 
 		expandBoundsToContain(offset);
-		setScrollTop(dimension.rowPxHeight * (offset - bounds.start) / dimension.rowByteWidth);
+		setScrollTop(dimension.rowPxHeight * (offset / dimension.rowByteWidth));
 	}, [offset]);
 
 	const onScroll = useCallback((scrollTop: number) => {
 		// On scroll, figure out the offset displayed at the new position.
-		const newOffset = bounds.start + Math.floor(scrollTop / dimension.rowPxHeight) * dimension.rowByteWidth;
-		const newScrollTop = Math.floor(scrollTop / dimension.rowPxHeight) * dimension.rowPxHeight;
+		const rowNumber = Math.floor(scrollTop / dimension.rowPxHeight);
+		const newOffset = rowNumber * dimension.rowByteWidth;
+		const newScrollTop = rowNumber * dimension.rowPxHeight;
 		previousOffset.current = newOffset;
 		setOffset(newOffset);
 		expandBoundsToContain(newOffset);

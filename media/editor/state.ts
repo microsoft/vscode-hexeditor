@@ -6,7 +6,7 @@ import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
-import { Range } from "./util";
+import { clamp, Range } from "./util";
 
 declare function acquireVsCodeApi(): ({
 	postMessage(msg: unknown): void;
@@ -142,9 +142,12 @@ export const scrollBounds = atom<Range>({
 			const d = get(dimensions);
 			const offset = get(initialOffset);
 			const windowSize = getDisplayedBytes(d);
+			const scrollEnd = get(fileSize) ?? offset + windowSize * 2;
+			console.log('init offset', offset, 'max', scrollEnd);
+
 			return new Range(
-				Math.max(0, offset - windowSize),
-				get(fileSize) ?? offset + windowSize * 2,
+				clamp(0, offset - windowSize, scrollEnd - windowSize),
+				scrollEnd,
 			);
 		},
 	}),
