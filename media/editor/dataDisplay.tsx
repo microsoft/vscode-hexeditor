@@ -324,22 +324,20 @@ const DataCell: React.FC<{
 		}
 	}, [byte]);
 
-	const onMouseUp = useCallback((e: React.MouseEvent) => {
-		const prevFocused = ctx.focusedElement || FocusedElement.zero;
+	const onMouseDown = useCallback((e: React.MouseEvent) => {
+		const prevFocused = ctx.focusedElement;
 		ctx.focusedElement = focusedElement;
 
 		if (ctx.isSelecting) {
 			ctx.isSelecting = false;
-		} else if (e.shiftKey) {
+		} else if (e.shiftKey && prevFocused) {
 			// on a shift key, the user is expanding the selection (or deselection)
 			// of an existing byte. We *don't* include that byte since we don't want
 			// to swap the byte.
-			const pb = prevFocused.byte;
-			const asc = pb < byte;
 			if (e.ctrlKey || e.metaKey) {
-				ctx.addSelectionRange(Range.inclusive(asc ? pb + 1 : pb, byte));
+				ctx.addSelectionRange(Range.inclusive(prevFocused.byte, byte));
 			} else {
-				ctx.setSelectionRanges([Range.inclusive(asc ? pb : pb + 1, byte)]);
+				ctx.setSelectionRanges([Range.inclusive(prevFocused.byte, byte)]);
 			}
 		} else if (e.ctrlKey || e.metaKey) {
 			ctx.addSelectionRange(Range.single(byte));
@@ -401,8 +399,12 @@ const DataCell: React.FC<{
 	}, [focusedElement]);
 
 	const onBlur = useCallback(() => {
-		ctx.focusedElement = undefined;
-	}, []);
+		queueMicrotask(() => {
+			if (ctx.focusedElement?.key === focusedElement.key) {
+				ctx.focusedElement = undefined;
+			}
+		});
+	}, [focusedElement]);
 
 	return (
 		<span
@@ -418,7 +420,7 @@ const DataCell: React.FC<{
 				useIsUnsaved(byte) && dataCellUnsavedCls,
 			)}
 			onMouseEnter={onMouseEnter}
-			onMouseUp={onMouseUp}
+			onMouseDown={onMouseDown}
 			onMouseLeave={onMouseLeave}
 			onKeyDown={onKeyDown}
 		>{firstOctetOfEdit !== undefined
