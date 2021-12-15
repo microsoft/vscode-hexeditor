@@ -238,6 +238,11 @@ export class HexDocumentModel {
 		};
 	}
 
+	/** Disposes of unmanaged resources. */
+	public dispose(): void {
+		this.accessor.dispose();
+	}
+
 	/**
 	 * Gets the size of the file on disk.
 	 */

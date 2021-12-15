@@ -2,14 +2,94 @@
 // Licensed under the MIT license.
 import * as vscode from "vscode";
 import { FileAccessor, FileWriteOp } from "../shared/fileAccessor";
+import { once } from "../shared/util/once";
+import { Policy } from "cockatiel";
 
-export const accessFile = (uri: vscode.Uri, untitledDocumentData?: Uint8Array): FileAccessor => {
+export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Array): Promise<FileAccessor> => {
 	if (uri.scheme === "untitled") {
 		return new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array());
-	} else {
-		return new SimpleFileAccessor(uri);
 	}
+
+	// try to use native file access for local files to allow large files to be handled efficiently
+	// todo@connor4312/lramos: push forward extension host API for this.
+	if (uri.scheme === "file") {
+		try {
+			const fs = await import("fs");
+			if ((await fs.promises.stat(uri.fsPath)).isFile()) {
+				return new NativeFileAccessor(uri, fs);
+			}
+		} catch {
+			// probably not node.js, or file does not exist
+		}
+	}
+
+	return new SimpleFileAccessor(uri);
 };
+
+/** Native accessor using Node's filesystem. This can be used. */
+class NativeFileAccessor implements FileAccessor {
+	public readonly uri: string;
+	public readonly supportsIncremetalAccess = true;
+	private readonly fsPath: string;
+	private readonly writeGuard = Policy.bulkhead(1, Infinity);
+
+	constructor(uri: vscode.Uri, private readonly fs: typeof import("fs")) {
+		this.uri = uri.toString();
+		this.fsPath = uri.fsPath;
+	}
+
+	async getSize(): Promise<number | undefined> {
+		const fd = await this.getHandle();
+		return (await fd.stat()).size;
+	}
+
+	async read(offset: number, target: Uint8Array): Promise<number> {
+		const fd = await this.getHandle();
+		const { bytesRead } = await fd.read(target, 0, target.byteLength, offset);
+		return bytesRead;
+	}
+
+	writeBulk(ops: readonly FileWriteOp[]): Promise<void> {
+		return this.writeGuard.execute(async () => {
+			const fd = await this.getHandle();
+			for (const { data, offset } of ops) {
+				fd.write(data, 0, data.byteLength, offset);
+			}
+		});
+	}
+
+	async writeStream(stream: AsyncIterable<Uint8Array>, cancellation?: vscode.CancellationToken): Promise<void> {
+		return this.writeGuard.execute(async () => {
+			if (cancellation?.isCancellationRequested) {
+				return;
+			}
+
+			const fd = await this.getHandle();
+			let offset = 0;
+			for await (const chunk of stream) {
+				if (cancellation?.isCancellationRequested) {
+					return;
+				}
+
+				await fd.write(chunk, 0, chunk.byteLength, offset);
+				offset += chunk.byteLength;
+			}
+		});
+	}
+
+	public dispose() {
+		this.getHandle.getValue()?.then(h => h.close()).catch(() => { /* ignore */ });
+	}
+
+	private readonly getHandle = once(async () => {
+		try {
+			return await this.fs.promises.open(this.fsPath, this.fs.constants.O_RDWR | this.fs.constants.O_CREAT);
+		} catch (e) {
+			this.getHandle.forget();
+			throw e;
+		}
+	});
+}
 
 class SimpleFileAccessor implements FileAccessor {
 	protected contents?: Thenable<Uint8Array> | Uint8Array;

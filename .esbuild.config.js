@@ -36,7 +36,7 @@ esbuild.build({
 	tsconfig: "./tsconfig.json",
   bundle: true,
 	format: 'cjs',
-	external: ['vscode'],
+	external: ['vscode', 'fs'],
 	minify,
 	watch,
 	platform: 'browser',

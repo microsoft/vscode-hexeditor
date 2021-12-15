@@ -15,7 +15,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		{ backupId, untitledDocumentData }: vscode.CustomDocumentOpenContext,
 		telemetryReporter: TelemetryReporter,
 	): Promise<HexDocument | PromiseLike<HexDocument>> {
-		const accessor = accessFile(uri, untitledDocumentData);
+		const accessor = await accessFile(uri, untitledDocumentData);
 		const model = new HexDocumentModel({
 			accessor,
 			isFiniteSize: true,
@@ -37,7 +37,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize ?? 0 });
 
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
-		const isLargeFile = !backupId && ((fileSize ?? 0) > maxFileSize);
+		const isLargeFile = !backupId && !accessor.supportsIncremetalAccess && ((fileSize ?? 0) > maxFileSize);
 		return new HexDocument(model, isLargeFile, baseAddress);
 	}
 
@@ -105,6 +105,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	dispose(): void {
 		// Notify subsribers to the custom document we are disposing of it
 		this._onDidDispose.fire();
+		this.model.dispose();
 		// Disposes of all the events attached to the custom document
 		super.dispose();
 	}
@@ -171,9 +172,10 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			throw new Error("Cannot save a document without a finite size");
 		}
 
-		const newFile = accessFile(targetResource);
+		const newFile = await accessFile(targetResource);
 		this.lastSave = Date.now();
 		await newFile.writeStream(this.model.readWithEdits());
+		this.model.dispose();
 		this.model = new HexDocumentModel({
 			accessor: newFile,
 			isFiniteSize: true,
