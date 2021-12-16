@@ -176,13 +176,14 @@ export class HexDocumentModel {
 	 * Persists changes to the file.
 	 */
 	public save(): Promise<void> {
+		const toSave = this._edits.slice(this.unsavedEditIndex);
+		if (toSave.length === 0) {
+			return Promise.resolve();
+		}
+
+		this._unsavedEditIndex += toSave.length;
+
 		return this.saveGuard.execute(async () => {
-			const toSave = this._edits.slice(this.unsavedEditIndex);
-			if (toSave.length === 0) {
-				return;
-			}
-
-
 			// for length changes, we must rewrite the entire file. Or at least from
 			// the offset of the first edit. For replacements we can selectively write.
 			if (!toSave.some(e => e.op !== HexDocumentEditOp.Replace || e.previous.length !== e.value.length)) {
@@ -192,7 +193,6 @@ export class HexDocumentModel {
 				await this.accessor.writeStream(this.readWithEdits());
 			}
 
-			this._unsavedEditIndex += toSave.length;
 			this.getSizeInner.forget();
 		});
 	}
@@ -236,6 +236,11 @@ export class HexDocumentModel {
 				return this._edits;
 			},
 		};
+	}
+
+	/** Disposes of unmanaged resources. */
+	public dispose(): void {
+		this.accessor.dispose();
 	}
 
 	/**

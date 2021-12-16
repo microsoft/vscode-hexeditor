@@ -39,8 +39,22 @@ export const useTheme = (): ColorMap => {
   return [value, setValue];
 };
 
+/**
+ * An effect-priority hook that invokes the function when the value changes.
+ */
+export const useOnChange = <T>(value: T, fn: (value: T, previous: T) => void): void => {
+	const previous = useRef<T>(value);
+	useEffect(() => {
+		if (value !== previous.current) {
+			fn(value, previous.current);
+			previous.current = value;
+		}
+	}, [value]);
+};
+
 const zeroRect: DOMRectReadOnly = new DOMRect();
 
+/** Uses the measured DOM size of the element, watching for resizes. */
 export const useSize = (target: React.RefObject<HTMLElement>): DOMRectReadOnly => {
 	const [size, setSize] = useState<DOMRectReadOnly>(zeroRect);
 

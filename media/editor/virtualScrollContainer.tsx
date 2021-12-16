@@ -98,7 +98,7 @@ export const VirtualScrollContainer: React.FC<{
 		handleHeight = Math.max(minHandleHeight, size.height * size.height / scrollHeight);
 		// Likewise, the distance from the top is how far through the scrollHeight
 		// the current scrollTop is--adjusting for the handle height to keep it on screen.
-		handleTop = (scrollTop - scrollStart) / (scrollHeight - size.height) * (size.height - handleHeight);
+		handleTop = Math.min(1, (scrollTop - scrollStart) / (scrollHeight - size.height)) * (size.height - handleHeight);
 		style = {
 			opacity: 1,
 			pointerEvents: "auto",
@@ -113,7 +113,7 @@ export const VirtualScrollContainer: React.FC<{
 	const onScrollWithOffset = (pageY: number, offset: number) => {
 		// This is just the `handleTop` assignment from above solved for the
 		// scrollTop where handleTop = `pageY - offset - size.top`.
-		const newScrollTop = (pageY - offset - size.top) / (size.height - handleHeight) * (scrollHeight - size.height);
+		const newScrollTop = scrollStart + (pageY - offset - size.top) / (size.height - handleHeight) * (scrollHeight - size.height);
 		onScroll(clampScroll(newScrollTop));
 	};
 

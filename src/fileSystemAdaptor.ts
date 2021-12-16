@@ -1,15 +1,161 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
+import type fs from "fs";
 import * as vscode from "vscode";
 import { FileAccessor, FileWriteOp } from "../shared/fileAccessor";
 
-export const accessFile = (uri: vscode.Uri, untitledDocumentData?: Uint8Array): FileAccessor => {
+export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Array): Promise<FileAccessor> => {
 	if (uri.scheme === "untitled") {
 		return new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array());
-	} else {
-		return new SimpleFileAccessor(uri);
 	}
+
+	// try to use native file access for local files to allow large files to be handled efficiently
+	// todo@connor4312/lramos: push forward extension host API for this.
+	if (uri.scheme === "file") {
+		try {
+			const fs = await import("fs");
+			if ((await fs.promises.stat(uri.fsPath)).isFile()) {
+				return new NativeFileAccessor(uri, fs);
+			}
+		} catch {
+			// probably not node.js, or file does not exist
+		}
+	}
+
+	return new SimpleFileAccessor(uri);
 };
+
+class FileHandleContainer {
+	private borrowQueue: ((h: fs.promises.FileHandle | Error) => Promise<void>)[] = [];
+	private handle?: fs.promises.FileHandle;
+	private disposeTimeout?: NodeJS.Timeout;
+	private disposed = false;
+
+	constructor(
+		private readonly path: string,
+		private readonly _fs: typeof fs,
+	) {}
+
+	/** Borrows the file handle to run the function. */
+	public borrow<R>(fn: (handle: fs.promises.FileHandle) => R): Promise<R> {
+		if (this.disposed) {
+			return Promise.reject(new Error("FileHandle was disposed"));
+		}
+
+		return new Promise<R>((resolve, reject) => {
+			this.borrowQueue.push(async handle => {
+				if (handle instanceof Error) {
+					return reject(handle);
+				}
+
+				try {
+					resolve(await fn(handle));
+				} catch (e) {
+					reject(e);
+				}
+			});
+
+			if (this.borrowQueue.length === 1) {
+				this.process();
+			}
+		});
+	}
+
+	public dispose() {
+		this.disposed = true;
+		this.handle = undefined;
+		if (this.disposeTimeout) {
+			clearTimeout(this.disposeTimeout);
+		}
+		this.rejectAll(new Error("FileHandle was disposed"));
+	}
+
+	private rejectAll(error: Error) {
+		while (this.borrowQueue.length) {
+			this.borrowQueue.pop()!(error);
+		}
+	}
+
+	private async process() {
+		if (this.disposeTimeout) {
+			clearTimeout(this.disposeTimeout);
+		}
+
+		if (!this.handle) {
+			try {
+				this.handle = await this._fs.promises.open(this.path, this._fs.constants.O_RDWR | this._fs.constants.O_CREAT);
+			} catch (e) {
+				return this.rejectAll(e as Error);
+			}
+		}
+
+		while (this.borrowQueue.length) {
+			const fn = this.borrowQueue.pop()!;
+			await fn(this.handle);
+		}
+
+		// When no one is using the handle, close it after some time. Otherwise the
+		// filesystem will lock the file which would be frustating to users.
+		this.disposeTimeout = setTimeout(() => {
+			this.handle?.close();
+			this.handle = undefined;
+		}, 1000);
+	}
+
+}
+
+/** Native accessor using Node's filesystem. This can be used. */
+class NativeFileAccessor implements FileAccessor {
+	public readonly uri: string;
+	public readonly supportsIncremetalAccess = true;
+	private readonly handle: FileHandleContainer;
+
+	constructor(uri: vscode.Uri, private readonly fs: typeof import("fs")) {
+		this.uri = uri.toString();
+		this.handle = new FileHandleContainer(uri.fsPath, fs);
+	}
+
+	async getSize(): Promise<number | undefined> {
+		return this.handle.borrow(async fd => (await fd.stat()).size);
+	}
+
+	async read(offset: number, target: Uint8Array): Promise<number> {
+		return this.handle.borrow(async fd => {
+			const { bytesRead } = await fd.read(target, 0, target.byteLength, offset);
+			return bytesRead;
+		});
+	}
+
+	writeBulk(ops: readonly FileWriteOp[]): Promise<void> {
+		return this.handle.borrow<void>(async fd => {
+			for (const { data, offset } of ops) {
+				fd.write(data, 0, data.byteLength, offset);
+			}
+		});
+	}
+
+	async writeStream(stream: AsyncIterable<Uint8Array>, cancellation?: vscode.CancellationToken): Promise<void> {
+		return this.handle.borrow(async fd => {
+			if (cancellation?.isCancellationRequested) {
+				return;
+			}
+
+			let offset = 0;
+			for await (const chunk of stream) {
+				if (cancellation?.isCancellationRequested) {
+					return;
+				}
+
+				await fd.write(chunk, 0, chunk.byteLength, offset);
+				offset += chunk.byteLength;
+			}
+		});
+	}
+
+	public dispose() {
+		this.handle.dispose();
+	}
+}
 
 class SimpleFileAccessor implements FileAccessor {
 	protected contents?: Thenable<Uint8Array> | Uint8Array;

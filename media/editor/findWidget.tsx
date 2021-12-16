@@ -3,24 +3,24 @@ import { styled } from "@linaria/react";
 import ArrowDown from "@vscode/codicons/src/icons/arrow-down.svg";
 import ArrowUp from "@vscode/codicons/src/icons/arrow-up.svg";
 import CaseSensitive from "@vscode/codicons/src/icons/case-sensitive.svg";
+import ChevronDown from "@vscode/codicons/src/icons/chevron-down.svg";
+import ChevronRight from "@vscode/codicons/src/icons/chevron-right.svg";
 import Close from "@vscode/codicons/src/icons/close.svg";
 import BinaryFile from "@vscode/codicons/src/icons/file-binary.svg";
 import RegexIcon from "@vscode/codicons/src/icons/regex.svg";
 import ReplaceAll from "@vscode/codicons/src/icons/replace-all.svg";
 import Replace from "@vscode/codicons/src/icons/replace.svg";
 import SearchStop from "@vscode/codicons/src/icons/search-stop.svg";
-import ChevronRight from "@vscode/codicons/src/icons/chevron-right.svg";
-import ChevronDown from "@vscode/codicons/src/icons/chevron-down.svg";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
 import { LiteralSearchQuery, MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
 import { dataCellCls } from "./dataDisplay";
 import { FocusedElement, useDisplayContext } from "./dataDisplayContext";
+import { usePersistedState } from "./hooks";
 import * as select from "./state";
 import { clsx, hexDecode, isHexString, parseHexDigit, Range } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
-import { usePersistedState } from "./hooks";
 
 const Wrapper = styled.div`
 	position: absolute;
@@ -170,6 +170,12 @@ export const FindWidget: React.FC = () => {
 	const ctx = useDisplayContext();
 	const textFieldRef = useRef<HTMLInputElement | null>(null);
 	const edits = useRecoilValue(select.edits);
+	/**
+	 * Length of the "edits" after expected replacements were made. The query
+	 * needs to be re-run if other edits get made and edits.length !== replacedEditLength.
+	 */
+	const safeReplacedEditsLen = useRef<number>(-1);
+	/** Whether the number of results is uncapped. */
 	const [isUncapped, setUncapped] = useState(false);
 	/** Element that was focused before the find widget was shown */
 	const previouslyFocusedElement = useRef<FocusedElement>();
@@ -238,7 +244,7 @@ export const FindWidget: React.FC = () => {
 				clearTimeout(timeout);
 			}
 		};
-	}, [query, isCaseSensitive, isUncapped, isRegexp, isBinaryMode, edits]);
+	}, [query, JSON.stringify(queryOrError), isUncapped, isCaseSensitive, isBinaryMode, edits.length - safeReplacedEditsLen.current]);
 
 	const closeWidget = () => {
 		const prev = previouslyFocusedElement.current;
@@ -251,7 +257,7 @@ export const FindWidget: React.FC = () => {
 		setVisible(false);
 	};
 
-	const onKeyDown = (e: React.KeyboardEvent) => {
+	const onFindKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Escape") {
 			e.preventDefault();
 			closeWidget();
@@ -268,6 +274,15 @@ export const FindWidget: React.FC = () => {
 				e.preventDefault();
 				navigateResults(1);
 			}
+		}
+	};
+
+	const onReplaceKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "Escape") {
+			e.preventDefault();
+			closeWidget();
+		} else if (e.key === "Enter" && selectedResult !== undefined) {
+			replaceSelected();
 		}
 	};
 
@@ -292,16 +307,42 @@ export const FindWidget: React.FC = () => {
 		}
 
 		const r = results.results[next];
-		ctx.setSelectionRanges([new Range(r.from, r.to)]);
-
-		setOffset(Math.max(0, select.startOfRowContainingByte(r.to - select.getDisplayedBytes(dimensions) / 1.5, dimensions)));
+		revealResult(r);
 		setSelectedResult(next);
 	};
 
+	const revealResult = (r: SearchResult) => {
+		ctx.setSelectionRanges([new Range(r.from, r.to)]);
+		setOffset(Math.max(0, select.startOfRowContainingByte(r.to - select.getDisplayedBytes(dimensions) / 1.5, dimensions)));
+	};
+
 	const replaceSelected = () => {
-		if (selectedResult && typeof replaceOrError !== "string") {
-			const r = results.results[selectedResult];
-			ctx.edit(searchResultToEdit(replaceOrError)(r));
+		if (selectedResult === undefined || typeof replaceOrError === "string") {
+			return;
+		}
+
+		const selected = results.results[selectedResult];
+		const edit = searchResultToEdit(replaceOrError)(selected);
+		safeReplacedEditsLen.current = edits.length + 1;
+		ctx.edit(edit);
+
+		// Remove the result we replaced, and shift their ranges if necessary
+		let nextResults = results.results.filter(r => r !== selected);
+		const delta = edit.value.length - edit.previous.length;
+		if (delta !== 0) {
+			nextResults = nextResults.map(r =>
+				r.from > selected.from
+					? ({ from: r.from + delta, to: r.to + delta, previous: r.previous })
+					: r,
+			);
+		}
+
+		setResults(results => ({ ...results, results: nextResults }));
+
+		// show the next result. Don't actually need to call `setSelectedResult` since
+		// the index is the same now that we removed the replaced result.
+		if (selectedResult < nextResults.length) {
+			revealResult(nextResults[selectedResult]);
 		}
 	};
 
@@ -310,7 +351,10 @@ export const FindWidget: React.FC = () => {
 			ctx.edit(results.results
 				.map(searchResultToEdit(replaceOrError))
 				.sort((a, b) => b.offset - a.offset));
-		}
+			safeReplacedEditsLen.current = edits.length + results.results.length;
+			setResults({ progress: 1, results: [] });
+			setSelectedResult(undefined);
+	}
 	};
 
 	const toggleFindReplace = useCallback(() => setReplaceVisible(v => !v), []);
@@ -329,7 +373,7 @@ export const FindWidget: React.FC = () => {
 					placeholder={isBinaryMode ? "Find Bytes (hex)" : "Find Text"}
 					value={query}
 					onChange={onQueryChange}
-					onKeyDown={onKeyDown}
+					onKeyDown={onFindKeyDown}
 					error={typeof queryOrError === "string" ? queryOrError : undefined}
 				>
 					{!isBinaryMode && <VsIconCheckbox checked={isRegexp} onToggle={setIsRegexp} title="Regular Expression Search">
@@ -362,7 +406,7 @@ export const FindWidget: React.FC = () => {
 					buttons={0}
 					value={replace}
 					onChange={onReplaceChange}
-					onKeyDown={onKeyDown}
+					onKeyDown={onReplaceKeyDown}
 					placeholder="Replace"
 					error={typeof replaceOrError === "string" ? replaceOrError : undefined}
 				/>

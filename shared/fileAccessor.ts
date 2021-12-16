@@ -11,6 +11,11 @@ export interface FileWriteOp {
 
 export interface FileAccessor {
 	readonly uri: string;
+	/**
+	 * Whether this accessor works with the file incrementally under the hood.
+	 * If false, it may be necessary to warn the user before they open very large files.
+	 */
+	readonly supportsIncremetalAccess?: boolean;
 
 	/** Calculates the size of the associated document. Undefined if unbounded */
 	getSize(): Promise<number | undefined>;
@@ -22,4 +27,6 @@ export interface FileAccessor {
 	writeStream(stream: AsyncIterable<Uint8Array>, cancellation?: vscode.CancellationToken): Promise<void>;
 	/** Signalled when a full reload is requested. Cached data should be forgotten. */
 	invalidate?(): void;
+	/** Disposes of the accessor. */
+	dispose(): void;
 }
