@@ -4,6 +4,8 @@ import type fs from "fs";
 import * as vscode from "vscode";
 import { FileAccessor, FileWriteOp } from "../shared/fileAccessor";
 
+declare function require(_name: "fs"): typeof fs;
+
 export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Array): Promise<FileAccessor> => {
 	if (uri.scheme === "untitled") {
 		return new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array());
@@ -13,7 +15,8 @@ export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Ar
 	// todo@connor4312/lramos: push forward extension host API for this.
 	if (uri.scheme === "file") {
 		try {
-			const fs = await import("fs");
+			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			const fs = require("fs");
 			if ((await fs.promises.stat(uri.fsPath)).isFile()) {
 				return new NativeFileAccessor(uri, fs);
 			}
