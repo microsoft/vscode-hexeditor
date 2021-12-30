@@ -192,7 +192,6 @@ export interface IPopoverProps {
 export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, children }) => {
   const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
   const { styles, attributes } = usePopper(anchor, popperElement);
-console.log("popper", anchor, popperElement, styles, attributes);
 	useEffect(() => {
 		if (visible) {
 			popperElement?.focus();
