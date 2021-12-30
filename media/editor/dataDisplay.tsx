@@ -271,12 +271,31 @@ const dataRowCls = css`
 	display: flex;
 `;
 
+const LoadingDataRow: React.FC<{ width: number }> = ({ width }) => {
+	const cells: React.ReactNode[] = [];
+	const text = "LOADING";
+	for (let i = 0; i < width; i++) {
+		const str = (text[i * 2] || ".") + (text[i * 2 + 1] || ".");
+		cells.push(<span
+			className={dataCellCls}
+			aria-hidden
+			style={{ opacity: 0.5 }}
+			key={i}
+		>{str}</span>);
+	}
+
+	return <>
+		<DataCellGroup>{cells}</DataCellGroup>
+		<DataCellGroup>{cells}</DataCellGroup>
+	</>;
+};
+
 const DataRow: React.FC<{ top: number; offset: number; width: number }> = ({ top, offset, width }) => (
 	<div className={dataRowCls} style={{ transform: `translateY(${top}px)` }}>
 		<DataCellGroup>
 			<Address>{offset.toString(16).padStart(8, "0")}</Address>
 		</DataCellGroup>
-		<Suspense fallback="Loading...">
+		<Suspense fallback={<LoadingDataRow width={width} />}>
 			<DataRowContents offset={offset} width={width} />
 		</Suspense>
 	</div>
