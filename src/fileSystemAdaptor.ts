@@ -11,6 +11,10 @@ export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Ar
 		return new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array());
 	}
 
+	if (uri.scheme === "vscode-debug-memory") {
+		return new DebugFileAccessor(uri);
+	}
+
 	// try to use native file access for local files to allow large files to be handled efficiently
 	// todo@connor4312/lramos: push forward extension host API for this.
 	if (uri.scheme === "file") {
@@ -233,5 +237,57 @@ class UntitledFileAccessor extends SimpleFileAccessor {
 
 	public override getSize() {
 		return Promise.resolve(this.contents.byteLength);
+	}
+}
+
+
+/**
+ * File accessor for VS Code debug memory. This is special-cased since we don't
+ * yet have low level filesystem operations in the extension host API.
+ *
+ * !!! DO NOT COPY THIS CODE. This way of accessing debug memory is subject to
+ * change in the future. Your extension will break if you copy this code. !!!
+ */
+class DebugFileAccessor implements FileAccessor {
+	public readonly supportsIncremetalAccess = true;
+	public readonly uri: string;
+
+	constructor(uri: vscode.Uri) {
+		this.uri = uri.toString();
+	}
+
+	async getSize(): Promise<number | undefined> {
+		return undefined;
+	}
+
+	async read(offset: number, data: Uint8Array): Promise<number> {
+		const contents = await vscode.workspace.fs.readFile(this.referenceRange(offset, offset + data.length));
+
+		const cpy = Math.min(data.length, contents.length - offset);
+		data.set(contents.subarray(offset, cpy + offset));
+		return cpy;
+	}
+
+	async writeStream(): Promise<void> {
+		throw new Error("Not supported");
+	}
+
+	async writeBulk(ops: readonly FileWriteOp[]): Promise<void> {
+		await Promise.all(ops.map(op => vscode.workspace.fs.writeFile(
+			this.referenceRange(op.offset, op.offset + op.data.length),
+			op.data
+		)));
+	}
+
+	private referenceRange(from: number, to: number) {
+		return vscode.Uri.parse(this.uri).with({ query: `?range=${from}:${to}` });
+	}
+
+	public invalidate(): void {
+		// no-op
+	}
+
+	dispose() {
+		// no-op
 	}
 }
