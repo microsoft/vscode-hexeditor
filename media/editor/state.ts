@@ -143,7 +143,6 @@ export const scrollBounds = atom<Range>({
 			const offset = get(initialOffset);
 			const windowSize = getDisplayedBytes(d);
 			const scrollEnd = get(fileSize) ?? offset + windowSize * 2;
-			console.log('init offset', offset, 'max', scrollEnd);
 
 			return new Range(
 				clamp(0, offset - windowSize, scrollEnd - windowSize),

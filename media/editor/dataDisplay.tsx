@@ -7,10 +7,11 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import { FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
+import { useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
-const Header = styled.div`
+	const Header = styled.div`
 	font-weight: bold;
 	color: var(--vscode-editorLineNumber-activeForeground);
 `;
@@ -448,6 +449,7 @@ const DataCell: React.FC<{
 	);
 };
 
+
 const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, width }) => {
 	const dataPageSize = useRecoilValue(select.dataPageSize);
 
@@ -456,8 +458,8 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 	const endPageNo = Math.floor((offset + width) / dataPageSize);
 	const endPageStartsAt = endPageNo * dataPageSize;
 
-	const startPage = useRecoilValue(select.editedDataPages(startPageNo));
-	const endPage = useRecoilValue(select.editedDataPages(endPageNo));
+	const [startPage] = useLastAsyncRecoilValue(select.editedDataPages(startPageNo));
+	const [endPage] = useLastAsyncRecoilValue(select.editedDataPages(endPageNo));
 
 	let memoValue = "";
 	let rawBytes = new Uint8Array(width);

@@ -3,6 +3,7 @@
  *--------------------------------------------------------*/
 
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { RecoilValue, useRecoilValueLoadable } from "recoil";
 import { ColorMap, observeColors, parseColors } from "vscode-webview-tools";
 import { vscode } from "./state";
 
@@ -76,4 +77,27 @@ export const useSize = (target: React.RefObject<HTMLElement>): DOMRectReadOnly =
 	}, [target.current]);
 
 	return size;
+};
+
+export const useLastAsyncRecoilValue = <T>(value: RecoilValue<T>): [value: T, isStale: boolean] => {
+	const loadable = useRecoilValueLoadable(value);
+	const lastValue = useRef<{ value: T, key: string, isStale: boolean }>();
+	switch (loadable.state) {
+		case "hasValue":
+			lastValue.current = { value: loadable.contents, isStale: false, key: value.key };
+			break;
+		case "loading":
+			if (lastValue.current?.key !== value.key) {
+				throw loadable.contents; // throwing a promise will trigger <Suspense />
+			} else {
+				lastValue.current.isStale = true;
+			}
+			break;
+		case "hasError":
+      throw loadable.contents;
+		default:
+			throw new Error(`Unknown loadable state ${JSON.stringify(loadable)}`);
+	}
+
+	return [lastValue.current.value, lastValue.current.isStale];
 };
