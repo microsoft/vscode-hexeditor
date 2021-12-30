@@ -1,16 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import React, { Suspense, useMemo, useLayoutEffect } from "react";
+import { styled } from "@linaria/react";
+import React, { Suspense, useLayoutEffect, useMemo } from "react";
 import { render } from "react-dom";
 import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
+import { DataHeader } from "./dataDisplay";
+import { DataDisplayContext, DisplayContext } from "./dataDisplayContext";
+import { FindWidget } from "./findWidget";
 import { useTheme } from "./hooks";
 import { ScrollContainer } from "./scrollContainer";
+import { SettingsGear } from "./settings";
 import * as select from "./state";
-import { DataHeader } from "./dataDisplay";
-import { styled } from "@linaria/react";
-import { FindWidget } from "./findWidget";
-import { DataDisplayContext, DisplayContext } from "./dataDisplayContext";
+import { VsProgressIndicator } from "./vscodeUi";
 
 const Container = styled.div`
 	display: flex;
@@ -40,7 +42,6 @@ const Root: React.FC = () => {
 			width: window.innerWidth,
 			height: window.innerHeight,
 			rowPxHeight: parseInt(theme["font-size"]) + 8,
-			rowByteWidth: 16
 		});
 
 		window.addEventListener("resize", applyDimensions);
@@ -48,7 +49,7 @@ const Root: React.FC = () => {
 		return () => window.removeEventListener("resize", applyDimensions);
 	}, [theme]);
 
-	return <Suspense fallback='Loading...'><Editor /></Suspense>;
+	return <Suspense fallback={<VsProgressIndicator />}><Editor /></Suspense>;
 };
 
 const Editor: React.FC = () => {
@@ -68,7 +69,8 @@ const Editor: React.FC = () => {
 	return <DataDisplayContext.Provider value={ctx}>
 		<Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
 			<FindWidget />
-			<DataHeader width={dimensions.rowByteWidth} />
+			<SettingsGear />
+			<DataHeader />
 			<ScrollContainer />
 		</Container>
 	</DataDisplayContext.Provider>;

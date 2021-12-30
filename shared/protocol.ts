@@ -26,6 +26,7 @@ export const enum MessageType {
 	CancelSearch,
 	ClearDataInspector,
 	SetInspectByte,
+	UpdateEditorSettings,
 	//#endregion
 }
 
@@ -35,10 +36,16 @@ export interface WebviewMessage<T> {
 	body: T;
 }
 
+export interface IEditorSettings {
+	showDecodedText: boolean;
+	columnWidth: number;
+}
+
 export interface ReadyResponseMessage {
 	type: MessageType.ReadyResponse;
 	initialOffset: number;
 	edits: ISerializedEdits;
+	editorSettings: IEditorSettings;
 	unsavedEditIndex: number;
 	fileSize: number | undefined;
 	isLargeFile: boolean;
@@ -160,6 +167,11 @@ export interface ReadyRequestMessage {
 	type: MessageType.ReadyRequest;
 }
 
+export interface UpdateEditorSettings {
+	type: MessageType.UpdateEditorSettings;
+	editorSettings: IEditorSettings;
+}
+
 export type FromWebviewMessage =
 	| OpenDocumentMessage
 	| ReadRangeMessage
@@ -168,7 +180,8 @@ export type FromWebviewMessage =
 	| CancelSearchMessage
 	| ClearDataInspectorMessage
 	| SetInspectByteMessage
-	| ReadyRequestMessage;
+	| ReadyRequestMessage
+	| UpdateEditorSettings;
 
 export type ExtensionHostMessageHandler = MessageHandler<ToWebviewMessage, FromWebviewMessage>;
 export type WebviewMessageHandler = MessageHandler<FromWebviewMessage, ToWebviewMessage>;

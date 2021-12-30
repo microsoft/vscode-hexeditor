@@ -20,6 +20,7 @@ const loadThreshold = 0.5;
 
 export const ScrollContainer: React.FC = () => {
 	const dimension = useRecoilValue(select.dimensions);
+	const columnWidth = useRecoilValue(select.columnWidth);
 	const fileSize = useRecoilValue(select.fileSize);
 	const [bounds, setBounds] = useRecoilState(select.scrollBounds);
 	const [offset, setOffset] = useRecoilState(select.offset);
@@ -28,7 +29,7 @@ export const ScrollContainer: React.FC = () => {
 	const [scrollTop, setScrollTop] = useState(0);
 
 	const expandBoundsToContain = useCallback((newOffset: number) => {
-		const windowSize = select.getDisplayedBytes(dimension);
+		const windowSize = select.getDisplayedBytes(dimension, columnWidth);
 
 		// Expand the scroll bounds if the new position is too close to the
 		// start or end of the selection, based on the loadThreshold.
@@ -41,7 +42,7 @@ export const ScrollContainer: React.FC = () => {
 				return old;
 			}
 		});
-	}, [dimension, fileSize]);
+	}, [dimension, columnWidth, fileSize]);
 
 	useEffect(() => {
 		if (previousOffset.current === offset) {
@@ -49,26 +50,26 @@ export const ScrollContainer: React.FC = () => {
 		}
 
 		expandBoundsToContain(offset);
-		setScrollTop(dimension.rowPxHeight * (offset / dimension.rowByteWidth));
+		setScrollTop(dimension.rowPxHeight * (offset / columnWidth));
 	}, [offset]);
 
 	const onScroll = useCallback((scrollTop: number) => {
 		// On scroll, figure out the offset displayed at the new position.
 		const rowNumber = Math.floor(scrollTop / dimension.rowPxHeight);
-		const newOffset = rowNumber * dimension.rowByteWidth;
+		const newOffset = rowNumber * columnWidth;
 		const newScrollTop = rowNumber * dimension.rowPxHeight;
 		previousOffset.current = newOffset;
 		setOffset(newOffset);
 		expandBoundsToContain(newOffset);
 		setScrollTop(newScrollTop);
-	}, [dimension, expandBoundsToContain]);
+	}, [dimension, columnWidth, expandBoundsToContain]);
 
 	return (
 		<VirtualScrollContainer
 			className={wrapperCls}
 			scrollTop={scrollTop}
-			scrollStart={dimension.rowPxHeight * (bounds.start / dimension.rowByteWidth)}
-			scrollEnd={dimension.rowPxHeight * (bounds.end / dimension.rowByteWidth) + dimension.height / 2}
+			scrollStart={dimension.rowPxHeight * (bounds.start / columnWidth)}
+			scrollEnd={dimension.rowPxHeight * (bounds.end / columnWidth) + dimension.height / 2}
 			onScroll={onScroll}
 		>
 			<DataDisplay />

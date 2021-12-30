@@ -3,7 +3,7 @@
 
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
-import { ExtensionHostMessageHandler, FromWebviewMessage, MessageHandler, MessageType, ToWebviewMessage } from "../shared/protocol";
+import { ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, MessageHandler, MessageType, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
@@ -11,6 +11,13 @@ import { HexDocument } from "./hexDocument";
 import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
 import { getCorrectArrayBuffer, randomString } from "./util";
 import { WebviewCollection } from "./webViewCollection";
+
+const defaultEditorSettings: Readonly<IEditorSettings> = {
+	columnWidth: 16,
+	showDecodedText: true,
+};
+
+const editorSettingsKeys = Object.keys(defaultEditorSettings) as readonly (keyof IEditorSettings)[];
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
 	public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView): vscode.Disposable {
@@ -240,6 +247,32 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		return p;
 	}
 
+	private readEditorSettings(): IEditorSettings {
+		const config = vscode.workspace.getConfiguration("hexeditor");
+		const settings: IEditorSettings = { ...defaultEditorSettings };
+		for (const key of editorSettingsKeys) {
+			if (config.has(key)) {
+				(settings as any)[key] = config.get(key);
+			}
+		}
+		return settings;
+	}
+
+	private writeEditorSettings(settings: IEditorSettings) {
+		const config = vscode.workspace.getConfiguration("hexeditor");
+		for (const key of editorSettingsKeys) {
+			const existing = config.inspect(key);
+			const target = !existing
+				? vscode.ConfigurationTarget.Global
+				: existing.workspaceFolderValue !== undefined
+				? vscode.ConfigurationTarget.WorkspaceFolder
+				: existing.workspaceValue !== undefined
+				? vscode.ConfigurationTarget.Workspace
+				: vscode.ConfigurationTarget.Global;
+			config.update(key, settings[key], target);
+		}
+	}
+
 	private async onMessage(
 		messaging: ExtensionHostMessageHandler,
 		document: HexDocument,
@@ -251,6 +284,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				return {
 					type: MessageType.ReadyResponse,
 					initialOffset: document.baseAddress,
+					editorSettings: this.readEditorSettings(),
 					edits: serializeEdits(document.edits),
 					unsavedEditIndex: document.unsavedEditIndex,
 					fileSize: await document.size(),
@@ -287,6 +321,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					method: "update",
 					data: getCorrectArrayBuffer(await document.readBufferWithEdits(message.offset, 8))
 				});
+				break;
+			case MessageType.UpdateEditorSettings:
+				this.writeEditorSettings(message.editorSettings);
 				break;
 		}
 	}

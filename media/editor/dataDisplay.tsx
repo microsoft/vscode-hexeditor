@@ -82,24 +82,27 @@ const dataDisplayCls = css`
 	height: 0px;
 `;
 
-export const DataHeader: React.FC<{ width: number }> = ({ width }) => (
-<Header>
-	<DataCellGroup style={{ visibility: "hidden" }}  aria-hidden="true">
-		<Address>00000000</Address>
-	</DataCellGroup>
-	<DataCellGroup>
-		{new Array(width).fill(0).map((_v, i) =>
-			<Byte key={i} value={i & 0xFF} />
-		)}
-	</DataCellGroup>
-	<DataCellGroup>Decoded Text</DataCellGroup>
-</Header>
-);
+export const DataHeader: React.FC= () => {
+	const editorSettings = useRecoilValue(select.editorSettings);
+
+	return <Header>
+		<DataCellGroup style={{ visibility: "hidden" }}  aria-hidden="true">
+			<Address>00000000</Address>
+		</DataCellGroup>
+		<DataCellGroup>
+			{new Array(editorSettings.columnWidth).fill(0).map((_v, i) =>
+				<Byte key={i} value={i & 0xFF} />
+			)}
+		</DataCellGroup>
+		{editorSettings.showDecodedText && <DataCellGroup>Decoded Text</DataCellGroup>}
+	</Header>;
+};
 
 export const DataDisplay: React.FC = () => {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const setOffset = useSetRecoilState(select.offset);
 	const setScrollBounds = useSetRecoilState(select.scrollBounds);
+	const columnWidth = useRecoilValue(select.columnWidth);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
 	const editTimeline = useRecoilValue(select.editTimeline);
@@ -119,8 +122,8 @@ export const DataDisplay: React.FC = () => {
 				return;
 			}
 
-			const displayedBytes = select.getDisplayedBytes(dimensions);
-			const byteRowStart = select.startOfRowContainingByte(byte, dimensions);
+			const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
+			const byteRowStart = select.startOfRowContainingByte(byte, columnWidth);
 			let newOffset: number;
 
 			setOffset(offset => {
@@ -129,7 +132,7 @@ export const DataDisplay: React.FC = () => {
 				if (byte < offset) {
 					return newOffset = byteRowStart;
 				} else if (byte - offset >= displayedBytes) {
-					return newOffset = byteRowStart - displayedBytes + dimensions.rowByteWidth;
+					return newOffset = byteRowStart - displayedBytes + columnWidth;
 				} else {
 					return offset;
 				}
@@ -149,7 +152,7 @@ export const DataDisplay: React.FC = () => {
 			}
 		});
 		return () => disposable.dispose();
-	}, [dimensions]);
+	}, [dimensions, columnWidth]);
 
 	// Whenever the edit timeline changes, update unsaved ranges.
 	useEffect(() => {
@@ -170,7 +173,7 @@ export const DataDisplay: React.FC = () => {
 
 	const onKeyDown = (e: React.KeyboardEvent) => {
 		const current = ctx.focusedElement || FocusedElement.zero;
-		const displayedBytes = select.getDisplayedBytes(dimensions);
+		const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
 
 		let delta = 0;
 		switch (e.key) {
@@ -181,10 +184,10 @@ export const DataDisplay: React.FC = () => {
 				delta = 1;
 				break;
 			case "ArrowDown":
-				delta = dimensions.rowByteWidth;
+				delta = columnWidth;
 				break;
 			case "ArrowUp":
-				delta = -dimensions.rowByteWidth;
+				delta = -columnWidth;
 				break;
 			case "Home":
 				delta = -current.byte;
@@ -244,18 +247,21 @@ export const DataDisplay: React.FC = () => {
 
 const DataRows: React.FC = () => {
 	const offset = useRecoilValue(select.offset);
+	const columnWidth = useRecoilValue(select.columnWidth);
+	const showDecodedText = useRecoilValue(select.showDecodedText);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize) ?? Infinity;
-	const endBytes = offset + select.getDisplayedBytes(dimensions);
+	const endBytes = offset + select.getDisplayedBytes(dimensions, columnWidth);
 	const rows: React.ReactChild[] = [];
 	let row = 0;
-	for (let i = offset; i < endBytes && i < fileSize; i += dimensions.rowByteWidth) {
+	for (let i = offset; i < endBytes && i < fileSize; i += columnWidth) {
 		rows.push(
 			<DataRow
 				key={i}
 				offset={i}
 				top={row * dimensions.rowPxHeight}
-				width={dimensions.rowByteWidth}
+				width={columnWidth}
+				showDecodedText={showDecodedText}
 			/>,
 		);
 		row++;
@@ -272,7 +278,7 @@ const dataRowCls = css`
 	display: flex;
 `;
 
-const LoadingDataRow: React.FC<{ width: number }> = ({ width }) => {
+const LoadingDataRow: React.FC<{ width: number; showDecodedText: boolean }> = ({ width, showDecodedText }) => {
 	const cells: React.ReactNode[] = [];
 	const text = "LOADING";
 	for (let i = 0; i < width; i++) {
@@ -287,17 +293,17 @@ const LoadingDataRow: React.FC<{ width: number }> = ({ width }) => {
 
 	return <>
 		<DataCellGroup>{cells}</DataCellGroup>
-		<DataCellGroup>{cells}</DataCellGroup>
+		{showDecodedText && <DataCellGroup>{cells}</DataCellGroup>}
 	</>;
 };
 
-const DataRow: React.FC<{ top: number; offset: number; width: number }> = ({ top, offset, width }) => (
+const DataRow: React.FC<{ top: number; offset: number; width: number; showDecodedText: boolean }> = ({ top, offset, width, showDecodedText }) => (
 	<div className={dataRowCls} style={{ transform: `translateY(${top}px)` }}>
 		<DataCellGroup>
 			<Address>{offset.toString(16).padStart(8, "0")}</Address>
 		</DataCellGroup>
-		<Suspense fallback={<LoadingDataRow width={width} />}>
-			<DataRowContents offset={offset} width={width} />
+		<Suspense fallback={<LoadingDataRow width={width} showDecodedText={showDecodedText} />}>
+			<DataRowContents offset={offset} width={width} showDecodedText={showDecodedText} />
 		</Suspense>
 	</div>
 );
@@ -450,7 +456,11 @@ const DataCell: React.FC<{
 };
 
 
-const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, width }) => {
+const DataRowContents: React.FC<{
+	offset: number;
+	width: number;
+	showDecodedText: boolean;
+}> = ({ offset, width, showDecodedText }) => {
 	const dataPageSize = useRecoilValue(select.dataPageSize);
 
 	const startPageNo = Math.floor(offset / dataPageSize);
@@ -497,17 +507,19 @@ const DataRowContents: React.FC<{ offset: number; width: number }> = ({ offset, 
 				value={value}
 			>{value.toString(16).padStart(2, "0").toUpperCase()}</DataCell>);
 
-			const char = getAsciiCharacter(value);
-			chars.push(<DataCell
-				key={i}
-				byte={boffset}
-				isChar={true}
-				className={char === undefined ? nonGraphicCharCls : undefined}
-				value={value}
-			>{char === undefined ? "." : char}</DataCell>);
+			if (showDecodedText) {
+				const char = getAsciiCharacter(value);
+				chars.push(<DataCell
+					key={i}
+					byte={boffset}
+					isChar={true}
+					className={char === undefined ? nonGraphicCharCls : undefined}
+					value={value}
+				>{char === undefined ? "." : char}</DataCell>);
+			}
 		}
 		return { bytes, chars };
-	}, [memoValue]);
+	}, [memoValue, showDecodedText]);
 
 	return (
 		<>

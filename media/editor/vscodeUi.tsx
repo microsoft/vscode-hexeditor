@@ -1,7 +1,10 @@
-import { styled } from "@linaria/react";
 import { css } from "@linaria/core";
-import React from "react";
+import { styled } from "@linaria/react";
+import Close from "@vscode/codicons/src/icons/close.svg";
+import React, { useEffect, useState } from "react";
+import { usePopper } from "react-popper";
 import { clsx } from "./util";
+import ReactDOM from "react-dom";
 
 const VsTextFieldGroupInner = styled.div`
 	position: relative
@@ -155,7 +158,9 @@ const VsIconButtonInner = styled.button`
 	}
 `;
 
-export const VsIconButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { title: string }> = props => <VsIconButtonInner {...props} aria-label={props.title} />;
+export const VsIconButton = React.forwardRef<HTMLButtonElement, { title: string }& React.ButtonHTMLAttributes<HTMLButtonElement>>(
+	(props, ref) => <VsIconButtonInner ref={ref} role="button" {...props} aria-label={props.title} />,
+);
 
 export const VsIconCheckbox: React.FC<{
 	checked: boolean;
@@ -166,3 +171,71 @@ export const VsIconCheckbox: React.FC<{
 		{children}
 	</VsIconButton>
 );
+
+const popoverCls = css`
+	position: absolute;
+	z-index: 1;
+`;
+
+const popoverHiddenCls = css`
+	visibility: hidden;
+	pointer-events: none;
+`;
+
+export interface IPopoverProps {
+	anchor: Element | null;
+	className?: string;
+	visible: boolean;
+	hide: () => void;
+}
+
+export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, children }) => {
+  const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
+  const { styles, attributes } = usePopper(anchor, popperElement);
+console.log("popper", anchor, popperElement, styles, attributes);
+	useEffect(() => {
+		if (visible) {
+			popperElement?.focus();
+		}
+	}, [visible]);
+
+	return ReactDOM.createPortal(
+		<div
+			ref={setPopperElement}
+			aria-hidden={!visible}
+			className={clsx(className, popoverCls, !visible && popoverHiddenCls)}
+			style={styles.popper}
+			tabIndex={visible ? 0 : -1}
+			role="region"
+			{...attributes.popper}
+		>
+			{children}
+		</div>,
+		document.body,
+	);
+};
+
+const widgetPopoverCls = css`
+	background: var(--vscode-editorWidget-background);
+	color: var(--vscode-editorWidget-foreground);
+	border: 1px solid var(--vscode-editorWidget-border);
+	padding: 0.5em;
+	padding-right: calc(0.8em + ${iconButtonSize}px);
+	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
+`;
+
+const widgetPopoverCloser = css`
+	position: absolute;
+	top: 0.5em;
+	right: 0.5em;
+`;
+
+export const VsWidgetPopover: React.FC<IPopoverProps> = props => (
+	<Popover {...props} className={clsx(props.className, widgetPopoverCls)}>
+		<VsIconButton title="Close" onClick={props.hide} className={widgetPopoverCloser}>
+			<Close />
+		</VsIconButton>
+		{props.children}
+	</Popover>
+);
+

@@ -57,6 +57,18 @@
               "big"
             ],
             "description": "The endianness selected when loading the editor."
+          },
+          "hexeditor.columnWidth": {
+            "type": "integer",
+            "default": 16,
+            "minimum": 1,
+            "maximum": 512,
+            "description": "The number of bytes per row to show in the editor."
+          },
+          "hexeditor.showDecodedText": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether decoded text should be shown in the editor."
           }
         }
       }
@@ -140,12 +152,13 @@
   },
   "dependencies": {
     "@linaria/react": "^3.0.0-beta.13",
+    "@popperjs/core": "^2.11.0",
     "@vscode/codicons": "0.0.26",
-    "@vscode/streamsearch": "connor4312/streamsearch",
     "cockatiel": "^2.0.2",
     "js-base64": "^3.7.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-popper": "^2.2.5",
     "recoil": "^0.5.2",
     "vscode-extension-telemetry": "0.4.4",
     "vscode-webview-tools": "^0.1.1"

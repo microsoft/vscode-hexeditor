@@ -167,6 +167,7 @@ export const FindWidget: React.FC = () => {
 	const [selectedResult, setSelectedResult] = useState<number>();
 	const [offset, setOffset] = useRecoilState(select.offset);
 	const dimensions = useRecoilValue(select.dimensions);
+	const columnWidth = useRecoilValue(select.columnWidth);
 	const ctx = useDisplayContext();
 	const textFieldRef = useRef<HTMLInputElement | null>(null);
 	const edits = useRecoilValue(select.edits);
@@ -248,7 +249,7 @@ export const FindWidget: React.FC = () => {
 
 	const closeWidget = () => {
 		const prev = previouslyFocusedElement.current;
-		if (prev !== undefined && select.isByteVisible(dimensions, offset, prev.byte)) {
+		if (prev !== undefined && select.isByteVisible(dimensions, columnWidth, offset, prev.byte)) {
 			ctx.focusedElement = prev;
 		} else {
 			document.querySelector<HTMLElement>(`.${dataCellCls}`)?.focus();
@@ -313,7 +314,9 @@ export const FindWidget: React.FC = () => {
 
 	const revealResult = (r: SearchResult) => {
 		ctx.setSelectionRanges([new Range(r.from, r.to)]);
-		setOffset(Math.max(0, select.startOfRowContainingByte(r.to - select.getDisplayedBytes(dimensions) / 1.5, dimensions)));
+		if (!select.isByteVisible(dimensions, columnWidth, offset, r.from)) {
+			setOffset(Math.max(0, select.startOfRowContainingByte(r.to - select.getDisplayedBytes(dimensions, columnWidth) / 3, columnWidth)));
+		}
 	};
 
 	const replaceSelected = () => {

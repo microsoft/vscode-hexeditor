@@ -44,6 +44,31 @@ const initialOffset = selector<number>({
 	get: ({ get }) => vscode.getState()?.offset ?? get(readyQuery).initialOffset,
 });
 
+/** Editor settings which have changes persisted to user settings */
+export const editorSettings = atom({
+	key: "editorSettings",
+	default: selector({
+		key: "defaultEditorSettings",
+		get: ({ get }) => get(readyQuery).editorSettings,
+	}),
+	effects_UNSTABLE: [
+		fx => fx.onSet(value => messageHandler.sendEvent({
+			type: MessageType.UpdateEditorSettings,
+			editorSettings: value,
+		})),
+	],
+});
+
+export const columnWidth = selector({
+	key: "columnWidth",
+	get: ({ get }) => get(editorSettings).columnWidth,
+});
+
+export const showDecodedText = selector({
+	key: "showDecodedText",
+	get: ({ get }) => get(editorSettings).showDecodedText,
+});
+
 // Atom used to invalidate data when a reload is requested.
 const reloadGeneration = atom({
 	key: "reloadGeneration",
@@ -71,26 +96,25 @@ export interface IDimensions {
 	width: number;
 	height: number;
 	rowPxHeight: number;
-	rowByteWidth: number;
 }
 
 /** Information about the window and layout size */
 export const dimensions = atom<IDimensions>({
 	key: "dimensions",
-	default: { width: 0, height: 0, rowPxHeight: 24, rowByteWidth: 16 },
+	default: { width: 0, height: 0, rowPxHeight: 24 },
 });
 
 /** Gets the number of bytes visible in the window. */
-export const getDisplayedBytes = (d: IDimensions): number =>
-	d.rowByteWidth * (Math.floor(d.height / d.rowPxHeight) - 1);
+export const getDisplayedBytes = (d: IDimensions, columnWidth: number): number =>
+	columnWidth * (Math.floor(d.height / d.rowPxHeight) - 1);
 
 /** Gets whether the byte is visible in the current window. */
-export const isByteVisible = (d: IDimensions, offset: number, byte: number): boolean =>
-	byte >= offset && byte - offset < getDisplayedBytes(d);
+export const isByteVisible = (d: IDimensions, columnWidth: number, offset: number, byte: number): boolean =>
+	byte >= offset && byte - offset < getDisplayedBytes(d, columnWidth);
 
 /** Returns the byte at the start of the row containing the given byte. */
-export const startOfRowContainingByte = (byte: number, dimensions: IDimensions): number =>
-	Math.floor(byte / dimensions.rowByteWidth) * dimensions.rowByteWidth;
+export const startOfRowContainingByte = (byte: number, columnWidth: number): number =>
+	Math.floor(byte / columnWidth) * columnWidth;
 
 /** Currently displayed byte offset */
 export const offset = atom({
@@ -117,8 +141,8 @@ export const offset = atom({
 			});
 
 			registerHandler(MessageType.GoToOffset, msg => {
-				const d = fx.getLoadable(dimensions).getValue();
-				fx.setSelf(Math.floor(msg.offset / d.rowByteWidth) * d.rowByteWidth);
+				const s = fx.getLoadable(columnWidth).getValue();
+				fx.setSelf(startOfRowContainingByte(msg.offset, s));
 			});
 		}
 	],
@@ -139,9 +163,8 @@ export const scrollBounds = atom<Range>({
 	default: selector({
 		key: "initialScrollBounds",
 		get: ({ get }) => {
-			const d = get(dimensions);
+			const windowSize = getDisplayedBytes(get(dimensions), get(columnWidth));
 			const offset = get(initialOffset);
-			const windowSize = getDisplayedBytes(d);
 			const scrollEnd = get(fileSize) ?? offset + windowSize * 2;
 
 			return new Range(
