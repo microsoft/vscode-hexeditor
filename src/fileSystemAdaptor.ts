@@ -12,7 +12,8 @@ export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Ar
 	}
 
 	if (uri.scheme === "vscode-debug-memory") {
-		return new DebugFileAccessor(uri);
+		const { permissions = 0 } = await vscode.workspace.fs.stat(uri);
+		return new DebugFileAccessor(uri, !!(permissions & vscode.FilePermission.Readonly));
 	}
 
 	// try to use native file access for local files to allow large files to be handled efficiently
@@ -251,10 +252,9 @@ class UntitledFileAccessor extends SimpleFileAccessor {
  */
 class DebugFileAccessor implements FileAccessor {
 	public readonly supportsIncremetalAccess = true;
-	public readonly isReadonly = true;
 	public readonly uri: string;
 
-	constructor(uri: vscode.Uri) {
+	constructor(uri: vscode.Uri, public readonly isReadonly: boolean) {
 		this.uri = uri.toString();
 	}
 
