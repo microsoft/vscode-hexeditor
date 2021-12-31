@@ -9,6 +9,7 @@ import { DataHeader } from "./dataDisplay";
 import { DataDisplayContext, DisplayContext } from "./dataDisplayContext";
 import { FindWidget } from "./findWidget";
 import { useTheme } from "./hooks";
+import { ReadonlyWarning } from "./readonlyWarning";
 import { ScrollContainer } from "./scrollContainer";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
@@ -55,7 +56,8 @@ const Root: React.FC = () => {
 const Editor: React.FC = () => {
 	const dimensions = useRecoilValue(select.dimensions);
 	const setEdit = useSetRecoilState(select.edits);
-	const ctx = useMemo(() => new DisplayContext(setEdit), []);
+	const isReadonly = useRecoilValue(select.isReadonly);
+	const ctx = useMemo(() => new DisplayContext(setEdit, isReadonly), []);
 
 	const isLargeFile = useRecoilValue(select.isLargeFile);
 	const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
@@ -72,6 +74,7 @@ const Editor: React.FC = () => {
 			<SettingsGear />
 			<DataHeader />
 			<ScrollContainer />
+			<ReadonlyWarning />
 		</Container>
 	</DataDisplayContext.Provider>;
 };

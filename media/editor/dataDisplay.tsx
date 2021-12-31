@@ -327,6 +327,7 @@ const DataCell: React.FC<{
 	const elRef = useRef<HTMLSpanElement | null>(null);
 	const focusedElement = new FocusedElement(isChar, byte);
 	const ctx = useDisplayContext();
+	const setReadonlyWarning = useSetRecoilState(select.showReadonlyWarningForEl);
 
 	const onMouseEnter = useCallback(() => {
 		const last = ctx.selection[0];
@@ -401,6 +402,11 @@ const DataCell: React.FC<{
 		}
 
 		e.stopPropagation();
+
+		if (ctx.isReadonly) {
+			setReadonlyWarning(elRef.current);
+			return;
+		}
 
 		if (isChar) {
 			// b is final

@@ -17,6 +17,11 @@ export interface FileAccessor {
 	 */
 	readonly supportsIncremetalAccess?: boolean;
 
+	/**
+	 * Whether this file is read-only.
+	 */
+	readonly isReadonly?: boolean;
+
 	/** Calculates the size of the associated document. Undefined if unbounded */
 	getSize(): Promise<number | undefined>;
 	/** Reads bytes at the given offset from the file, returning the number of read bytes. */

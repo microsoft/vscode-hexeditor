@@ -357,16 +357,18 @@ export const FindWidget: React.FC = () => {
 			safeReplacedEditsLen.current = edits.length + results.results.length;
 			setResults({ progress: 1, results: [] });
 			setSelectedResult(undefined);
-	}
+		}
 	};
 
 	const toggleFindReplace = useCallback(() => setReplaceVisible(v => !v), []);
 
 	return <Wrapper tabIndex={visible ? undefined : -1} className={clsx(visible && visibleCls)}>
 		{results.progress < 1 && <VsProgressIndicator />}
-		<VsIconButton title="Toggle Replace" onClick={toggleFindReplace} className={replaceToggleCls}>
-			{replaceVisible ? <ChevronDown /> : <ChevronRight />}
-		</VsIconButton>
+		{!ctx.isReadonly && (
+			<VsIconButton title="Toggle Replace" onClick={toggleFindReplace} className={replaceToggleCls}>
+				{replaceVisible ? <ChevronDown /> : <ChevronRight />}
+			</VsIconButton>
+		)}
 		<ControlsContainer>
 			<InputRow>
 				<VsTextFieldGroup

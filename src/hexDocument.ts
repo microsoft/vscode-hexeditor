@@ -55,6 +55,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		super();
 	}
 
+	/**
+	 * Gets whether the model is read-only.
+	 */
+	public get isReadonly(): boolean {
+		return this.model.isReadonly;
+	}
+
 	/** @inheritdoc */
 	public get uri(): vscode.Uri {
 		return vscode.Uri.parse(this.model.uri);

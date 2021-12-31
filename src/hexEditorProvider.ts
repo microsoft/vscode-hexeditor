@@ -289,6 +289,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					unsavedEditIndex: document.unsavedEditIndex,
 					fileSize: await document.size(),
 					isLargeFile: document.isLargeFile,
+					isReadonly: document.isReadonly,
 				};
 			case MessageType.ReadRangeRequest:
 				const data = await document.readBuffer(message.offset, message.bytes);

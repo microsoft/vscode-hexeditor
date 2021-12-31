@@ -188,7 +188,10 @@ export class DisplayContext {
 		return this._selection;
 	}
 
-	constructor(private readonly setEdits: SetterOrUpdater<readonly HexDocumentEdit[]>) {
+	constructor(
+		private readonly setEdits: SetterOrUpdater<readonly HexDocumentEdit[]>,
+		public readonly isReadonly: boolean,
+	) {
 		registerHandler(MessageType.SetFocusedByte, msg => {
 			if (!document.hasFocus()) {
 				window.focus();

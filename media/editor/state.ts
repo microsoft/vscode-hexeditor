@@ -29,9 +29,19 @@ export const messageHandler = new MessageHandler<FromWebviewMessage, ToWebviewMe
 
 window.addEventListener("message", ev => messageHandler.handleMessage(ev.data));
 
-export const readyQuery = selector({
+const readyQuery = selector({
 	key: "ready",
 	get: () => messageHandler.sendRequest<ReadyResponseMessage>({ type: MessageType.ReadyRequest }),
+});
+
+export const isReadonly = selector({
+	key: "isReadonly",
+	get: ({ get }) => get(readyQuery).isReadonly,
+});
+
+export const showReadonlyWarningForEl = atom<HTMLElement | null>({
+	key: "showReadonlyWarningForEl",
+	default: null,
 });
 
 export const fileSize = selector({

@@ -178,22 +178,43 @@ const popoverCls = css`
 `;
 
 const popoverHiddenCls = css`
-	visibility: hidden;
+	opacity: 0;
 	pointer-events: none;
 `;
 
 export interface IPopoverProps {
 	anchor: Element | null;
 	className?: string;
+	focusable?: boolean;
 	visible: boolean;
 	hide: () => void;
+	role?: string;
+	arrow?: { className: string, size: number };
 }
 
-export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, children }) => {
+const PopoverArrow: React.FC<{ size: number } & React.SVGProps<SVGSVGElement>> = ({ size: h, ...props }) => {
+	const w = h * 1.5;
+	return (
+		<svg data-popper-arrow height={h} width={w} {...props}>
+			<polygon points={`${w / 2},0 ${w},${h} 0,${h}`} />
+			<polygon points={`${w / 2},1 ${w - 1},${h} 1,${h}`} />
+		</svg>
+	);
+};
+
+export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, children, focusable = true, arrow, hide: _hide, ...props }) => {
   const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
-  const { styles, attributes } = usePopper(anchor, popperElement);
+  const [arrowElement, setArrowElement] = useState<HTMLElement | null>(null);
+  const { styles, attributes } = usePopper(anchor, popperElement, arrow && {
+		modifiers: [
+			{
+				name: "arrow",
+				options: { element: arrowElement }
+			},
+		],
+	});
 	useEffect(() => {
-		if (visible) {
+		if (visible && focusable) {
 			popperElement?.focus();
 		}
 	}, [visible]);
@@ -202,25 +223,54 @@ export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, c
 		<div
 			ref={setPopperElement}
 			aria-hidden={!visible}
-			className={clsx(className, popoverCls, !visible && popoverHiddenCls)}
+			className={clsx(popoverCls, !visible && popoverHiddenCls)}
 			style={styles.popper}
 			tabIndex={visible ? 0 : -1}
 			role="region"
 			{...attributes.popper}
+			{...props}
 		>
-			{children}
+			<div className={className} style={arrow && { margin: arrow.size - 1 }}>{children}</div>
+			{arrow && <div ref={setArrowElement} className={arrow.className} style={styles.arrow} {...attributes.arrow} >
+				<PopoverArrow size={arrow.size} />
+			</div>}
 		</div>,
 		document.body,
 	);
 };
 
-const widgetPopoverCls = css`
+const tooltipPopoverCls = css`
 	background: var(--vscode-editorWidget-background);
 	color: var(--vscode-editorWidget-foreground);
 	border: 1px solid var(--vscode-editorWidget-border);
 	padding: 0.5em;
 	padding-right: calc(0.8em + ${iconButtonSize}px);
 	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
+	transition: 0.2s opacity;
+`;
+
+const tooltipArrowCls = css`
+	position: absolute;
+	top: 0;
+	left: 0;
+
+	svg {
+		display: block;
+	}
+
+	polygon:first-child {
+		fill: var(--vscode-editorWidget-border);
+	}
+
+	polygon:last-child {
+		fill: var(--vscode-editorWidget-background);
+	}
+}
+`;
+
+const widgetPopoverCls = css`
+	padding-right: calc(0.8em + ${iconButtonSize}px);
+	transition: none;
 `;
 
 const widgetPopoverCloser = css`
@@ -229,8 +279,28 @@ const widgetPopoverCloser = css`
 	right: 0.5em;
 `;
 
+const tooltipArrow = { size: 8, className: tooltipArrowCls };
+
+export const VsTooltipPopover: React.FC<IPopoverProps> = (props) => {
+	useEffect(() => {
+		const listener = props.hide;
+		window.addEventListener("keydown", listener);
+		window.addEventListener("mousedown", listener);
+		return () => {
+			window.removeEventListener("keydown", listener);
+			window.removeEventListener("mousedown", listener);
+		};
+	}, [props.hide]);
+
+	return (
+		<Popover {...props} className={clsx(props.className, tooltipPopoverCls)} role="alert" focusable={false} arrow={tooltipArrow}>
+			{props.children}
+		</Popover>
+	);
+};
+
 export const VsWidgetPopover: React.FC<IPopoverProps> = props => (
-	<Popover {...props} className={clsx(props.className, widgetPopoverCls)}>
+	<Popover {...props} className={clsx(props.className, tooltipPopoverCls, widgetPopoverCls)}>
 		<VsIconButton title="Close" onClick={props.hide} className={widgetPopoverCloser}>
 			<Close />
 		</VsIconButton>

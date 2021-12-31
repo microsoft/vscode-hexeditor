@@ -48,6 +48,7 @@ export interface ReadyResponseMessage {
 	editorSettings: IEditorSettings;
 	unsavedEditIndex: number;
 	fileSize: number | undefined;
+	isReadonly: boolean;
 	isLargeFile: boolean;
 }
 

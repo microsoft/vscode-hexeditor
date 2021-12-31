@@ -110,6 +110,13 @@ export class HexDocumentModel {
 	}
 
 	/**
+	 * Gets whether the model is read-only.
+	 */
+	public get isReadonly(): boolean {
+		return !!this.accessor.isReadonly;
+	}
+
+	/**
 	 * Gets the document size, accounting for all edits.
 	 * Returns undefined if infinite.
 	 */

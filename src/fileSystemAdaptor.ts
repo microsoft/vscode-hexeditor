@@ -166,10 +166,12 @@ class NativeFileAccessor implements FileAccessor {
 
 class SimpleFileAccessor implements FileAccessor {
 	protected contents?: Thenable<Uint8Array> | Uint8Array;
+	public readonly isReadonly: boolean;
 	public readonly uri: string;
 
 	constructor(uri: vscode.Uri) {
 		this.uri = uri.toString();
+		this.isReadonly = vscode.workspace.fs.isWritableFileSystem(this.uri) === false;
 	}
 
 	async getSize(): Promise<number> {
@@ -240,7 +242,6 @@ class UntitledFileAccessor extends SimpleFileAccessor {
 	}
 }
 
-
 /**
  * File accessor for VS Code debug memory. This is special-cased since we don't
  * yet have low level filesystem operations in the extension host API.
@@ -250,6 +251,7 @@ class UntitledFileAccessor extends SimpleFileAccessor {
  */
 class DebugFileAccessor implements FileAccessor {
 	public readonly supportsIncremetalAccess = true;
+	public readonly isReadonly = true;
 	public readonly uri: string;
 
 	constructor(uri: vscode.Uri) {
