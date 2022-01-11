@@ -140,12 +140,18 @@ export class ByteData {
 			return dataview.getUint32(0, littleEndian);
 			// 24 bit isn't supported by default so we must add it
 			// It's safe to cast here as the only numbits that produces a big int is 64.
-		} else if (numBits == 24 && signed) {
-			const first8 = (this.adjacentBytes[1].byteConverter(8, signed, littleEndian) as number) << 16;
-			return first8 | this.byteConverter(16, signed, littleEndian) as number;
-		} else if (numBits == 24 && !signed) {
-			const first8 = (this.adjacentBytes[1].byteConverter(8, signed, littleEndian) as number & 0xFF) << 16;
-			return first8 | this.byteConverter(16, signed, littleEndian) as number;
+		} else if (numBits == 24 && littleEndian) {
+			const result = this.adjacentBytes[2]<<16 | this.adjacentBytes[1]<<8 | this.adjacentBytes[0];
+			if (signed && result >= 1<<23) {
+				return result - 1<<24;
+			}
+			return result;
+		} else if (numBits == 24 && !littleEndian) {
+			const result = this.adjacentBytes[0]<<16 | this.adjacentBytes[1]<<8 | this.adjacentBytes[2];
+			if (signed && result >= 1<<23) {
+				return result - 1<<24;
+			}
+			return result;
 		} else if (numBits == 16 && signed) {
 			return dataview.getInt16(0, littleEndian);
 		} else if (numBits == 16 && !signed) {
