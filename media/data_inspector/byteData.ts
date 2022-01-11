@@ -141,13 +141,13 @@ export class ByteData {
 			// 24 bit isn't supported by default so we must add it
 			// It's safe to cast here as the only numbits that produces a big int is 64.
 		} else if (numBits == 24 && littleEndian) {
-			const result = this.adjacentBytes[2]<<16 | this.adjacentBytes[1]<<8 | this.adjacentBytes[0];
+			const result = uint8bytes[2] << 16 | uint8bytes[1] << 8 | uint8bytes[0];
 			if (signed && result >= 1<<23) {
 				return result - 1<<24;
 			}
 			return result;
 		} else if (numBits == 24 && !littleEndian) {
-			const result = this.adjacentBytes[0]<<16 | this.adjacentBytes[1]<<8 | this.adjacentBytes[2];
+			const result = uint8bytes[0] << 16 | uint8bytes[1] << 8 | uint8bytes[2];
 			if (signed && result >= 1<<23) {
 				return result - 1<<24;
 			}
