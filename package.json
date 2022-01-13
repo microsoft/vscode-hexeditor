@@ -2,7 +2,7 @@
   "name": "hexeditor",
   "displayName": "Hex Editor",
   "description": "Allows viewing and editing files in a hex editor",
-  "version": "1.8.2",
+  "version": "1.9.2",
   "aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
   "publisher": "ms-vscode",
   "repository": {
@@ -14,7 +14,7 @@
   },
   "license": "MIT",
   "engines": {
-    "vscode": "^1.56.0"
+    "vscode": "^1.63.0"
   },
   "categories": [
     "Other"
@@ -57,6 +57,18 @@
               "big"
             ],
             "description": "The endianness selected when loading the editor."
+          },
+          "hexeditor.columnWidth": {
+            "type": "integer",
+            "default": 16,
+            "minimum": 1,
+            "maximum": 512,
+            "description": "The number of bytes per row to show in the editor."
+          },
+          "hexeditor.showDecodedText": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether decoded text should be shown in the editor."
           }
         }
       }
@@ -111,34 +123,51 @@
         }
       ]
     },
-		"keybindings": [
-			{
-				"command": "hexEditor.goToOffset",
-				"key": "ctrl+g",
-				"when": "activeCustomEditorId == hexEditor.hexedit"
-			}
-		]
+    "keybindings": [
+      {
+        "command": "hexEditor.goToOffset",
+        "key": "ctrl+g",
+        "when": "activeCustomEditorId == hexEditor.hexedit"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -noEmit && node .esbuild.config.js",
     "lint": "eslint src --ext ts",
-    "watch": "tsc -noEmit -watch"
+    "watch": "node .esbuild.config.js --watch",
+    "test": "node ./src/test/runTest.js"
   },
   "devDependencies": {
-    "@types/node": "^15.6.2",
-    "@types/vscode": "^1.56.0",
-    "@types/webpack-env": "^1.16.3",
-    "@typescript-eslint/eslint-plugin": "^5.4.0",
-    "@typescript-eslint/parser": "^5.4.0",
-    "esbuild": "^0.13.15",
-    "eslint": "^8.3.0",
+    "@linaria/esbuild": "^3.0.0-beta.15",
+    "@linaria/shaker": "^3.0.0-beta.15",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^17.0.8",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "@types/vscode": "^1.63.1",
+    "@typescript-eslint/eslint-plugin": "^5.9.1",
+    "@typescript-eslint/parser": "^5.9.1",
+    "@vscode/test-electron": "^2.0.3",
+    "chai": "^4.3.4",
+    "esbuild": "^0.14.11",
+    "esbuild-plugin-svgr": "^1.0.0",
+    "eslint": "^8.6.0",
     "mocha": "^9.1.3",
-    "ts-loader": "^9.2.6",
-    "typescript": "^4.5.2"
+    "typescript": "^4.5.4"
   },
   "dependencies": {
-    "@vscode/codicons": "0.0.26",
-    "vscode-extension-telemetry": "0.4.4"
+    "@linaria/react": "^3.0.0-beta.15",
+    "@popperjs/core": "^2.11.2",
+    "@vscode/codicons": "0.0.27",
+    "cockatiel": "^2.0.2",
+    "js-base64": "^3.7.2",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-popper": "^2.2.5",
+    "recoil": "^0.5.2",
+    "vscode-extension-telemetry": "0.4.5",
+    "vscode-webview-tools": "^0.1.1"
   }
 }

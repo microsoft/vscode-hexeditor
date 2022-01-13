@@ -2,146 +2,105 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import { Disposable } from "./dispose";
 import TelemetryReporter from "vscode-extension-telemetry";
+import { HexDocumentEdit, HexDocumentEditReference, HexDocumentModel } from "../shared/hexDocumentModel";
+import { Backup } from "./backup";
+import { Disposable } from "./dispose";
+import { accessFile } from "./fileSystemAdaptor";
 import { SearchProvider } from "./searchProvider";
-import { FileSystemAdaptor } from "./fileSystemAdaptor";
-
-/**
- * @description Helper function to compare two arrays
- * @param arr1 First array to compare
- * @param arr2 Second array to compare
- * @returns Whether or not they're equal
- */
-function arrayCompare(arr1: HexDocumentEdit[] | undefined, arr2: HexDocumentEdit[] | undefined): boolean {
-	if (arr1 === undefined || arr2 === undefined) return arr1 === arr2;
-	if (arr1.length !== arr2.length) return false;
-	for (let i = 0; i < arr1.length; i++) {
-		const obj1 = arr1[i];
-		const obj2 = arr2[i];
-		if (obj1.offset !== obj2.offset || obj1.oldValue != obj2.oldValue || obj1.newValue != obj2.newValue) {
-			return false;
-		}
-	}
-	return true;
-}
-
-export interface HexDocumentEdit {
-	oldValue: number | undefined;
-	newValue: number | undefined;
-	readonly offset: number;
-	// Indicates if the cell will be dirty after an undo
-	sameOnDisk: boolean;
-}
 
 export class HexDocument extends Disposable implements vscode.CustomDocument {
 	static async create(
 		uri: vscode.Uri,
-		openContext: vscode.CustomDocumentOpenContext,
+		{ backupId, untitledDocumentData }: vscode.CustomDocumentOpenContext,
 		telemetryReporter: TelemetryReporter,
 	): Promise<HexDocument | PromiseLike<HexDocument>> {
-		const backupId = openContext.backupId;
-		// If we have a backup, read that. Otherwise read the resource from the workspace
-		const dataFile = typeof backupId === "string" ? vscode.Uri.parse(backupId) : uri;
-		const unsavedEditURI = typeof backupId === "string" ? vscode.Uri.parse(backupId + ".json") : undefined;
-		const fileSize = await FileSystemAdaptor.getFileSize(uri, openContext.untitledDocumentData);
+		const accessor = await accessFile(uri, untitledDocumentData);
+		const model = new HexDocumentModel({
+			accessor,
+			isFiniteSize: true,
+			supportsLengthChanges: true,
+			edits: backupId
+				? { unsaved: await new Backup(vscode.Uri.parse(backupId)).read(), saved: [] }
+				: undefined,
+		});
+
 		const queries = HexDocument.parseQuery(uri.query);
 		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
+
+		const fileSize = await accessor.getSize();
 		/* __GDPR__
 			"fileOpen" : {
 				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true }
 			}
 		*/
-		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize });
-		let fileData: Uint8Array;
+		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize ?? 0 });
+
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
-		let unsavedEdits: HexDocumentEdit[][] = [];
-		// If there's a backup the user already hit open anyways so we will open it even if above max file size
-		if (fileSize > maxFileSize && !backupId) {
-			fileData = new Uint8Array();
-		} else {
-			fileData = await FileSystemAdaptor.readFile(dataFile, openContext.untitledDocumentData);
-			if (unsavedEditURI) {
-				const jsonData = await vscode.workspace.fs.readFile(unsavedEditURI);
-				unsavedEdits = JSON.parse(Buffer.from(jsonData).toString("utf-8"));
-			}
-		}
-		return new HexDocument(uri, fileData, fileSize, unsavedEdits, baseAddress);
+		const isLargeFile = !backupId && !accessor.supportsIncremetalAccess && ((fileSize ?? 0) > maxFileSize);
+		return new HexDocument(model, isLargeFile, baseAddress);
 	}
-
-	private readonly _uri: vscode.Uri;
-
-	private _bytesize: number;
-	private _baseAddress: number;
-	private _documentData: Uint8Array;
-
-	private _edits: HexDocumentEdit[][] = [];
-	private _unsavedEdits: HexDocumentEdit[][] = [];
 
 	// Last save time
 	public lastSave = Date.now();
 
-	public readonly searchProvider: SearchProvider;
+	/** Search provider for the document. */
+	public readonly searchProvider = new SearchProvider();
 
-	private constructor(
-		uri: vscode.Uri,
-		initialContent: Uint8Array,
-		fileSize: number,
-		unsavedEdits: HexDocumentEdit[][],
-		baseAddress: number
+	constructor(
+		private model: HexDocumentModel,
+		public readonly isLargeFile: boolean,
+		public readonly baseAddress: number,
 	) {
 		super();
-		this._uri = uri;
-		this._documentData = initialContent;
-		this._bytesize = fileSize;
-		this._baseAddress = baseAddress;
-		this._unsavedEdits = unsavedEdits;
-		// If we don't do this Array.from casting then both will reference the same array causing bad behavior
-		this._edits = Array.from(unsavedEdits);
-		this.searchProvider = new SearchProvider(this);
 	}
-
-	public get uri(): vscode.Uri { return this._uri; }
-
-	public get filesize(): number {
-		let numAdditions = 0;
-		// We add the extra unsaved cells to the size of the file
-		this.unsavedEdits.flat().forEach(edit => {
-			if (edit.newValue !== undefined && edit.oldValue === undefined) {
-				numAdditions++;
-			} else if (edit.oldValue !== undefined && edit.newValue === undefined && edit.offset < this._bytesize) {
-				numAdditions--;
-			}
-		});
-		return this._bytesize + numAdditions;
-	}
-
-	public get baseAddress(): number { return this._baseAddress; }
-	public get documentData(): Uint8Array { return this._documentData; }
 
 	/**
-	 * @description Function which returns the document data with unsaved edits applied on top
+	 * Gets whether the model is read-only.
 	 */
-	public get documentDataWithEdits(): number[] {
-		// Map the edits into the document
-		const documentArray = Array.from(this.documentData);
-		const unsavedEdits = this._unsavedEdits.flat();
-		let removals: number[] = [];
-		for (const edit of unsavedEdits) {
-			if (edit.oldValue !== undefined && edit.newValue !== undefined) {
-				documentArray[edit.offset] = edit.newValue;
-			} else if (edit.oldValue === undefined && edit.newValue !== undefined) {
-				documentArray.push(edit.newValue);
-			} else {
-				removals.push(edit.offset);
+	public get isReadonly(): boolean {
+		return this.model.isReadonly;
+	}
+
+	/** @inheritdoc */
+	public get uri(): vscode.Uri {
+		return vscode.Uri.parse(this.model.uri);
+	}
+
+	/**
+	 * Reads data including edits from the model, returning an iterable of
+	 * Uint8Array chunks.
+	 */
+	public readWithEdits(offset: number): AsyncIterableIterator<Uint8Array>	{
+		return this.model.readWithEdits(offset);
+	}
+
+	/**
+	 * Reads the amount of data from the model, including edits, into a
+	 * buffer of the requested length.
+	 */
+	public async readBufferWithEdits(offset: number, length: number): Promise<Uint8Array> {
+		const target = new Uint8Array(length);
+		let soFar = 0;
+		for await (const chunk of this.model.readWithEdits(offset)) {
+			const read = Math.min(chunk.length, target.length - soFar);
+			target.set(chunk.subarray(0, read), soFar);
+			soFar += read;
+			if (soFar === length) {
+				return target;
 			}
 		}
-		// We want the removals in reverse order because we only support removing from the very end
-		removals = removals.sort((a, b) => b - a);
-		for (const removal of removals) {
-			documentArray.splice(removal, 1);
-		}
-		return documentArray;
+
+		return target.slice(0, soFar);
+	}
+
+	/**
+	 * Reads into the buffer from the original file, without edits.
+	 */
+	public async readBuffer(offset: number, length: number): Promise<Uint8Array> {
+		const target = new Uint8Array(length);
+		const read = await this.model.readInto(offset, target);
+		return read === length ? target : target.slice(0, read);
 	}
 
 	private readonly _onDidDispose = this._register(new vscode.EventEmitter<void>());
@@ -153,158 +112,92 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	dispose(): void {
 		// Notify subsribers to the custom document we are disposing of it
 		this._onDidDispose.fire();
+		this.model.dispose();
 		// Disposes of all the events attached to the custom document
 		super.dispose();
 	}
 
-	// Opens the file overriding any filesize restrictions
-	// This doesn't update the fileSize so we don't need to change that
-	async openAnyways(): Promise<void> {
-		this._documentData = await vscode.workspace.fs.readFile(this.uri);
+	private readonly _onDidRevert = this._register(new vscode.EventEmitter<void>());
+
+	/**
+	 * Fired to notify webviews that the document has changed and the file
+	 * should be reloaded.
+	 */
+	public readonly onDidRevert = this._onDidRevert.event;
+
+	/**
+	 * @see HexDocumentModel.isSynced
+	 */
+	public get isSynced(): boolean {
+		return this.model.isSynced;
+	}
+	/**
+	 * Edits made in the document.
+	 */
+	public get edits(): readonly HexDocumentEdit[] {
+		return this.model.edits;
 	}
 
-	public get unsavedEdits(): HexDocumentEdit[][] { return this._unsavedEdits; }
-
-	private readonly _onDidChangeDocument = this._register(new vscode.EventEmitter<{
-		readonly fileSize: number;
-		readonly baseAddress: number;
-		readonly type: "redo" | "undo" | "revert";
-		readonly edits: readonly HexDocumentEdit[];
-	}>());
+	/**
+	 * Gets the opId of the last saved edit.
+	 */
+	public get unsavedEditIndex(): number {
+		return this.model.unsavedEditIndex;
+	}
 
 	/**
-	 * Fired to notify webviews that the document has changed.
+	 * @see HexDocumentModel.makeEdits
 	 */
-	public readonly onDidChangeContent = this._onDidChangeDocument.event;
-
-	private readonly _onDidChange = this._register(new vscode.EventEmitter<{
-		undo(): void;
-		redo(): void;
-	}>());
+	public makeEdits(edits: readonly HexDocumentEdit[]): HexDocumentEditReference {
+		return this.model.makeEdits(edits);
+	}
 
 	/**
-	 * Fired to tell VS Code that an edit has occured in the document.
-	 *
-	 * This updates the document's dirty indicator.
+	 * See {@link HexDocumentModel.size}
 	 */
-	public readonly onDidChange = this._onDidChange.event;
-
-	/**
-	 * Called when the user edits the document in a webview.
-	 *
-	 * This fires an event to notify VS Code that the document has been edited.
-	 */
-	makeEdit(edits: HexDocumentEdit[]): void {
-		edits.forEach(e => e.sameOnDisk = false);
-		this._edits.push(edits);
-		this._unsavedEdits.push(edits);
-
-		this._onDidChange.fire({
-			undo: async () => {
-				const undoneEdits = this._edits.pop();
-				// If undone edit is undefined then we didn't undo anything
-				if (!undoneEdits) return;
-				let removedFromUnsaved = false;
-				if (arrayCompare(this._unsavedEdits[this._unsavedEdits.length - 1], undoneEdits)) {
-					this._unsavedEdits.pop();
-					removedFromUnsaved = true;
-				}
-				const unsavedEdits: HexDocumentEdit[] = [];
-				for (const edit of undoneEdits) {
-					// If the value is the same as what's on disk we want to let the webview know in order to mark a cell dirty
-					edit.sameOnDisk = edit.oldValue !== undefined && edit.oldValue === this.documentData[edit.offset] || false;
-					// If it's changed on disk and we didn't just remove it from unsaved then its an unsaved edit that needs to be tracked
-					if (!edit.sameOnDisk && !removedFromUnsaved) {
-						unsavedEdits.push({
-							newValue: edit.oldValue,
-							oldValue: edit.newValue,
-							offset: edit.offset,
-							sameOnDisk: edit.sameOnDisk
-						});
-					}
-				}
-				if (unsavedEdits.length !== 0) this._unsavedEdits.push(unsavedEdits);
-				this._onDidChangeDocument.fire({
-					fileSize: this.filesize,
-					baseAddress: this.baseAddress,
-					type: "undo",
-					edits: undoneEdits,
-				});
-			},
-			redo: async () => {
-				this._edits.push(edits);
-				const redoneEdits = edits;
-				if (this._unsavedEdits[this._unsavedEdits.length - 1] !== undefined) {
-					// We have to flip the old in new values because redone is reapplying them so they will be exact opposites
-					// This allows us to then compare them
-					let unsavedEdits: HexDocumentEdit[] = this._unsavedEdits[this._unsavedEdits.length - 1].slice(0);
-					unsavedEdits = unsavedEdits.map((e) => {
-						if (e.newValue === undefined && e.oldValue !== undefined) {
-							e.newValue = e.oldValue;
-							e.oldValue = undefined;
-						}
-						return e;
-					});
-					if (arrayCompare(unsavedEdits, redoneEdits)) this._unsavedEdits.pop();
-				}
-				const unsavedEdits = [];
-				for (const edit of redoneEdits) {
-					edit.sameOnDisk = edit.offset < this._bytesize && edit.newValue === this.documentData[edit.offset] || false;
-					// If they're not the same as what's on disk then they're unsaved and need to be tracked
-					if (!edit.sameOnDisk) unsavedEdits.push(edit);
-				}
-				// Means the entire redo is the same on disk so we don't add the edit as unsaved
-				if (unsavedEdits.length !== 0) this._unsavedEdits.push(unsavedEdits);
-				this._onDidChangeDocument.fire({
-					fileSize: this.filesize,
-					baseAddress: this.baseAddress,
-					type: "redo",
-					edits: redoneEdits
-				});
-			}
-		});
+	public size(): Promise<number | undefined> {
+		return this.model.size();
 	}
 
 	/**
 	 * Called by VS Code when the user saves the document.
 	 */
-	async save(cancellation?: vscode.CancellationToken): Promise<void> {
-		await this.saveAs(this.uri, cancellation);
+	public async save(_cancellation?: vscode.CancellationToken): Promise<void> {
+		this.lastSave = Date.now();
+		await this.model.save();
+		this.lastSave = Date.now();
 	}
 
 	/**
 	 * Called by VS Code when the user saves the document to a new location.
 	 */
-	async saveAs(targetResource: vscode.Uri, cancellation?: vscode.CancellationToken): Promise<void> {
-		// The document data is now the document data with edits appplied
-		this._documentData = new Uint8Array(this.documentDataWithEdits);
-		this._bytesize = this.documentData.length;
-		const fileData = this.documentData;
+	public async saveAs(targetResource: vscode.Uri, cancellation?: vscode.CancellationToken): Promise<void> {
 		if (cancellation && cancellation.isCancellationRequested) {
 			return;
 		}
-		await vscode.workspace.fs.writeFile(targetResource, fileData);
+		if (!this.model.isFiniteSize) {
+			// todo: we could prompt for the number of bytes to save?
+			throw new Error("Cannot save a document without a finite size");
+		}
+
+		const newFile = await accessFile(targetResource);
 		this.lastSave = Date.now();
-		this._unsavedEdits = [];
+		await newFile.writeStream(this.model.readWithEdits());
+		this.lastSave = Date.now();
+		this.model.dispose();
+		this.model = new HexDocumentModel({
+			accessor: newFile,
+			isFiniteSize: true,
+			supportsLengthChanges: true,
+		});
 	}
 
 	/**
 	 * Called by VS Code when the user calls `revert` on a document.
 	 */
 	async revert(_token?: vscode.CancellationToken): Promise<void> {
-		const diskContent = await vscode.workspace.fs.readFile(this.uri);
-		this._bytesize = diskContent.length;
-		this._documentData = diskContent;
-		this._unsavedEdits = [];
-		this._edits = [];
-		// // If we revert then the edits are exactly what's on the disk
-		// this._edits.flat().forEach(e => e.sameOnDisk = true);
-		this._onDidChangeDocument.fire({
-			fileSize: this.filesize,
-			baseAddress: this.baseAddress,
-			type: "revert",
-			edits: []
-		});
+		this.model.revert();
+		this._onDidRevert.fire();
 	}
 
 	/**
@@ -312,68 +205,21 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 *
 	 * These backups are used to implement hot exit.
 	 */
-	async backup(destination: vscode.Uri, cancellation: vscode.CancellationToken): Promise<vscode.CustomDocumentBackup> {
-		await this.saveAs(destination, cancellation);
-		await vscode.workspace.fs.writeFile(vscode.Uri.parse(destination.path + ".json"), Buffer.from(JSON.stringify(this.unsavedEdits), "utf-8"));
+	async backup(destination: vscode.Uri): Promise<vscode.CustomDocumentBackup> {
+		const backup = new Backup(destination);
+		await backup.write(this.model.unsavedEdits);
+
 		return {
 			id: destination.toString(),
 			delete: async (): Promise<void> => {
 				try {
 					await vscode.workspace.fs.delete(destination);
-					await vscode.workspace.fs.delete(vscode.Uri.parse(destination.path + ".json"));
 				} catch {
 					// noop
 				}
 			}
 		};
 	}
-
-	/**
-	 * @description Handles replacement within the document when the user clicks the replace / replace all button
-	 * @param {number[]} replacement The new values which will be replacing the old
-	 * @param {number[][]} replaceOffsets The offsets to replace with replacement
-	 * @param {boolean} preserveCase Whether or not to preserve case
-	 * @returns {HexDocumentEdit[]} the new edits so we can send them back to the webview for application
-	 */
-	public replace(replacement: number[], replaceOffsets: number[][], preserveCase: boolean): HexDocumentEdit[] {
-		const allEdits: HexDocumentEdit[] = [];
-		// We only want to call this once as it's sort of expensive so we save it
-		const documentDataWithEdits = this.documentDataWithEdits;
-		for (const offsets of replaceOffsets) {
-			const edits: HexDocumentEdit[] = [];
-			// Similar to copy and paste we do the most conservative replacement
-			// i.e if the replacement is smaller we don't try to fill the whole selection
-			for (let i = 0; i < replacement.length && i < offsets.length; i++) {
-				// If we preserve case we make sure that the characters match the case of the original values
-				if (preserveCase) {
-					const replacementChar = String.fromCharCode(replacement[i]);
-					const currentDocumentChar = String.fromCharCode(documentDataWithEdits[offsets[i]]);
-					// We need to check that the inverse isn't true because things like numbers return true for both
-					if (currentDocumentChar.toUpperCase() === currentDocumentChar && currentDocumentChar.toLowerCase() != currentDocumentChar) {
-						replacement[i] = replacementChar.toUpperCase().charCodeAt(0);
-					} else if (currentDocumentChar.toLowerCase() === currentDocumentChar && currentDocumentChar.toUpperCase() != currentDocumentChar) {
-						replacement[i] = replacementChar.toLowerCase().charCodeAt(0);
-					}
-				}
-
-				// If they're not the same as what is displayed then we add it as an edit as something has been replaced
-				if (replacement[i] !== documentDataWithEdits[offsets[i]]) {
-					const edit: HexDocumentEdit = {
-						oldValue: documentDataWithEdits[offsets[i]],
-						newValue: replacement[i],
-						offset: offsets[i],
-						sameOnDisk: false
-					};
-					edits.push(edit);
-					allEdits.push(edit);
-				}
-			}
-		}
-		// After the replacement is complete we add it to the document's edit queue
-		if (allEdits.length !== 0) this.makeEdit(allEdits);
-		return allEdits;
-	}
-
 
 	/**
 	 * Utility function to convert a Uri query string into a map

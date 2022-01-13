@@ -2,218 +2,189 @@
 // Licensed under the MIT license.
 
 import { HexDocument } from "./hexDocument";
+import { LiteralSearchQuery, RegExpSearchQuery, SearchResult, SearchResultsWithProgress } from "../shared/protocol";
+import { Disposable } from "vscode";
+import { utf8Length } from "./util";
+import { caseInsensitiveEquivalency, LiteralSearch, Wildcard } from "./literalSearch";
+import { Uint8ArrayMap } from "../shared/util/uint8ArrayMap";
 
-// This is the same interface in the webviews search handler, we just currently do not share interfaces across the exthost and webview
-interface SearchOptions {
-	regex: boolean;
-	caseSensitive: boolean;
+/** Type that defines a search request created from the {@link SearchProvider} */
+export interface ISearchRequest extends Disposable {
+	search(): AsyncIterable<SearchResultsWithProgress>
 }
 
-export interface SearchResults {
-	result: number[][];
-	partial: boolean;
+class ResultsCollector {
+	private static readonly targetUpdateInterval = 1000;
+	private readonly buffers = new Uint8ArrayMap<Uint8Array>();
+
+	public get capped() {
+		return this.cap === 0;
+	}
+
+	constructor(
+		private readonly filesize: number | undefined,
+		private cap: number | undefined,
+	) {}
+
+	public fileOffset = 0;
+
+	private lastYieldedTime = Date.now();
+	private results: SearchResult[] = [];
+
+	/** Adds results to the collector */
+	public push(previousRef: Uint8Array, from: number, to: number) {
+		// Copy the array, if new, since the search will return mutable references
+		const previous = this.buffers.set(previousRef, () => new Uint8Array(previousRef));
+
+		if (this.cap === undefined) {
+			this.results.push({ from, to, previous });
+		} else if (this.cap > 0) {
+			this.results.push({ from, to, previous });
+			this.cap--;
+		}
+	}
+
+	/** Returns the results to yield right now, if any */
+	public toYield(): SearchResultsWithProgress | undefined {
+		const now = Date.now();
+		if (now - this.lastYieldedTime > ResultsCollector.targetUpdateInterval) {
+			this.lastYieldedTime = now;
+			const results = this.results;
+			this.results = [];
+			return { progress: this.filesize ? this.fileOffset / this.filesize : 0, results };
+		}
+
+		return undefined;
+	}
+
+	/** Returns the final set of results */
+	public final(): SearchResultsWithProgress {
+		return { progress: 1, capped: this.capped, results: this.results };
+	}
 }
 
-export class SearchRequest {
+/** Request that handles searching for byte or text literals. */
+export class LiteralSearchRequest implements ISearchRequest {
+	private cancelled = false;
 
-	private _documentDataWithEdits: number[];
-	private _cancelled = false;
-
-	// How many search results we will return
-	private static _searchResultLimit = 100000;
-	// How long we want to let the search run before interrupting it to check for cancellations
-	private static _interruptTime = 100;
-
-	constructor(document: HexDocument) {
-		this._documentDataWithEdits = document.documentDataWithEdits;
+	constructor(
+		private readonly document: HexDocument,
+		private readonly query: LiteralSearchQuery,
+		private readonly isCaseSensitive: boolean,
+		private readonly cap: number | undefined,
+	) {
 	}
 
-	public async textSearch(query: string, options: SearchOptions): Promise<SearchResults> {
-		const results: SearchResults = {
-			result: [],
-			partial: false
-		};
-		if (options.regex) {
-			return new Promise((resolve) => {
-				this.regexTextSearch(query, options.caseSensitive, results, String.fromCharCode.apply(null, Array.from(this._documentDataWithEdits)), resolve);
-			});
-		} else {
-			return new Promise((resolve) => {
-				this.normalTextSearch(query, options.caseSensitive, 0, results, resolve);
-			});
-		}
+	/** @inheritdoc */
+	public dispose(): void {
+		this.cancelled = true;
 	}
 
-	public async hexSearch(query: string[]): Promise<SearchResults> {
-		const results: SearchResults = {
-			result: [],
-			partial: false
-		};
-		return new Promise((resolve) => {
-			this.normalHexSearch(query, 0, results, resolve);
-		});
-	}
+	/** @inheritdoc */
+	public async *search(): AsyncIterableIterator<SearchResultsWithProgress> {
+		const { isCaseSensitive, query, document, cap } = this;
+		const collector = new ResultsCollector(await document.size(), cap);
 
-	/**
-	 * @description Searches the hex document for a given query
-	 * @param {string[]} query The query being searched for
-	 * @param {number} documentIndex The index to start the search at
-	 * @param {SearchResults} results The results passed as a reference so it can be passed through the calls
-	 * @param {(value: SearchResults) => void} onComplete Callback which is called when the function is completed
-	 */
-	public normalHexSearch(query: string[], documentIndex: number, results: SearchResults, onComplete: (value: SearchResults) => void): void {
-		const searchStart = Date.now();
-		// We compare the query to every spot in the file finding matches
-		for (; documentIndex < this._documentDataWithEdits.length; documentIndex++) {
-			const matchOffsets = [];
-			for (let j = 0; j < query.length; j++) {
-				// Once there isn't enough room in the file for the query we return
-				if (documentIndex + j >= this._documentDataWithEdits.length) {
-					onComplete(results);
-					return;
-				}
-				let hex = this._documentDataWithEdits[documentIndex + j].toString(16).toUpperCase();
-				// ensures that 0D and D produce a match because we expect hex to be two characters
-				hex = hex.length !== 2 ? "0" + hex : hex;
-				const currentComparison = query[j].toUpperCase();
-				// ?? is wild card and matches anything, else they must match exactly
-				// If they don't we don't check things after in the query as that's wasted computation
-				if (currentComparison === "??" || currentComparison === hex) {
-					matchOffsets.push(documentIndex + j);
-				} else {
-					break;
-				}
-			}
-			// If We got a complete match then it is valid
-			if (matchOffsets.length === query.length) {
-				results.result.push(matchOffsets);
-				// We stop calculating results after we hit the limit and just call it a partial response
-				if (results.result.length === SearchRequest._searchResultLimit) {
-					results.partial = true;
-					onComplete(results);
-					return;
-				}
-			}
-			// If it's cancelled we just return what we have
-			if (this._cancelled) {
-				this._cancelled = false;
-				results.partial = true;
-				onComplete(results);
+		const streamSearch = new LiteralSearch(
+			query.literal.map(c => c === "*" ? Wildcard : c),
+			(index, data) => collector.push(data, index, index + data.length),
+			isCaseSensitive ? undefined: caseInsensitiveEquivalency,
+		);
+
+		for await (const chunk of document.readWithEdits(0)) {
+			if (this.cancelled || collector.capped) {
+				yield collector.final();
 				return;
 			}
-			// If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
-			if ((Date.now() - searchStart) > SearchRequest._interruptTime) {
-				setImmediate(() => this.normalHexSearch(query, documentIndex, results, onComplete));
-				return undefined;
+
+			streamSearch.push(chunk);
+			collector.fileOffset += chunk.length;
+
+			const toYield = collector.toYield();
+			if (toYield) {
+				yield toYield;
 			}
 		}
-		onComplete(results);
-		return;
+
+		yield collector.final();
+	}
+}
+
+const regexSearchWindow = 8 * 1024;
+
+/**
+ * Request that handles searching for text regexes. This works on a window of
+ * data and is not an ideal implementation. For instance, a regex could start
+ * matching at byte 0 and end matching 10 GB later. For this, we need a
+ * streaming regex matcher. There are a few of them, but none that I can find
+ * in JavaScript/npm today.
+ *
+ * Neither Rust's regex engine or RE2 support streaming, but PCRE2 does, so we
+ * may at some point evaluate wrapping that into webassembly and using it here.
+ *
+ * @see https://www.pcre.org/current/doc/html/pcre2partial.html
+ */
+export class RegexSearchRequest implements ISearchRequest {
+	private cancelled = false;
+	private re: RegExp;
+
+	constructor(
+		private readonly document: HexDocument,
+		re: RegExpSearchQuery,
+		caseSensitive: boolean,
+		private readonly cap: number | undefined,
+	) {
+		this.re = new RegExp(re.re, caseSensitive ? "g" : "ig");
 	}
 
-	/**
-	 * @description Handles searching for regexes within the decoded text
-	 * @param {string} query The regex
-	 * @param {boolean} caseSensitive Whether or not you care about matching cases
-	 * @param {SearchResults} results The results of the completed search, this is passed by reference so that it can be passed during setImmediate
-	 * @param {(value: SearchResults) => void} onComplete Callback which is called when the function is completed
-	 */
-	private regexTextSearch(query: string, caseSensitive: boolean, results: SearchResults, documentString: string, onComplete: (value: SearchResults) => void): void {
-		const searchStart = Date.now();
-		const flags = caseSensitive ? "g" : "gi";
-		const regex = new RegExp(query, flags);
-		let match: RegExpExecArray | null;
-		while ((match = regex.exec(documentString)) !== null) {
-			if (match.index === undefined) continue;
-			const matchOffsets = [];
-			for (let i = match.index; i < match.index + match[0].length; i++) {
-				matchOffsets.push(i);
-			}
-			results.result.push(matchOffsets);
-			// If it was cancelled we return immediately
-			if (this._cancelled) {
-				this._cancelled = false;
-				results.partial = true;
-				onComplete(results);
+	/** @inheritdoc */
+	public dispose(): void {
+		this.cancelled = true;
+	}
+
+	/** @inheritdoc */
+	public async *search(): AsyncIterableIterator<SearchResultsWithProgress> {
+		let str = "";
+		let strStart = 0;
+
+		const { re, document } = this;
+		const decoder = new TextDecoder();
+		const encoder = new TextEncoder();
+		const collector = new ResultsCollector(await document.size(), this.cap);
+
+		for await (const chunk of document.readWithEdits(0)) {
+			if (this.cancelled || collector.capped) {
+				yield collector.final();
 				return;
 			}
-			// If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
-			if ((Date.now() - searchStart) > SearchRequest._interruptTime) {
-				setImmediate(() => this.regexTextSearch(query, caseSensitive, results, documentString, onComplete));
-				return;
+
+			str += decoder.decode(chunk);
+
+			let lastReIndex = 0;
+			for (const match of str.matchAll(re)) {
+				const start = strStart + utf8Length(str.slice(0, match.index!));
+				const length = utf8Length(match[0]);
+				collector.push(encoder.encode(match[0]), start, start + length);
+				lastReIndex = match.index! + match[0].length;
 			}
-			// We stop calculating results after we hit the limit and just call it a partial response
-			if (results.result.length === SearchRequest._searchResultLimit) {
-				results.partial = true;
-				onComplete(results);
-				return;
+
+			collector.fileOffset += chunk.length;
+
+			// Cut off the start of the string either to meet the window requirements,
+			// or at the index of the last match -- whichever is greater.
+			const overflow = Math.max(str.length - regexSearchWindow, lastReIndex);
+			if (overflow > 0) {
+				strStart += overflow;
+				re.lastIndex = 0;
+				str = str.slice(overflow);
+			}
+
+			const toYield = collector.toYield();
+			if (toYield) {
+				yield toYield;
 			}
 		}
-		onComplete(results);
-		return;
-	}
 
-	/**
-	 * @description Handles searching for string literals within the decoded text section
-	 * @param {string} query The query you're searching for
-	 * @param {boolean} caseSensitive Whether or not case matters
-	 * @param {number} documentIndex The index to start your search at
-	 * @param {SearchResults} results The results of the completed search, this is passed by reference so that it can be passed during setImmediate
-	 * @param {(value: SearchResults) => void} onComplete The callback to be called when the search is completed
-	 */
-	private normalTextSearch(query: string, caseSensitive: boolean, documentIndex: number, results: SearchResults, onComplete: (value: SearchResults) => void): void {
-		const searchStart = Date.now();
-		// We compare the query to every spot in the file finding matches
-		for (; documentIndex < this._documentDataWithEdits.length; documentIndex++) {
-			const matchOffsets = [];
-			for (let j = 0; j < query.length; j++) {
-				// Once there isn't enough room in the file for the query we return
-				if (documentIndex + j >= this._documentDataWithEdits.length) {
-					onComplete(results);
-					return;
-				}
-				let ascii = String.fromCharCode(this._documentDataWithEdits[documentIndex + j]);
-				let currentComparison = query[j];
-				// Ignoring case we make them uppercase
-				if (!caseSensitive) {
-					ascii = ascii.toUpperCase();
-					currentComparison = currentComparison.toUpperCase();
-				}
-				// If it's a match we add the offset to the results
-				if (currentComparison === ascii) {
-					matchOffsets.push(documentIndex + j);
-				} else {
-					break;
-				}
-			}
-			// If we got a complete match then it is valid
-			if (matchOffsets.length === query.length) {
-				results.result.push(matchOffsets);
-				// We stop calculating results after we hit the limit and just call it a partial response
-				if (results.result.length === SearchRequest._searchResultLimit) {
-					results.partial = true;
-					onComplete(results);
-					return;
-				}
-			}
-			// If it's cancelled we just return what we have
-			if (this._cancelled) {
-				this._cancelled = false;
-				results.partial = true;
-				onComplete(results);
-				return;
-			}
-			// If the search has run for awhile we use set immediate to place it back at the end of the event loop so other things can run
-			if ((Date.now() - searchStart) > SearchRequest._interruptTime) {
-				setImmediate(this.normalTextSearch.bind(this), query, caseSensitive, documentIndex, results, onComplete);
-				return;
-			}
-		}
-		onComplete(results);
-		return;
-	}
-
-	public cancelSearch(): void {
-		this._cancelled = true;
+		yield collector.final();
 	}
 }

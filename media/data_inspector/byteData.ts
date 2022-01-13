@@ -1,11 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-interface ByteDataMessage {
-	decimal: number | null;
-	adjacentBytes: ByteDataMessage[];
-}
-
 export class ByteData {
 
 	private decimal: number;
@@ -15,12 +10,11 @@ export class ByteData {
 	 * @description Constructs a bytedata object from a message sent over by the editor
 	 * @param message The message from the editor
 	 */
-	public static constructFromMessage(message: ByteDataMessage): ByteData {
-		// The message protocol converts NaN to null so we convert it back here
-		const byteObj = new ByteData(message.decimal !== null ? message.decimal : NaN);
-		for (const adjacentBytes of message.adjacentBytes) {
-			const current = new ByteData(adjacentBytes.decimal !== null ? adjacentBytes.decimal : NaN);
-			byteObj.addAdjacentByte(current);
+	public static constructFromMessage(message: ArrayBuffer): ByteData {
+		const u8 = new Uint8Array(message);
+		const byteObj = new ByteData(u8[0]);
+		for (let i = 1; i < u8.length; i++) {
+			byteObj.addAdjacentByte(new ByteData(u8[i]));
 		}
 		return byteObj;
 	}

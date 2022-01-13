@@ -27,7 +27,7 @@
       "no-console": "off",
       "no-var": 1,
       "no-case-declarations": 0,
-      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "(^_)|(^h$)" }],
       "@typescript-eslint/no-explicit-any": 0,
       "@typescript-eslint/camelcase": 0,
       "@typescript-eslint/no-non-null-assertion": 0,
