@@ -101,7 +101,9 @@ describe("HexDocumentModel", () => {
 			await assertContents(new Uint8Array([10, 11, 12, 3, 4, 5, 6, 7, 8, 9]));
 		});
 
-		it("makes random replacements", async () => {
+		it("makes random replacements", async function() {
+			this.timeout(10_000);
+
 			const expected = new Uint8Array(original);
 			const rng = pseudoRandom("vs code!");
 			let str = `- [${expected.join(", ")}]\n`;
