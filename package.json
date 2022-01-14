@@ -132,7 +132,6 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
     "compile": "tsc -noEmit && node .esbuild.config.js",
     "lint": "eslint src --ext ts",
     "watch": "node .esbuild.config.js --watch",
