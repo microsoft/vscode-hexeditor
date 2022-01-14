@@ -1,5 +1,12 @@
 ## Release Notes
 
+## 1.9.3 - January 13, 2022
+
+- Files of any size can now be opened without issue (when operating locally)
+- Find menu has been improved and aligns better with the VS Code UI
+- Layout columns and decoded text views are now configurable
+- Support viewing and editing memory of programs debugged in VS Code
+
 ## 1.8.2 - July 27, 2021
 - Fix web compatibility due to incorrect bundle format
 
