@@ -28,3 +28,5 @@ extends:
 
       - script: npm run lint
         displayName: Run ESLint
+      - script: xvfb-run -a npm test
+        displayName: Run Tests
