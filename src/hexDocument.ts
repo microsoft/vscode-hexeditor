@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import TelemetryReporter from "vscode-extension-telemetry";
+import TelemetryReporter from "@vscode/extension-telemetry";
 import { HexDocumentEdit, HexDocumentEditReference, HexDocumentModel } from "../shared/hexDocumentModel";
 import { Backup } from "./backup";
 import { Disposable } from "./dispose";

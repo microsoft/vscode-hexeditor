@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
-import TelemetryReporter from "vscode-extension-telemetry";
+import TelemetryReporter from "@vscode/extension-telemetry";
 import { ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, MessageHandler, MessageType, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
