@@ -13,7 +13,7 @@ import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
-	const Header = styled.div`
+const Header = styled.div`
 	font-weight: bold;
 	color: var(--vscode-editorLineNumber-activeForeground);
 `;
@@ -84,11 +84,11 @@ const dataDisplayCls = css`
 	height: 0px;
 `;
 
-export const DataHeader: React.FC= () => {
+export const DataHeader: React.FC = () => {
 	const editorSettings = useRecoilValue(select.editorSettings);
 
 	return <Header>
-		<DataCellGroup style={{ visibility: "hidden" }}  aria-hidden="true">
+		<DataCellGroup style={{ visibility: "hidden" }} aria-hidden="true">
 			<Address>00000000</Address>
 		</DataCellGroup>
 		<DataCellGroup>
@@ -247,7 +247,7 @@ export const DataDisplay: React.FC = () => {
 			return;
 		}
 
-    const pasteData = evt.clipboardData?.getData("text");
+		const pasteData = evt.clipboardData?.getData("text");
 		if (pasteData && ctx.focusedElement) {
 			setPasting({ target, offset: ctx.focusedElement.byte, data: pasteData });
 		}
@@ -382,6 +382,10 @@ const DataCell: React.FC<{
 	}, [byte]);
 
 	const onMouseDown = useCallback((e: React.MouseEvent) => {
+		if (!(e.buttons & 1)) {
+			return;
+		}
+
 		const prevFocused = ctx.focusedElement;
 		ctx.focusedElement = focusedElement;
 

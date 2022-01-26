@@ -55,6 +55,7 @@ export const useOnChange = <T>(value: T, fn: (value: T, previous: T) => void): v
 
 let idCounter = 0;
 
+/** Creates a unique ID for use in the DOM */
 export const useUniqueId = (prefix = "uniqueid-"): string =>
 	useMemo(() => `${prefix}${idCounter++}`, [prefix]);
 
