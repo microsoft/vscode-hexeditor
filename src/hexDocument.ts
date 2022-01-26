@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import * as vscode from "vscode";
 import TelemetryReporter from "@vscode/extension-telemetry";
-import { HexDocumentEdit, HexDocumentEditReference, HexDocumentModel } from "../shared/hexDocumentModel";
+import * as vscode from "vscode";
+import { HexDocumentEdit, HexDocumentEditOp, HexDocumentEditReference, HexDocumentModel } from "../shared/hexDocumentModel";
 import { Backup } from "./backup";
 import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
@@ -150,6 +150,29 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 */
 	public makeEdits(edits: readonly HexDocumentEdit[]): HexDocumentEditReference {
 		return this.model.makeEdits(edits);
+	}
+
+	/**
+	 * Inserts data into the document.
+	 */
+	public insert(offset: number, data: Uint8Array): HexDocumentEditReference {
+		return this.model.makeEdits([{ op: HexDocumentEditOp.Insert, offset, value: data }]);
+	}
+
+	/**
+	 * Replaces data into the document. If the data is larger than the document,
+	 * then this results in the necessary additional insertion operation.
+	 */
+	public async replace(offset: number, data: Uint8Array): Promise<HexDocumentEditReference> {
+		const previous = await this.readBufferWithEdits(offset, data.length);
+		if (previous.length === data.length) {
+			return this.makeEdits([{ op: HexDocumentEditOp.Replace, offset, value: data, previous }]);
+		} else {
+			return this.makeEdits([
+				{ op: HexDocumentEditOp.Replace, offset: offset, value: data.subarray(0, previous.length), previous },
+				{ op: HexDocumentEditOp.Insert, offset: offset + previous.length, value: data.subarray(previous.length) },
+			]);
+		}
 	}
 
 	/**

@@ -118,8 +118,35 @@ export const VsProgressIndicator = styled.div`
 	}
 `;
 
-const iconButtonSize = 22;
+export const iconButtonSize = 22;
 const iconButtonMargin = 3;
+
+export const VsButton = styled.button`
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: 1px solid var(--vscode-button-border);
+	padding: 0 ${iconButtonMargin + iconButtonSize}px;
+	font-family: var(--vscode-font-family);
+	cursor: pointer;
+	padding: 6px 11px;
+
+	:hover {
+		background: var(--vscode-button-hoverBackground);
+	}
+
+	:active {
+		background: var(--vscode-button-background);
+	}
+
+	:focus {
+		outline: 1px solid var(--vscode-focusBorder);
+	}
+
+	:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+`;
 
 const VsIconButtonInner = styled.button`
 	background: transparent;

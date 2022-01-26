@@ -2,7 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { DependencyList, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { RecoilValue, useRecoilValueLoadable } from "recoil";
 import { ColorMap, observeColors, parseColors } from "vscode-webview-tools";
 import { vscode } from "./state";
@@ -53,6 +53,12 @@ export const useOnChange = <T>(value: T, fn: (value: T, previous: T) => void): v
 	}, [value]);
 };
 
+let idCounter = 0;
+
+/** Creates a unique ID for use in the DOM */
+export const useUniqueId = (prefix = "uniqueid-"): string =>
+	useMemo(() => `${prefix}${idCounter++}`, [prefix]);
+
 const zeroRect: DOMRectReadOnly = new DOMRect();
 
 /** Uses the measured DOM size of the element, watching for resizes. */
@@ -100,4 +106,12 @@ export const useLastAsyncRecoilValue = <T>(value: RecoilValue<T>): [value: T, is
 	}
 
 	return [lastValue.current.value, lastValue.current.isStale];
+};
+
+export const useGlobalHandler = <T = Event>(name: string, handler: (evt: T) => void, deps: DependencyList = []) => {
+	useEffect(() => {
+		const l = (evt: Event) => handler(evt as unknown as T);
+		window.addEventListener(name, l);
+		return () => window.removeEventListener(name, l);
+	}, deps);
 };
