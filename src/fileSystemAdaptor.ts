@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
+import { Policy } from "cockatiel";
 import type fs from "fs";
 import * as vscode from "vscode";
 import { FileAccessor, FileWriteOp } from "../shared/fileAccessor";
@@ -40,7 +41,7 @@ class FileHandleContainer {
 	private disposed = false;
 
 	constructor(
-		private readonly path: string,
+		public readonly path: string,
 		private readonly _fs: typeof fs,
 	) {}
 
@@ -78,6 +79,15 @@ class FileHandleContainer {
 		this.rejectAll(new Error("FileHandle was disposed"));
 	}
 
+	/* Closes the handle, but allows it to be reopened if another borrow happens */
+	public async close() {
+		await this.handle?.close();
+		this.handle = undefined;
+		if (this.disposeTimeout) {
+			clearTimeout(this.disposeTimeout);
+		}
+	}
+
 	private rejectAll(error: Error) {
 		while (this.borrowQueue.length) {
 			this.borrowQueue.pop()!(error);
@@ -89,28 +99,34 @@ class FileHandleContainer {
 			clearTimeout(this.disposeTimeout);
 		}
 
-		if (!this.handle) {
-			try {
-				this.handle = await this._fs.promises.open(this.path, this._fs.constants.O_RDWR | this._fs.constants.O_CREAT);
-			} catch (e) {
-				return this.rejectAll(e as Error);
-			}
-		}
-
 		while (this.borrowQueue.length) {
-			const fn = this.borrowQueue.pop()!;
-			await fn(this.handle);
+			if (!this.handle) {
+				try {
+					this.handle = await this._fs.promises.open(this.path, this._fs.constants.O_RDWR | this._fs.constants.O_CREAT);
+				} catch (e) {
+					return this.rejectAll(e as Error);
+				}
+			}
+
+			await this.borrowQueue[0]?.(this.handle);
+			this.borrowQueue.shift();
 		}
 
 		// When no one is using the handle, close it after some time. Otherwise the
 		// filesystem will lock the file which would be frustating to users.
-		this.disposeTimeout = setTimeout(() => {
-			this.handle?.close();
-			this.handle = undefined;
-		}, 1000);
+		if (this.handle) {
+			this.disposeTimeout = setTimeout(() => {
+				this.handle?.close();
+				this.handle = undefined;
+			}, 1000);
+		}
 	}
-
 }
+
+const retryOnENOENT = Policy.handleWhen(e => (e as any).code === "ENOENT")
+	.retry()
+	.attempts(10)
+	.delay(50);
 
 /** Native accessor using Node's filesystem. This can be used. */
 class NativeFileAccessor implements FileAccessor {
@@ -143,6 +159,35 @@ class NativeFileAccessor implements FileAccessor {
 	}
 
 	async writeStream(stream: AsyncIterable<Uint8Array>, cancellation?: vscode.CancellationToken): Promise<void> {
+		// We write to a tmp file for two reasons:
+		// - writes can mess up any reads that we do, so this simplifies lots of things
+		// - sometimes the written file will be shorter than the original
+		// - prevents any torn state if we crash/exit while writing
+		// Renames are very fast and atomic on the same drive, so this should have
+		// minimal impact on performance.
+
+		const tmpName = `${this.handle.path}.tmp`;
+		const tmp = await this.fs.promises.open(tmpName, this.fs.constants.O_WRONLY | this.fs.constants.O_CREAT | this.fs.constants.O_TRUNC);
+		try {
+			let offset = 0;
+			for await (const chunk of stream) {
+				if (cancellation?.isCancellationRequested) {
+					return;
+				}
+
+				await tmp.write(chunk, 0, chunk.byteLength, offset);
+				offset += chunk.byteLength;
+			}
+		} finally {
+			await tmp.close();
+		}
+
+			await this.handle.borrow(async () => {
+				await this.handle.close();
+				// Retry the rename a few times since the file might take a moment to show up on disk after operations flush.
+				await retryOnENOENT.execute(() => this.fs.promises.rename(tmpName, this.handle.path));
+			});
+
 		return this.handle.borrow(async fd => {
 			if (cancellation?.isCancellationRequested) {
 				return;

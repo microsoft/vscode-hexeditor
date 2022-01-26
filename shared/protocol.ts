@@ -27,6 +27,8 @@ export const enum MessageType {
 	ClearDataInspector,
 	SetInspectByte,
 	UpdateEditorSettings,
+	DoPaste,
+	DoCopy,
 	//#endregion
 }
 
@@ -173,6 +175,24 @@ export interface UpdateEditorSettings {
 	editorSettings: IEditorSettings;
 }
 
+export const enum PasteMode {
+	Insert = "insert",
+	Replace = "replace",
+}
+
+export interface PasteMessage {
+	type: MessageType.DoPaste;
+	offset: number;
+	data: Uint8Array;
+	mode: PasteMode;
+}
+
+export interface CopyMessage {
+	type: MessageType.DoCopy;
+	selections: [from: number, to: number][];
+	asText: boolean;
+}
+
 export type FromWebviewMessage =
 	| OpenDocumentMessage
 	| ReadRangeMessage
@@ -182,7 +202,9 @@ export type FromWebviewMessage =
 	| ClearDataInspectorMessage
 	| SetInspectByteMessage
 	| ReadyRequestMessage
-	| UpdateEditorSettings;
+	| UpdateEditorSettings
+	| PasteMessage
+	| CopyMessage;
 
 export type ExtensionHostMessageHandler = MessageHandler<ToWebviewMessage, FromWebviewMessage>;
 export type WebviewMessageHandler = MessageHandler<FromWebviewMessage, ToWebviewMessage>;

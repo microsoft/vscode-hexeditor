@@ -3,14 +3,16 @@
 
 import * as vscode from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
-import { ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, MessageHandler, MessageType, ToWebviewMessage } from "../shared/protocol";
+import { HexDocumentEditReference } from "../shared/hexDocumentModel";
+import { ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
 import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
-import { getCorrectArrayBuffer, randomString } from "./util";
+import { flattenBuffers, getCorrectArrayBuffer, randomString } from "./util";
 import { WebviewCollection } from "./webViewCollection";
+import * as base64 from 'js-base64';
 
 const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
@@ -295,13 +297,25 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				const data = await document.readBuffer(message.offset, message.bytes);
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
 			case MessageType.MakeEdits:
-				const ref = document.makeEdits(deserializeEdits(message.edits));
-				this._onDidChangeCustomDocument.fire({
-					document,
-					undo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.undo()) }),
-					redo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.redo()) }),
-				});
+				this.publishEdit(messaging, document, document.makeEdits(deserializeEdits(message.edits)));
 				return;
+			case MessageType.DoPaste:
+				this.publishEdit(
+					messaging,
+					document,
+					message.mode === PasteMode.Insert
+						? document.insert(message.offset, message.data)
+						: await document.replace(message.offset, message.data)
+				);
+				messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(document.edits) });
+				return;
+			case MessageType.DoCopy: {
+				const parts = await Promise.all(message.selections.sort((a, b) => a[0] - b[0]).map(s => document.readBuffer(s[0], s[1] - s[0])));
+				const flatParts = flattenBuffers(parts);
+				const encoded = message.asText ? new TextDecoder().decode(flatParts) : base64.fromUint8Array(flatParts);
+				vscode.env.clipboard.writeText(encoded);
+				return;
+			}
 			case MessageType.CancelSearch:
 				document.searchProvider.cancel();
 				return;
@@ -327,6 +341,14 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				this.writeEditorSettings(message.editorSettings);
 				break;
 		}
+	}
+
+	private publishEdit(messaging: ExtensionHostMessageHandler, document: HexDocument, ref: HexDocumentEditReference) {
+		this._onDidChangeCustomDocument.fire({
+			document,
+			undo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.undo()) }),
+			redo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.redo()) }),
+		});
 	}
 }
 

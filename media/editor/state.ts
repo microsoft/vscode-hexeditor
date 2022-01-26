@@ -46,7 +46,11 @@ export const showReadonlyWarningForEl = atom<HTMLElement | null>({
 
 export const fileSize = selector({
 	key: "fileSize",
-	get: ({ get }) => get(readyQuery).fileSize,
+	get: ({ get }) => {
+		const initial = get(readyQuery).fileSize;
+		const sizeDelta = get(editTimeline).sizeDelta;
+		return initial === undefined ? initial : initial + sizeDelta;
+	},
 });
 
 const initialOffset = selector<number>({

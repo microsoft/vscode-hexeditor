@@ -6,8 +6,10 @@ import { styled } from "@linaria/react";
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
+import { MessageType } from "../../shared/protocol";
+import { PastePopup } from "./copyPaste";
 import { FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
-import { useLastAsyncRecoilValue } from "./hooks";
+import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
@@ -108,6 +110,7 @@ export const DataDisplay: React.FC = () => {
 	const editTimeline = useRecoilValue(select.editTimeline);
 	const unsavedEditIndex = useRecoilValue(select.unsavedEditIndex);
 	const ctx = useDisplayContext();
+	const [pasting, setPasting] = useState<{ target: HTMLElement; offset: number; data: string } | undefined>();
 
 	useEffect(() => {
 		const l = () => { ctx.isSelecting = false; };
@@ -238,11 +241,38 @@ export const DataDisplay: React.FC = () => {
 		}
 	};
 
+	useGlobalHandler<ClipboardEvent>("paste", evt => {
+		const target = document.activeElement;
+		if (!(target instanceof HTMLElement) || !target.classList.contains(dataCellCls)) {
+			return;
+		}
+
+    const pasteData = evt.clipboardData?.getData("text");
+		if (pasteData && ctx.focusedElement) {
+			setPasting({ target, offset: ctx.focusedElement.byte, data: pasteData });
+		}
+	});
+
+	useGlobalHandler<ClipboardEvent>("copy", () => {
+		if (ctx.focusedElement) {
+			select.messageHandler.sendEvent({
+				type: MessageType.DoCopy,
+				selections: ctx.selection.map(r => [r.start, r.end]),
+				asText: ctx.focusedElement.char
+			});
+		}
+	});
+
+	const clearPasting = useCallback(() => setPasting(undefined), []);
+
 	return <div
 		ref={containerRef}
 		className={dataDisplayCls}
 		onKeyDown={onKeyDown}
-	><DataRows /></div>;
+	>
+		<DataRows />
+		<PastePopup context={pasting} hide={clearPasting} />
+	</div>;
 };
 
 const DataRows: React.FC = () => {

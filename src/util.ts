@@ -41,3 +41,19 @@ export const utf8Length = (str: string): number => {
 	return new Blob([str]).size;
 	}
 };
+
+export const flattenBuffers = (buffers: readonly Uint8Array[]): Uint8Array => {
+	let size = 0;
+	for (const buffer of buffers) {
+		size += buffer.byteLength;
+	}
+
+	const target = new Uint8Array(size);
+	let offset = 0;
+	for (const buffer of buffers) {
+		target.set(buffer, offset);
+		offset += buffer.byteLength;
+	}
+
+	return target;
+};
