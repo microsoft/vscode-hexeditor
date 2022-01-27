@@ -1,5 +1,8 @@
 ## Release Notes
 
+## 1.9.4 - January 27, 2022
+- Fixed bug with copy and paste not working
+
 ## 1.9.3 - January 13, 2022
 
 - Files of any size can now be opened without issue (when operating locally)
