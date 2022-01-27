@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 
 import TelemetryReporter from "@vscode/extension-telemetry";
-import * as base64 from 'js-base64';
+import * as base64 from "js-base64";
 import * as vscode from "vscode";
 import { HexDocumentEditReference } from "../shared/hexDocumentModel";
 import { ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
