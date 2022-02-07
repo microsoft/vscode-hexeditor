@@ -22,6 +22,8 @@ export interface FileAccessor {
 	 */
 	readonly isReadonly?: boolean;
 
+	/** Implements a file watcher. */
+	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable;
 	/** Calculates the size of the associated document. Undefined if unbounded */
 	getSize(): Promise<number | undefined>;
 	/** Reads bytes at the given offset from the file, returning the number of read bytes. */

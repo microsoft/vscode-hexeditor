@@ -43,7 +43,7 @@ class FileHandleContainer {
 	constructor(
 		public readonly path: string,
 		private readonly _fs: typeof fs,
-	) {}
+	) { }
 
 	/** Borrows the file handle to run the function. */
 	public borrow<R>(fn: (handle: fs.promises.FileHandle) => R): Promise<R> {
@@ -139,6 +139,10 @@ class NativeFileAccessor implements FileAccessor {
 		this.handle = new FileHandleContainer(uri.fsPath, fs);
 	}
 
+	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable {
+		return watchWorkspaceFile(this.uri, onDidChange, onDidDelete);
+	}
+
 	async getSize(): Promise<number | undefined> {
 		return this.handle.borrow(async fd => (await fd.stat()).size);
 	}
@@ -182,11 +186,11 @@ class NativeFileAccessor implements FileAccessor {
 			await tmp.close();
 		}
 
-			await this.handle.borrow(async () => {
-				await this.handle.close();
-				// Retry the rename a few times since the file might take a moment to show up on disk after operations flush.
-				await retryOnENOENT.execute(() => this.fs.promises.rename(tmpName, this.handle.path));
-			});
+		await this.handle.borrow(async () => {
+			await this.handle.close();
+			// Retry the rename a few times since the file might take a moment to show up on disk after operations flush.
+			await retryOnENOENT.execute(() => this.fs.promises.rename(tmpName, this.handle.path));
+		});
 
 		return this.handle.borrow(async fd => {
 			if (cancellation?.isCancellationRequested) {
@@ -212,12 +216,18 @@ class NativeFileAccessor implements FileAccessor {
 
 class SimpleFileAccessor implements FileAccessor {
 	protected contents?: Thenable<Uint8Array> | Uint8Array;
+	private readonly fsPath: string;
 	public readonly isReadonly: boolean;
 	public readonly uri: string;
 
 	constructor(uri: vscode.Uri) {
 		this.uri = uri.toString();
+		this.fsPath = uri.fsPath;
 		this.isReadonly = vscode.workspace.fs.isWritableFileSystem(this.uri) === false;
+	}
+
+	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable {
+		return watchWorkspaceFile(this.uri, onDidChange, onDidDelete);
 	}
 
 	async getSize(): Promise<number> {
@@ -303,6 +313,10 @@ class DebugFileAccessor implements FileAccessor {
 		this.uri = uri.toString();
 	}
 
+	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable {
+		return watchWorkspaceFile(this.uri, onDidChange, onDidDelete);
+	}
+
 	async getSize(): Promise<number | undefined> {
 		return undefined;
 	}
@@ -338,3 +352,14 @@ class DebugFileAccessor implements FileAccessor {
 		// no-op
 	}
 }
+
+const watchWorkspaceFile = (uri: string, onDidChange: () => void, onDidDelete: () => void) => {
+	const base = uri.split("/");
+	const fileName = base.pop()!;
+	const pattern = new vscode.RelativePattern(vscode.Uri.parse(base.join("/")), fileName);
+
+	const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+	watcher.onDidChange(onDidChange);
+	watcher.onDidDelete(onDidDelete);
+	return watcher;
+};

@@ -3,6 +3,7 @@
 
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
+import { FileAccessor } from "../shared/fileAccessor";
 import { HexDocumentEdit, HexDocumentEditOp, HexDocumentEditReference, HexDocumentModel } from "../shared/hexDocumentModel";
 import { Backup } from "./backup";
 import { Disposable } from "./dispose";
@@ -14,7 +15,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		uri: vscode.Uri,
 		{ backupId, untitledDocumentData }: vscode.CustomDocumentOpenContext,
 		telemetryReporter: TelemetryReporter,
-	): Promise<HexDocument | PromiseLike<HexDocument>> {
+	): Promise<{ document: HexDocument, accessor: FileAccessor }> {
 		const accessor = await accessFile(uri, untitledDocumentData);
 		const model = new HexDocumentModel({
 			accessor,
@@ -38,11 +39,11 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
 		const isLargeFile = !backupId && !accessor.supportsIncremetalAccess && ((fileSize ?? 0) > maxFileSize);
-		return new HexDocument(model, isLargeFile, baseAddress);
+		return { document: new HexDocument(model, isLargeFile, baseAddress), accessor };
 	}
 
 	// Last save time
-	public lastSave = Date.now();
+	public lastSave = 0;
 
 	/** Search provider for the document. */
 	public readonly searchProvider = new SearchProvider();

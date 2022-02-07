@@ -50,7 +50,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		openContext: vscode.CustomDocumentOpenContext,
 		_token: vscode.CancellationToken
 	): Promise<HexDocument> {
-		const document = await HexDocument.create(uri, openContext, this._telemetryReporter);
+		const { document, accessor } = await HexDocument.create(uri, openContext, this._telemetryReporter);
 		const disposables: vscode.Disposable[] = [];
 
 		disposables.push(document.onDidRevert(() => {
@@ -60,13 +60,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			}
 		}));
 
-		const watcher = vscode.workspace.createFileSystemWatcher(uri.fsPath);
-		disposables.push(watcher);
-		disposables.push(watcher.onDidChange(async e => {
-			if (e.fsPath !== uri.fsPath) {
-				return;
-			}
-
+		const onDidChange = async () => {
 			if (document.isSynced) {
 				// If we executed a save recently the change was probably caused by us
 				// we shouldn't trigger a revert to resync the document as it is already sync
@@ -86,18 +80,19 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			} else if (selected === "Revert") {
 				vscode.commands.executeCommand("workbench.action.files.revert");
 			}
-		}));
-		disposables.push(watcher.onDidDelete(e => {
-			if (e.toString() === uri.toString()) {
-				vscode.window.showWarningMessage("This file has been deleted! Saving now will create a new file on disk.", "Overwrite", "Close Editor").then((response) => {
-					if (response === "Overwrite") {
-						vscode.commands.executeCommand("workbench.action.files.save");
-					} else if (response === "Close Editor") {
-						vscode.commands.executeCommand("workbench.action.closeActiveEditor");
-					}
-				});
-			}
-		}));
+		};
+
+		const onDidDelete = () => {
+			vscode.window.showWarningMessage("This file has been deleted! Saving now will create a new file on disk.", "Overwrite", "Close Editor").then((response) => {
+				if (response === "Overwrite") {
+					vscode.commands.executeCommand("workbench.action.files.save");
+				} else if (response === "Close Editor") {
+					vscode.commands.executeCommand("workbench.action.closeActiveEditor");
+				}
+			});
+		};
+
+		disposables.push(accessor.watch(onDidChange, onDidDelete));
 
 		document.onDidDispose(() => {
 			// Make the hex editor panel hidden since we're disposing of the webview
