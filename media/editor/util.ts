@@ -225,3 +225,9 @@ export const parseHexDigit = (s: string): number | undefined => {
 		default: return undefined;
 	}
 };
+
+export const reverseInPlace = (array: { readonly length: number;[n: number]: number }) => {
+	for (let l = 0, r = array.length - 1; l < r; l++, r--) {
+		[array[l], array[r]] = [array[r], array[l]];
+	}
+};

@@ -38,6 +38,12 @@
       {
         "title": "Hex Editor",
         "properties": {
+          "hexeditor.inspectorType": {
+            "type": "string",
+            "enum": ["inline", "sidebar"],
+            "default": "inline",
+            "description": "Where the data inspector should be shown in the hex editor."
+          },
           "hexeditor.maxFileSize": {
             "type": "number",
             "minimum": 0,
@@ -101,7 +107,7 @@
           "id": "hexExplorer",
           "title": "Hex Editor",
           "icon": "panel-icon.svg",
-          "when": "hexEditor:openEditor"
+          "when": "hexEditor:showSidebarInspector"
         }
       ]
     },
@@ -111,7 +117,7 @@
           "type": "webview",
           "id": "hexEditor.dataInspectorView",
           "name": "Data Inspector",
-          "when": "hexEditor:openEditor"
+          "when": "hexEditor:showSidebarInspector"
         }
       ]
     },
@@ -119,7 +125,7 @@
       "commandPalette": [
         {
           "command": "hexEditor.goToOffset",
-          "when": "hexEditor:openEditor"
+          "when": "hexEditor:showSidebarInspector"
         }
       ]
     },

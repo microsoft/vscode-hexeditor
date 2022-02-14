@@ -5,8 +5,10 @@ import { styled } from "@linaria/react";
 import React, { Suspense, useLayoutEffect, useMemo } from "react";
 import { render } from "react-dom";
 import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
+import { InspectorLocation } from "../../shared/protocol";
 import { DataHeader } from "./dataDisplay";
 import { DataDisplayContext, DisplayContext } from "./dataDisplayContext";
+import { DataInspector } from "./dataInspector";
 import { FindWidget } from "./findWidget";
 import { useTheme } from "./hooks";
 import { ReadonlyWarning } from "./readonlyWarning";
@@ -57,6 +59,7 @@ const Editor: React.FC = () => {
 	const dimensions = useRecoilValue(select.dimensions);
 	const setEdit = useSetRecoilState(select.edits);
 	const isReadonly = useRecoilValue(select.isReadonly);
+	const { inspectorType } = useRecoilValue(select.editorSettings);
 	const ctx = useMemo(() => new DisplayContext(setEdit, isReadonly), []);
 
 	const isLargeFile = useRecoilValue(select.isLargeFile);
@@ -75,6 +78,7 @@ const Editor: React.FC = () => {
 			<DataHeader />
 			<ScrollContainer />
 			<ReadonlyWarning />
+			{inspectorType === InspectorLocation.Inline && <DataInspector />}
 		</Container>
 	</DataDisplayContext.Provider>;
 };

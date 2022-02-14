@@ -8,7 +8,7 @@ import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
 import { PastePopup } from "./copyPaste";
-import { FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
+import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
@@ -23,20 +23,6 @@ const Address = styled.div`
 	color: var(--vscode-editorLineNumber-foreground);
 	text-transform: uppercase;
 	line-height: var(--cell-size);
-`;
-
-export const dataCellCls = css`
-	font-family: var(--vscode-editor-font-family);
-	width: var(--cell-size);
-	height: var(--cell-size);
-	line-height: var(--cell-size);
-	text-align: center;
-	display: inline-block;
-
-	&:focus {
-		outline-offset: 1px;
-		outline: var(--vscode-focusBorder) 2px solid;
-	}
 `;
 
 const DataCellGroup = styled.div`
@@ -348,6 +334,10 @@ for (const [key, value] of keysToOctets) {
 	keysToOctets.set(key.toUpperCase(), value);
 }
 
+const dataCellCharCls = css`
+	width: calc(var(--cell-size) * 0.7) !important;
+`;
+
 const DataCell: React.FC<{
 	byte: number;
 	value: number;
@@ -479,6 +469,7 @@ const DataCell: React.FC<{
 			onFocus={onFocus}
 			onBlur={onBlur}
 			className={clsx(
+				isChar && dataCellCharCls,
 				dataCellCls,
 				className,
 				useIsHovered(focusedElement) && dataCellHoveredCls,
@@ -489,6 +480,7 @@ const DataCell: React.FC<{
 			onMouseDown={onMouseDown}
 			onMouseLeave={onMouseLeave}
 			onKeyDown={onKeyDown}
+			data-key={focusedElement.key}
 		>{firstOctetOfEdit !== undefined
 			? firstOctetOfEdit.toString(16).toUpperCase()
 			: children}</span>
