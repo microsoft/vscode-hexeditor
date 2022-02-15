@@ -13,7 +13,7 @@ resources:
     - repository: templates
       type: github
       name: microsoft/vscode-engineering
-      ref: main
+      ref: lramos15/telemetryExtraction
       endpoint: Monaco
 
 extends:
