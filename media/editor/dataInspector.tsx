@@ -76,7 +76,7 @@ const TypesList = styled.dl`
 	gap: 0.3rem 1rem;
 	align-items: center;
 	margin: 0;
-	max-width: calc(100vw - ${tooltipArrowSize * 2 + 20}px);
+	max-width: calc(100vw - 30px);
 
 	dd, dl {
 		margin: 0;
