@@ -14,7 +14,6 @@ resources:
       type: github
       name: microsoft/vscode-engineering
       ref: main
-      endpoint: Monaco
 
 extends:
   template: azure-pipelines/extension/stable.yml@templates
