@@ -40,8 +40,12 @@
         "properties": {
           "hexeditor.inspectorType": {
             "type": "string",
-            "enum": ["inline", "sidebar"],
-            "default": "inline",
+            "enum": [
+              "aside",
+              "hover",
+              "sidebar"
+            ],
+            "default": "aside",
             "description": "Where the data inspector should be shown in the hex editor."
           },
           "hexeditor.maxFileSize": {

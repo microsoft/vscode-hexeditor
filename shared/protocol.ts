@@ -44,7 +44,8 @@ export const enum Endianness {
 }
 
 export const enum InspectorLocation {
-	Inline = "inline",
+	Hover = "hover",
+	Aside = "aside",
 	Sidebar = "sidebar",
 }
 

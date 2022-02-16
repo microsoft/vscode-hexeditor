@@ -283,6 +283,7 @@ const tooltipPopoverCls = css`
 	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
 	transition: 0.2s opacity;
 	animation: fadeIn linear 100ms;
+	overflow: hidden;
 
 	@keyframes fadeIn {
 		from { opacity: 0; }
@@ -321,6 +322,8 @@ const widgetPopoverCloser = css`
 `;
 
 const tooltipArrow = { size: 8, className: tooltipArrowCls };
+
+export const tooltipArrowSize = tooltipArrow.size;
 
 export const VsTooltipPopover: React.FC<IPopoverProps> = (props) => {
 	useGlobalHandler<KeyboardEvent>("keydown", evt => {

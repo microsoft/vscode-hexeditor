@@ -4,8 +4,9 @@
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
-import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
+import { FromWebviewMessage, InspectorLocation, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
+import { dataInspectorProperties } from "./dataInspectorProperties";
 import { clamp, Range } from "./util";
 
 declare function acquireVsCodeApi(): ({
@@ -33,6 +34,31 @@ const readyQuery = selector({
 	key: "ready",
 	get: () => messageHandler.sendRequest<ReadyResponseMessage>({ type: MessageType.ReadyRequest }),
 });
+
+export const enum DataInspectorSide {
+	Right,
+	Bottom,
+}
+
+export const dataInspectorLocation = selector({
+	key: "dataInspectorSide",
+	get: ({ get }) => {
+		const settings = get(editorSettings);
+		const d = get(dimensions);
+		if (settings.inspectorType === InspectorLocation.Sidebar) {
+			return InspectorLocation.Sidebar;
+		}
+
+		if (d.rowPxHeight * settings.columnWidth * 2 > d.width) {
+			return InspectorLocation.Hover;
+		}
+
+		return settings.inspectorType;
+	}
+});
+
+export const getDataInspectorBottomSize =
+	(d: IDimensions) => d.rowPxHeight * (dataInspectorProperties.length / 2);
 
 export const isReadonly = selector({
 	key: "isReadonly",

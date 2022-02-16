@@ -6,9 +6,10 @@ import { styled } from "@linaria/react";
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
-import { MessageType } from "../../shared/protocol";
+import { InspectorLocation, MessageType } from "../../shared/protocol";
 import { PastePopup } from "./copyPaste";
 import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
+import { DataInspectorAside } from "./dataInspector";
 import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
@@ -16,6 +17,7 @@ import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 const Header = styled.div`
 	font-weight: bold;
 	color: var(--vscode-editorLineNumber-activeForeground);
+	white-space: nowrap;
 `;
 
 const Address = styled.div`
@@ -70,8 +72,23 @@ const dataDisplayCls = css`
 	height: 0px;
 `;
 
+const textCellWidth = 0.7;
+
+const DataInspectorWrap = styled.div`
+	position: absolute;
+	top: var(--cell-size);
+	font-weight: normal;
+	z-index: 2;
+	line-height: var(--cell-size);
+
+	dl {
+		gap: 0 0.4rem !important;
+	}
+`;
+
 export const DataHeader: React.FC = () => {
 	const editorSettings = useRecoilValue(select.editorSettings);
+	const inspectorLocation = useRecoilValue(select.dataInspectorLocation);
 
 	return <Header>
 		<DataCellGroup style={{ visibility: "hidden" }} aria-hidden="true">
@@ -82,8 +99,21 @@ export const DataHeader: React.FC = () => {
 				<Byte key={i} value={i & 0xFF} />
 			)}
 		</DataCellGroup>
-		{editorSettings.showDecodedText && <DataCellGroup>Decoded Text</DataCellGroup>}
+		{editorSettings.showDecodedText && (
+			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})` }}>
+				Decoded Text
+			</DataCellGroup>
+		)}
+		{inspectorLocation === InspectorLocation.Aside && <DataInspector />}
 	</Header>;
+};
+
+const DataInspector: React.FC = () => {
+	const [isInspecting, setIsInspecting] = useState(false);
+	return <DataCellGroup style={{ position: "relative" }}>
+		{isInspecting ? "Data Inspector" : null}
+		<DataInspectorWrap><DataInspectorAside onInspecting={setIsInspecting} /></DataInspectorWrap>
+	</DataCellGroup>;
 };
 
 export const DataDisplay: React.FC = () => {
@@ -290,7 +320,6 @@ const dataRowCls = css`
 	position: absolute;
 	left: 0;
 	top: 0;
-	right: 0;
 	display: flex;
 `;
 

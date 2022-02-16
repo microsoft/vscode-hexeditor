@@ -18,7 +18,7 @@ const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
 	showDecodedText: true,
 	defaultEndianness: Endianness.Little,
-	inspectorType: InspectorLocation.Inline,
+	inspectorType: InspectorLocation.Aside,
 };
 
 const editorSettingsKeys = Object.keys(defaultEditorSettings) as readonly (keyof IEditorSettings)[];
@@ -120,7 +120,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		HexEditorProvider.currentWebview = messageHandler;
 
 		// Set the hex editor activity panel to be visible
-		const showSidebarInspector = vscode.workspace.getConfiguration("hexeditor").get("inspectorType") === "sidebar";
+		const showSidebarInspector = vscode.workspace.getConfiguration("hexeditor").get("inspectorType") === InspectorLocation.Sidebar;
 		if (showSidebarInspector) {
 			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", true);
 			this._dataInspectorView.show({

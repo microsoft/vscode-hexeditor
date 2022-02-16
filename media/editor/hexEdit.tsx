@@ -8,7 +8,7 @@ import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "r
 import { InspectorLocation } from "../../shared/protocol";
 import { DataHeader } from "./dataDisplay";
 import { DataDisplayContext, DisplayContext } from "./dataDisplayContext";
-import { DataInspector } from "./dataInspector";
+import { DataInspectorHover } from "./dataInspector";
 import { FindWidget } from "./findWidget";
 import { useTheme } from "./hooks";
 import { ReadonlyWarning } from "./readonlyWarning";
@@ -59,7 +59,7 @@ const Editor: React.FC = () => {
 	const dimensions = useRecoilValue(select.dimensions);
 	const setEdit = useSetRecoilState(select.edits);
 	const isReadonly = useRecoilValue(select.isReadonly);
-	const { inspectorType } = useRecoilValue(select.editorSettings);
+	const inspectorLocation = useRecoilValue(select.dataInspectorLocation);
 	const ctx = useMemo(() => new DisplayContext(setEdit, isReadonly), []);
 
 	const isLargeFile = useRecoilValue(select.isLargeFile);
@@ -78,7 +78,7 @@ const Editor: React.FC = () => {
 			<DataHeader />
 			<ScrollContainer />
 			<ReadonlyWarning />
-			{inspectorType === InspectorLocation.Inline && <DataInspector />}
+			{inspectorLocation === InspectorLocation.Hover && <DataInspectorHover />}
 		</Container>
 	</DataDisplayContext.Provider>;
 };
