@@ -13,7 +13,6 @@
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionDevelopmentPath=${workspaceFolder}/../vscode-js-debug/out",
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"

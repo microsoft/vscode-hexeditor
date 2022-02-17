@@ -232,7 +232,7 @@ const PopoverArrow: React.FC<{ size: number } & React.SVGProps<SVGSVGElement>> =
 	);
 };
 
-export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, children, focusable = true, arrow, onClickOutside, hide: _hide, ...props }) => {
+export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, children, focusable = true, arrow, hide, ...props }) => {
 	const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
 	const [arrowElement, setArrowElement] = useState<HTMLElement | null>(null);
 	const { styles, attributes } = usePopper(anchor, popperElement, arrow && {
@@ -251,9 +251,9 @@ export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, c
 
 	useGlobalHandler<MouseEvent>("mousedown", evt => {
 		if (evt.target instanceof Element && !popperElement?.contains(evt.target)) {
-			onClickOutside?.();
+			hide();
 		}
-	}, [onClickOutside, popperElement]);
+	}, [hide, popperElement]);
 
 	return ReactDOM.createPortal(
 		<div
@@ -333,7 +333,7 @@ export const VsTooltipPopover: React.FC<IPopoverProps> = (props) => {
 	}, [props.hide]);
 
 	return (
-		<Popover {...props} onClickOutside={props.hide} className={clsx(props.className, tooltipPopoverCls)} role="alert" focusable={false} arrow={tooltipArrow}>
+		<Popover {...props} className={clsx(props.className, tooltipPopoverCls)} role="alert" focusable={false} arrow={tooltipArrow}>
 			{props.children}
 		</Popover>
 	);

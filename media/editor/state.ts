@@ -6,7 +6,6 @@ import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import { FromWebviewMessage, InspectorLocation, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
-import { dataInspectorProperties } from "./dataInspectorProperties";
 import { clamp, Range } from "./util";
 
 declare function acquireVsCodeApi(): ({
@@ -35,11 +34,11 @@ const readyQuery = selector({
 	get: () => messageHandler.sendRequest<ReadyResponseMessage>({ type: MessageType.ReadyRequest }),
 });
 
-export const enum DataInspectorSide {
-	Right,
-	Bottom,
-}
-
+/**
+ * Selector for where the Data Inspector should be shown, if anywhere.
+ * This is partially user configured, but may also change based off the
+ * available editor width.
+ */
 export const dataInspectorLocation = selector({
 	key: "dataInspectorSide",
 	get: ({ get }) => {
@@ -49,6 +48,7 @@ export const dataInspectorLocation = selector({
 			return InspectorLocation.Sidebar;
 		}
 
+		// rough approximation, if there's no enough horizontal width then use a hover instead
 		if (d.rowPxHeight * settings.columnWidth * 2 > d.width) {
 			return InspectorLocation.Hover;
 		}
@@ -56,9 +56,6 @@ export const dataInspectorLocation = selector({
 		return settings.inspectorType;
 	}
 });
-
-export const getDataInspectorBottomSize =
-	(d: IDimensions) => d.rowPxHeight * (dataInspectorProperties.length / 2);
 
 export const isReadonly = selector({
 	key: "isReadonly",

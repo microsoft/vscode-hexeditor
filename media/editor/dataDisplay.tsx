@@ -72,6 +72,8 @@ const dataDisplayCls = css`
 	height: 0px;
 `;
 
+// Byte cells are square, and show two (hex) characters, but text cells show a
+// single character so can be narrower--by this constant multiplier.
 const textCellWidth = 0.7;
 
 const DataInspectorWrap = styled.div`
@@ -100,6 +102,7 @@ export const DataHeader: React.FC = () => {
 			)}
 		</DataCellGroup>
 		{editorSettings.showDecodedText && (
+			// Calculated decoded width so that the Data Inspector is displayed at the right position
 			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})` }}>
 				Decoded Text
 			</DataCellGroup>
@@ -108,6 +111,7 @@ export const DataHeader: React.FC = () => {
 	</Header>;
 };
 
+/** Component that shows a Data Inspector header, and the inspector itself directly below when appropriate. */
 const DataInspector: React.FC = () => {
 	const [isInspecting, setIsInspecting] = useState(false);
 	return <DataCellGroup style={{ position: "relative" }}>

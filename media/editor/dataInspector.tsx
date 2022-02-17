@@ -6,8 +6,9 @@ import { FocusedElement, getDataCellElement, useDisplayContext } from "./dataDis
 import { dataInspectorProperties } from "./dataInspectorProperties";
 import { usePersistedState } from "./hooks";
 import * as select from "./state";
-import { tooltipArrowSize, VsTooltipPopover } from "./vscodeUi";
+import { VsTooltipPopover } from "./vscodeUi";
 
+/** Component that shows a data inspector when bytes are hovered. */
 export const DataInspectorHover: React.FC = () => {
 	const ctx = useDisplayContext();
 	const [inspected, setInspected] = useState<FocusedElement>();
@@ -44,6 +45,7 @@ export const DataInspectorHover: React.FC = () => {
 	</VsTooltipPopover>;
 };
 
+/** Data inspector view shown to the right hand side of the hex editor. */
 export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean): void }> = ({ onInspecting }) => {
 	const ctx = useDisplayContext();
 	const [inspected, setInspected] = useState<FocusedElement | undefined>(ctx.focusedElement);
@@ -88,6 +90,7 @@ const TypesList = styled.dl`
 	}
 `;
 
+/** Inner contents of the data inspector, reused between the hover and aside inspector views. */
 const InspectorContents: React.FC<{
 	offset: number;
 	columns: number;
@@ -95,6 +98,7 @@ const InspectorContents: React.FC<{
 	const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
 	const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
 
+	// select data pages, twice just in case the hover would overflow a single page
 	const dataPageSize = useRecoilValue(select.dataPageSize);
 	const startPageNo = Math.floor(offset / dataPageSize);
 	const startPageStartsAt = startPageNo * dataPageSize;
@@ -104,6 +108,7 @@ const InspectorContents: React.FC<{
 	const startPage = useRecoilValue(select.editedDataPages(startPageNo));
 	const endPage = useRecoilValue(select.editedDataPages(endPageNo));
 
+	// Load the data pages into a single nicely formatted array.
 	const target = new Uint8Array(lookahead);
 	for (let i = 0; i < lookahead; i++) {
 		if (offset + i >= endPageStartsAt) {
@@ -138,6 +143,7 @@ const EndiannessToggleContainer = styled.div`
 	}
 `;
 
+/** Controlled checkbox that toggles between little and big endian. */
 const EndiannessToggle: React.FC<{
 	endianness: Endianness;
 	setEndianness: (e: Endianness) => void;
