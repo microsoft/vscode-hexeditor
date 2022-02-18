@@ -27,7 +27,6 @@ body {
 	top: 20px;
 	display: grid;
 	grid-template-columns: 0fr 1fr;
-	gap: 3px;
 	padding-top: 3px;
 	align-items: center;
 }

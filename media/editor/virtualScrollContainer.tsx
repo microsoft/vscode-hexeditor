@@ -1,8 +1,8 @@
-import { styled } from "@linaria/react";
 import { css } from "@linaria/core";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { styled } from "@linaria/react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSize } from "./hooks";
-import { clamp, clsx } from "./util";
+import { clamp, clsx, getScrollDimensions } from "./util";
 
 const Handle = styled.div`
 	background: var(--vscode-scrollbarSlider-background);
@@ -39,27 +39,10 @@ const scrollInterationBlockerCls = css`
 	z-index: 1;
 `;
 
-const scrollbarCls = css`
-	position: absolute;
-	visibility: hidden;
-	overflow: scroll;
-	width: 100px;
-	height: 100px;
-`;
-
 const containerCls = css`
 	position: relative;
 `;
 
-const calcScrollbarDimensions = () => {
-	const el = document.createElement("div");
-	el.classList.add(scrollbarCls);
-	document.body.appendChild(el);
-	const width = (el.offsetWidth - el.clientWidth);
-	const height = (el.offsetHeight - el.clientHeight);
-	document.body.removeChild(el);
-	return { width, height };
-};
 
 /**
  * Generic virtual scroll container. We use this instead
@@ -78,7 +61,6 @@ export const VirtualScrollContainer: React.FC<{
 	minHandleHeight?: number;
 	onScroll(top: number): void;
 }> = ({ className, children, scrollStart, scrollEnd, minHandleHeight = 20, scrollTop, onScroll }) => {
-	const scrollDimension = useMemo(calcScrollbarDimensions, []);
 	const wrapperRef = useRef<HTMLDivElement | null>(null);
 	// Set when the scroll handle is being dragged. startY is the original pageY
 	// positon of the cursor. offset how far down the scroll handle the cursor was.
@@ -182,7 +164,7 @@ export const VirtualScrollContainer: React.FC<{
 		<ScrollbarContainer style={{
 			opacity: visible ? 1 : 0,
 			pointerEvents: visible ? "auto" : "none",
-			width: scrollDimension.width,
+			width: getScrollDimensions().width,
 		}} className={clsx(drag && draggingCls)} ref={wrapperRef} onMouseDown={onBarMouseDown}>
 			<Handle role="scrollbar" style={style} onMouseDown={onHandleMouseDown} />
 		</ScrollbarContainer>

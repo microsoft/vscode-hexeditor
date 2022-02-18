@@ -1,4 +1,5 @@
 import { styled } from "@linaria/react";
+import { css } from "@linaria/core";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRecoilValue } from "recoil";
 import { Endianness } from "../../shared/protocol";
@@ -86,9 +87,11 @@ const TypesList = styled.dl`
 
 	dd {
 		font-family: var(--vscode-editor-font-family);
-		user-select: all;
+		user-select: auto;
 	}
 `;
+
+const endOfFileCls = css`opacity: 0.8`;
 
 /** Inner contents of the data inspector, reused between the hover and aside inspector views. */
 const InspectorContents: React.FC<{
@@ -103,10 +106,10 @@ const InspectorContents: React.FC<{
 
 	return <>
 		<TypesList style={{ gridTemplateColumns: "max-content ".repeat(columns) }}>
-			{inspectableTypes.filter(t => target.length >= t.minBytes).map(({ label, convert }) =>
+			{inspectableTypes.map(({ label, convert, minBytes }) =>
 				<React.Fragment key={label}>
 					<dt>{label}</dt>
-					<dd>{convert(dv, le)}</dd>
+					<dd>{target.length < minBytes ? <span className={endOfFileCls}>End of File</span> : convert(dv, le)}</dd>
 				</React.Fragment>
 			)}
 		</TypesList>

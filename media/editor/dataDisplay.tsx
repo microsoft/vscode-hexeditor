@@ -12,12 +12,14 @@ import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHove
 import { DataInspectorAside } from "./dataInspector";
 import { useFileBytes, useGlobalHandler } from "./hooks";
 import * as select from "./state";
-import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
+import { clamp, clsx, getAsciiCharacter, getScrollDimensions, Range, RangeDirection } from "./util";
 
 const Header = styled.div`
 	font-weight: bold;
 	color: var(--vscode-editorLineNumber-activeForeground);
 	white-space: nowrap;
+	display: flex;
+	align-items: center;
 `;
 
 const Address = styled.div`
@@ -31,7 +33,7 @@ const DataCellGroup = styled.div`
 	padding: 0 calc(var(--cell-size) / 4);
 	display: inline-flex;
 	cursor: default;
-	user-select: none;
+	user-select: text;
 `;
 
 const nonGraphicCharCls = css`
@@ -82,6 +84,9 @@ const DataInspectorWrap = styled.div`
 	font-weight: normal;
 	z-index: 2;
 	line-height: var(--cell-size);
+	left: calc(var(--cell-size) / 4);
+	right: var(--scrollbar-width);
+	overflow: hidden;
 
 	dl {
 		gap: 0 0.4rem !important;
@@ -114,9 +119,11 @@ export const DataHeader: React.FC = () => {
 /** Component that shows a Data Inspector header, and the inspector itself directly below when appropriate. */
 const DataInspector: React.FC = () => {
 	const [isInspecting, setIsInspecting] = useState(false);
-	return <DataCellGroup style={{ position: "relative" }}>
+	return <DataCellGroup style={{ position: "relative", flexGrow: 1 }}>
 		{isInspecting ? "Data Inspector" : null}
-		<DataInspectorWrap><DataInspectorAside onInspecting={setIsInspecting} /></DataInspectorWrap>
+		<DataInspectorWrap style={{ "--scrollbar-width": `${getScrollDimensions().width}px` } as React.CSSProperties}>
+			<DataInspectorAside onInspecting={setIsInspecting} />
+		</DataInspectorWrap>
 	</DataCellGroup>;
 };
 

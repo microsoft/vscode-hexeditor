@@ -52,8 +52,8 @@ export const inspectableTypes: readonly IInspectableType[] = [
 	{
 		label: "UTF-16",
 		minBytes: 2,
-		convert: dv => {
-			const utf16 = new TextDecoder("utf-16").decode(dv.buffer);
+		convert: (dv, le) => {
+			const utf16 = new TextDecoder(le ? "utf-16le" : "utf-16be").decode(dv.buffer);
 			for (const char of utf16) return char;
 			return utf16;
 		},

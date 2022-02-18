@@ -3,6 +3,8 @@
 
 // Assorted helper functions
 
+import { css } from "@linaria/core";
+
 export const isMac = navigator.userAgent.indexOf("Mac OS X") >= 0;
 
 /**
@@ -225,3 +227,30 @@ export const parseHexDigit = (s: string): number | undefined => {
 		default: return undefined;
 	}
 };
+
+const scrollbarCls = css`
+	position: absolute;
+	visibility: hidden;
+	overflow: scroll;
+	width: 100px;
+	height: 100px;
+`;
+
+/** Calculates the dimensions of the browser scrollbar */
+export const getScrollDimensions = (() => {
+	let value: { width: number; height: number } | undefined;
+	return () => {
+		if (value !== undefined) {
+			return value;
+		}
+
+		const el = document.createElement("div");
+		el.classList.add(scrollbarCls);
+		document.body.appendChild(el);
+		const width = (el.offsetWidth - el.clientWidth);
+		const height = (el.offsetHeight - el.clientHeight);
+		document.body.removeChild(el);
+		value = { width, height };
+		return value;
+	};
+})();
