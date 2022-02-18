@@ -4,7 +4,7 @@
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
-import { FromWebviewMessage, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
+import { FromWebviewMessage, InspectorLocation, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { clamp, Range } from "./util";
 
@@ -32,6 +32,29 @@ window.addEventListener("message", ev => messageHandler.handleMessage(ev.data));
 const readyQuery = selector({
 	key: "ready",
 	get: () => messageHandler.sendRequest<ReadyResponseMessage>({ type: MessageType.ReadyRequest }),
+});
+
+/**
+ * Selector for where the Data Inspector should be shown, if anywhere.
+ * This is partially user configured, but may also change based off the
+ * available editor width.
+ */
+export const dataInspectorLocation = selector({
+	key: "dataInspectorSide",
+	get: ({ get }) => {
+		const settings = get(editorSettings);
+		const d = get(dimensions);
+		if (settings.inspectorType === InspectorLocation.Sidebar) {
+			return InspectorLocation.Sidebar;
+		}
+
+		// rough approximation, if there's no enough horizontal width then use a hover instead
+		if (d.rowPxHeight * settings.columnWidth * 2 > d.width) {
+			return InspectorLocation.Hover;
+		}
+
+		return settings.inspectorType;
+	}
 });
 
 export const isReadonly = selector({

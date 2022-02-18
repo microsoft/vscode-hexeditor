@@ -1,12 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { ByteData } from "./byteData";
-import { changeEndianness, clearDataInspector, populateDataInspector } from "./dataInspector";
+import { buildDataInspectorUi, changeEndianness, clearDataInspector, populateDataInspector } from "./dataInspector";
 
 declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
-let currentByteData: ByteData;
+let currentByteData: ArrayBuffer;
 
 
 
@@ -14,11 +13,13 @@ let currentByteData: ByteData;
 // This is the main entry point
 ((): void => {
 
+	buildDataInspectorUi();
+
 	// Handle messages which are sent to the inspector
 	window.addEventListener("message", async e => {
 		switch (e.data.method) {
 			case "update":
-				currentByteData = ByteData.constructFromMessage(e.data.data);
+				currentByteData = e.data.data;
 				populateDataInspector(currentByteData, (document.getElementById("endianness") as HTMLSelectElement).value === "little");
 				return;
 			case "clear":

@@ -15,8 +15,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
 import { LiteralSearchQuery, MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
-import { dataCellCls } from "./dataDisplay";
-import { FocusedElement, useDisplayContext } from "./dataDisplayContext";
+import { dataCellCls, FocusedElement, useDisplayContext } from "./dataDisplayContext";
 import { usePersistedState } from "./hooks";
 import * as select from "./state";
 import { clsx, hexDecode, isHexString, parseHexDigit, Range } from "./util";
@@ -163,7 +162,7 @@ export const FindWidget: React.FC = () => {
 	const [isBinaryMode, setIsBinaryMode] = usePersistedState("find.isBinaryMode", false);
 	const [isRegexp, setIsRegexp] = usePersistedState("find.isRegexp", false);
 	const [isCaseSensitive, setIsCaseSensitive] = usePersistedState("find.isCaseSensitive", false);
-	const [results, setResults]= useRecoilState(select.searchResults);
+	const [results, setResults] = useRecoilState(select.searchResults);
 	const [selectedResult, setSelectedResult] = useState<number>();
 	const [offset, setOffset] = useRecoilState(select.offset);
 	const dimensions = useRecoilValue(select.dimensions);
@@ -437,13 +436,13 @@ const ResultBadge: React.FC<{
 		? <a role="button" title={`More than ${results.results.length} results, click to find all`} onClick={onUncap}>{resultCountStr}+</a>
 		: <span title={`${results.results.length} results`}>{resultCountStr}</span>;
 
-		return <div className={resultBadgeCls}>
-			{results.progress < 1
-				? `Found ${resultCountStr}...`
-				: !results.results.length
-					? "No results"
-					: selectedResult !== undefined
-						? <>{selectedFormat.format(selectedResult + 1)} of {resultCountComponent}</>
-						: <>{resultCountComponent} results</>}
-		</div>;
+	return <div className={resultBadgeCls}>
+		{results.progress < 1
+			? `Found ${resultCountStr}...`
+			: !results.results.length
+				? "No results"
+				: selectedResult !== undefined
+					? <>{selectedFormat.format(selectedResult + 1)} of {resultCountComponent}</>
+					: <>{resultCountComponent} results</>}
+	</div>;
 };

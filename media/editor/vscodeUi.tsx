@@ -1,10 +1,12 @@
 import { css } from "@linaria/core";
 import { styled } from "@linaria/react";
 import Close from "@vscode/codicons/src/icons/close.svg";
-import React, { useEffect, useState } from "react";
+import React, { KeyboardEvent, useEffect, useState } from "react";
 import { usePopper } from "react-popper";
 import { clsx } from "./util";
 import ReactDOM from "react-dom";
+import { VirtualElement } from "@popperjs/core";
+import { useGlobalHandler } from "./hooks";
 
 const VsTextFieldGroupInner = styled.div`
 	position: relative
@@ -24,14 +26,14 @@ const VsTextFieldGroupButtons = styled.div`
 `;
 
 export const VsTextFieldGroup =
-React.forwardRef<HTMLInputElement, { buttons: number; outerClassName?: string; error?: string } & React.InputHTMLAttributes<HTMLInputElement>>(
-	({ buttons, children, outerClassName, ...props }, ref) => (
-		<VsTextFieldGroupInner className={outerClassName}>
-			<VsTextField {...props} ref={ref} style={{ paddingRight: buttons * (iconButtonMargin + iconButtonSize) }} />
-			<VsTextFieldGroupButtons>{children}</VsTextFieldGroupButtons>
-		</VsTextFieldGroupInner>
-	)
-);
+	React.forwardRef<HTMLInputElement, { buttons: number; outerClassName?: string; error?: string } & React.InputHTMLAttributes<HTMLInputElement>>(
+		({ buttons, children, outerClassName, ...props }, ref) => (
+			<VsTextFieldGroupInner className={outerClassName}>
+				<VsTextField {...props} ref={ref} style={{ paddingRight: buttons * (iconButtonMargin + iconButtonSize) }} />
+				<VsTextFieldGroupButtons>{children}</VsTextFieldGroupButtons>
+			</VsTextFieldGroupInner>
+		)
+	);
 
 const VsTextFieldErrorMessage = styled.div`
 	display: none;
@@ -185,7 +187,7 @@ const VsIconButtonInner = styled.button`
 	}
 `;
 
-export const VsIconButton = React.forwardRef<HTMLButtonElement, { title: string }& React.ButtonHTMLAttributes<HTMLButtonElement>>(
+export const VsIconButton = React.forwardRef<HTMLButtonElement, { title: string } & React.ButtonHTMLAttributes<HTMLButtonElement>>(
 	(props, ref) => <VsIconButtonInner ref={ref} role="button" {...props} aria-label={props.title} />,
 );
 
@@ -210,11 +212,12 @@ const popoverHiddenCls = css`
 `;
 
 export interface IPopoverProps {
-	anchor: Element | null;
+	anchor: Element | VirtualElement | null;
 	className?: string;
 	focusable?: boolean;
 	visible: boolean;
 	hide: () => void;
+	onClickOutside?: () => void;
 	role?: string;
 	arrow?: { className: string, size: number };
 }
@@ -229,10 +232,10 @@ const PopoverArrow: React.FC<{ size: number } & React.SVGProps<SVGSVGElement>> =
 	);
 };
 
-export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, children, focusable = true, arrow, hide: _hide, ...props }) => {
-  const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
-  const [arrowElement, setArrowElement] = useState<HTMLElement | null>(null);
-  const { styles, attributes } = usePopper(anchor, popperElement, arrow && {
+export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, children, focusable = true, arrow, hide, ...props }) => {
+	const [popperElement, setPopperElement] = useState<HTMLElement | null>(null);
+	const [arrowElement, setArrowElement] = useState<HTMLElement | null>(null);
+	const { styles, attributes } = usePopper(anchor, popperElement, arrow && {
 		modifiers: [
 			{
 				name: "arrow",
@@ -245,6 +248,12 @@ export const Popover: React.FC<IPopoverProps> = ({ anchor, visible, className, c
 			popperElement?.focus();
 		}
 	}, [visible]);
+
+	useGlobalHandler<MouseEvent>("mousedown", evt => {
+		if (evt.target instanceof Element && !popperElement?.contains(evt.target)) {
+			hide();
+		}
+	}, [hide, popperElement]);
 
 	return ReactDOM.createPortal(
 		<div
@@ -271,9 +280,15 @@ const tooltipPopoverCls = css`
 	color: var(--vscode-editorWidget-foreground);
 	border: 1px solid var(--vscode-editorWidget-border);
 	padding: 0.5em;
-	padding-right: calc(0.8em + ${iconButtonSize}px);
 	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
 	transition: 0.2s opacity;
+	animation: fadeIn linear 100ms;
+	overflow: hidden;
+
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
 `;
 
 const tooltipArrowCls = css`
@@ -308,15 +323,13 @@ const widgetPopoverCloser = css`
 
 const tooltipArrow = { size: 8, className: tooltipArrowCls };
 
+export const tooltipArrowSize = tooltipArrow.size;
+
 export const VsTooltipPopover: React.FC<IPopoverProps> = (props) => {
-	useEffect(() => {
-		const listener = props.hide;
-		window.addEventListener("keydown", listener);
-		window.addEventListener("mousedown", listener);
-		return () => {
-			window.removeEventListener("keydown", listener);
-			window.removeEventListener("mousedown", listener);
-		};
+	useGlobalHandler<KeyboardEvent>("keydown", evt => {
+		if (evt.key === "Escape") {
+			props.hide();
+		}
 	}, [props.hide]);
 
 	return (

@@ -4,6 +4,7 @@ import { SetterOrUpdater } from "recoil";
 import { HexDocumentEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
 import { messageHandler, registerHandler } from "./state";
+import { css } from "@linaria/core";
 import { Range } from "./util";
 
 export class FocusedElement {
@@ -15,7 +16,7 @@ export class FocusedElement {
 		public readonly char: boolean,
 		/** Focused byte index */
 		public readonly byte: number,
-	) {}
+	) { }
 
 	/** Gets the other element at this byte (the character or non-character) */
 	public other(): FocusedElement {
@@ -40,8 +41,10 @@ export class DisplayContext {
 	private _focusedByte?: FocusedElement;
 	private _unsavedRanges: readonly Range[] = [];
 	private readonly unsavedRangesEmitter = new EventEmitter<readonly Range[]>();
-	private readonly selectionChangeEmitter = new EventEmitter<{ range:Range; isSingleSwap: boolean }>();
+	private readonly selectionChangeEmitter = new EventEmitter<{ range: Range; isSingleSwap: boolean }>();
+	private readonly hoverChangeEmitter = new EventEmitter<FocusedElement | undefined>();
 	private readonly hoverChangeHandlers = new Map<bigint, (isSelected: boolean) => void>();
+	private readonly focusChangeEmitter = new EventEmitter<FocusedElement | undefined>();
 	private readonly focusChangeHandlers = new Map<bigint, (isSelected: boolean) => void>();
 	private readonly focusChangeGenericHandler = new EventEmitter<number | undefined>();
 
@@ -49,6 +52,16 @@ export class DisplayContext {
 	 * Whether the user is currently selecting data.
 	 */
 	public isSelecting = false;
+
+	/**
+	 * Handler for when any focus changes.
+	 */
+	public readonly onDidFocus = this.focusChangeEmitter.addListener;
+
+	/**
+	 * Handler for when any hover changes.
+	 */
+	public readonly onDidHover = this.hoverChangeEmitter.addListener;
 
 	/**
 	 * Emitter that fires when a selection for a single byte changes.
@@ -77,7 +90,7 @@ export class DisplayContext {
 	}
 
 	/**
- 	 * Emitter that fires when the given byte is focused or unfocused.
+		 * Emitter that fires when the given byte is focused or unfocused.
 	 */
 	public onDidChangeFocus(element: FocusedElement, listener: (isFocused: boolean) => void): IDisposable {
 		if (this.focusChangeHandlers.has(element.key)) {
@@ -115,7 +128,7 @@ export class DisplayContext {
 	/**
 	 * Updates the currently focused byte.
 	 */
-	public set focusedElement(element: FocusedElement | undefined ) {
+	public set focusedElement(element: FocusedElement | undefined) {
 		if (this._focusedByte?.key === element?.key) {
 			return;
 		}
@@ -125,6 +138,7 @@ export class DisplayContext {
 		}
 
 		this._focusedByte = element;
+		this.focusChangeEmitter.emit(element);
 
 		if (this._focusedByte !== undefined) {
 			this.focusChangeHandlers.get(this._focusedByte.key)?.(true);
@@ -172,6 +186,7 @@ export class DisplayContext {
 		}
 
 		this._hoveredByte = byte;
+		this.hoverChangeEmitter.emit(byte);
 
 		if (this._hoveredByte !== undefined) {
 			this.hoverChangeHandlers.get(this._hoveredByte.key)?.(true);
@@ -347,3 +362,20 @@ export const useIsUnsaved = (byte: number): boolean => {
 
 	return unsaved;
 };
+
+export const dataCellCls = css`
+	font-family: var(--vscode-editor-font-family);
+	width: var(--cell-size);
+	height: var(--cell-size);
+	line-height: var(--cell-size);
+	text-align: center;
+	display: inline-block;
+
+	&:focus {
+		outline-offset: 1px;
+		outline: var(--vscode-focusBorder) 2px solid;
+	}
+`;
+
+export const getDataCellElement = (element: FocusedElement) =>
+	document.querySelector(`.${dataCellCls}[data-key="${element.key}"]`);

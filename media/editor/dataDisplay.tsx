@@ -6,16 +6,18 @@ import { styled } from "@linaria/react";
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
-import { MessageType } from "../../shared/protocol";
+import { InspectorLocation, MessageType } from "../../shared/protocol";
 import { PastePopup } from "./copyPaste";
-import { FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
-import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
+import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
+import { DataInspectorAside } from "./dataInspector";
+import { useFileBytes, useGlobalHandler } from "./hooks";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
 const Header = styled.div`
 	font-weight: bold;
 	color: var(--vscode-editorLineNumber-activeForeground);
+	white-space: nowrap;
 `;
 
 const Address = styled.div`
@@ -23,20 +25,6 @@ const Address = styled.div`
 	color: var(--vscode-editorLineNumber-foreground);
 	text-transform: uppercase;
 	line-height: var(--cell-size);
-`;
-
-export const dataCellCls = css`
-	font-family: var(--vscode-editor-font-family);
-	width: var(--cell-size);
-	height: var(--cell-size);
-	line-height: var(--cell-size);
-	text-align: center;
-	display: inline-block;
-
-	&:focus {
-		outline-offset: 1px;
-		outline: var(--vscode-focusBorder) 2px solid;
-	}
 `;
 
 const DataCellGroup = styled.div`
@@ -84,8 +72,25 @@ const dataDisplayCls = css`
 	height: 0px;
 `;
 
+// Byte cells are square, and show two (hex) characters, but text cells show a
+// single character so can be narrower--by this constant multiplier.
+const textCellWidth = 0.7;
+
+const DataInspectorWrap = styled.div`
+	position: absolute;
+	top: var(--cell-size);
+	font-weight: normal;
+	z-index: 2;
+	line-height: var(--cell-size);
+
+	dl {
+		gap: 0 0.4rem !important;
+	}
+`;
+
 export const DataHeader: React.FC = () => {
 	const editorSettings = useRecoilValue(select.editorSettings);
+	const inspectorLocation = useRecoilValue(select.dataInspectorLocation);
 
 	return <Header>
 		<DataCellGroup style={{ visibility: "hidden" }} aria-hidden="true">
@@ -96,8 +101,23 @@ export const DataHeader: React.FC = () => {
 				<Byte key={i} value={i & 0xFF} />
 			)}
 		</DataCellGroup>
-		{editorSettings.showDecodedText && <DataCellGroup>Decoded Text</DataCellGroup>}
+		{editorSettings.showDecodedText && (
+			// Calculated decoded width so that the Data Inspector is displayed at the right position
+			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})` }}>
+				Decoded Text
+			</DataCellGroup>
+		)}
+		{inspectorLocation === InspectorLocation.Aside && <DataInspector />}
 	</Header>;
+};
+
+/** Component that shows a Data Inspector header, and the inspector itself directly below when appropriate. */
+const DataInspector: React.FC = () => {
+	const [isInspecting, setIsInspecting] = useState(false);
+	return <DataCellGroup style={{ position: "relative" }}>
+		{isInspecting ? "Data Inspector" : null}
+		<DataInspectorWrap><DataInspectorAside onInspecting={setIsInspecting} /></DataInspectorWrap>
+	</DataCellGroup>;
 };
 
 export const DataDisplay: React.FC = () => {
@@ -304,7 +324,6 @@ const dataRowCls = css`
 	position: absolute;
 	left: 0;
 	top: 0;
-	right: 0;
 	display: flex;
 `;
 
@@ -347,6 +366,10 @@ const keysToOctets = new Map([
 for (const [key, value] of keysToOctets) {
 	keysToOctets.set(key.toUpperCase(), value);
 }
+
+const dataCellCharCls = css`
+	width: calc(var(--cell-size) * 0.7) !important;
+`;
 
 const DataCell: React.FC<{
 	byte: number;
@@ -479,6 +502,7 @@ const DataCell: React.FC<{
 			onFocus={onFocus}
 			onBlur={onBlur}
 			className={clsx(
+				isChar && dataCellCharCls,
 				dataCellCls,
 				className,
 				useIsHovered(focusedElement) && dataCellHoveredCls,
@@ -489,6 +513,7 @@ const DataCell: React.FC<{
 			onMouseDown={onMouseDown}
 			onMouseLeave={onMouseLeave}
 			onKeyDown={onKeyDown}
+			data-key={focusedElement.key}
 		>{firstOctetOfEdit !== undefined
 			? firstOctetOfEdit.toString(16).toUpperCase()
 			: children}</span>
@@ -501,30 +526,10 @@ const DataRowContents: React.FC<{
 	width: number;
 	showDecodedText: boolean;
 }> = ({ offset, width, showDecodedText }) => {
-	const dataPageSize = useRecoilValue(select.dataPageSize);
-
-	const startPageNo = Math.floor(offset / dataPageSize);
-	const startPageStartsAt = startPageNo * dataPageSize;
-	const endPageNo = Math.floor((offset + width) / dataPageSize);
-	const endPageStartsAt = endPageNo * dataPageSize;
-
-	const [startPage] = useLastAsyncRecoilValue(select.editedDataPages(startPageNo));
-	const [endPage] = useLastAsyncRecoilValue(select.editedDataPages(endPageNo));
-
+	const rawBytes = useFileBytes(offset, width, true);
 	let memoValue = "";
-	let rawBytes = new Uint8Array(width);
-	for (let i = 0; i < width; i++) {
-		const boffset = offset + i;
-		const value = boffset >= endPageStartsAt
-			? endPage[boffset - endPageStartsAt]
-			: startPage[boffset - startPageStartsAt];
-		if (value === undefined) {
-			rawBytes = rawBytes.subarray(0, i);
-			break;
-		}
-
-		memoValue += "," + value;
-		rawBytes[i] = value;
+	for (const byte of rawBytes) {
+		memoValue += "," + byte;
 	}
 
 	const { bytes, chars } = useMemo(() => {

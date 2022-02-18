@@ -5,7 +5,7 @@ import TelemetryReporter from "@vscode/extension-telemetry";
 import * as base64 from "js-base64";
 import * as vscode from "vscode";
 import { HexDocumentEditReference } from "../shared/hexDocumentModel";
-import { ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
+import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
@@ -17,6 +17,8 @@ import { WebviewCollection } from "./webViewCollection";
 const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
 	showDecodedText: true,
+	defaultEndianness: Endianness.Little,
+	inspectorType: InspectorLocation.Aside,
 };
 
 const editorSettingsKeys = Object.keys(defaultEditorSettings) as readonly (keyof IEditorSettings)[];
@@ -96,7 +98,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 		document.onDidDispose(() => {
 			// Make the hex editor panel hidden since we're disposing of the webview
-			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", false);
+			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", false);
 			disposeAll(disposables);
 		});
 
@@ -118,10 +120,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		HexEditorProvider.currentWebview = messageHandler;
 
 		// Set the hex editor activity panel to be visible
-		vscode.commands.executeCommand("setContext", "hexEditor:openEditor", true);
-		this._dataInspectorView.show({
-			autoReveal: true
-		});
+		const showSidebarInspector = vscode.workspace.getConfiguration("hexeditor").get("inspectorType") === InspectorLocation.Sidebar;
+		if (showSidebarInspector) {
+			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", true);
+			this._dataInspectorView.show({
+				autoReveal: true
+			});
+		}
 
 		// Setup initial content for the webview
 		webviewPanel.webview.options = {
@@ -130,7 +135,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 		// Detects when the webview changes visibility to update the activity bar accordingly
 		webviewPanel.onDidChangeViewState(e => {
-			vscode.commands.executeCommand("setContext", "hexEditor:openEditor", e.webviewPanel.visible);
+			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", showSidebarInspector && e.webviewPanel.visible);
 			if (e.webviewPanel.visible) {
 				HexEditorProvider.currentWebview = messageHandler;
 				this._dataInspectorView.show({
@@ -170,8 +175,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	}
 
 	/**
-	   * Get the static HTML used for in our editor's webviews.
-	  */
+		 * Get the static HTML used for in our editor's webviews.
+		*/
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Convert the styles and scripts for the webview into webview URIs
 		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.js"));
@@ -262,10 +267,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			const target = !existing
 				? vscode.ConfigurationTarget.Global
 				: existing.workspaceFolderValue !== undefined
-				? vscode.ConfigurationTarget.WorkspaceFolder
-				: existing.workspaceValue !== undefined
-				? vscode.ConfigurationTarget.Workspace
-				: vscode.ConfigurationTarget.Global;
+					? vscode.ConfigurationTarget.WorkspaceFolder
+					: existing.workspaceValue !== undefined
+						? vscode.ConfigurationTarget.Workspace
+						: vscode.ConfigurationTarget.Global;
 			config.update(key, settings[key], target);
 		}
 	}

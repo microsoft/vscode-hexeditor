@@ -38,9 +38,22 @@ export interface WebviewMessage<T> {
 	body: T;
 }
 
+export const enum Endianness {
+	Big = "big",
+	Little = "little",
+}
+
+export const enum InspectorLocation {
+	Hover = "hover",
+	Aside = "aside",
+	Sidebar = "sidebar",
+}
+
 export interface IEditorSettings {
 	showDecodedText: boolean;
 	columnWidth: number;
+	inspectorType: InspectorLocation;
+	defaultEndianness: Endianness;
 }
 
 export interface ReadyResponseMessage {
