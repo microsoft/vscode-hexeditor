@@ -3,8 +3,8 @@ import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRecoilValue } from "recoil";
 import { Endianness } from "../../shared/protocol";
 import { FocusedElement, getDataCellElement, useDisplayContext } from "./dataDisplayContext";
-import { dataInspectorProperties } from "./dataInspectorProperties";
-import { usePersistedState } from "./hooks";
+import { inspectableTypes } from "./dataInspectorProperties";
+import { useFileBytes, usePersistedState } from "./hooks";
 import * as select from "./state";
 import { VsTooltipPopover } from "./vscodeUi";
 
@@ -97,36 +97,16 @@ const InspectorContents: React.FC<{
 }> = ({ offset, columns }) => {
 	const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
 	const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
-
-	// select data pages, twice just in case the hover would overflow a single page
-	const dataPageSize = useRecoilValue(select.dataPageSize);
-	const startPageNo = Math.floor(offset / dataPageSize);
-	const startPageStartsAt = startPageNo * dataPageSize;
-	const endPageNo = Math.floor((offset + lookahead) / dataPageSize);
-	const endPageStartsAt = endPageNo * dataPageSize;
-
-	const startPage = useRecoilValue(select.editedDataPages(startPageNo));
-	const endPage = useRecoilValue(select.editedDataPages(endPageNo));
-
-	// Load the data pages into a single nicely formatted array.
-	const target = new Uint8Array(lookahead);
-	for (let i = 0; i < lookahead; i++) {
-		if (offset + i >= endPageStartsAt) {
-			target[i] = endPage[offset + i - endPageStartsAt];
-		} else {
-			target[i] = startPage[offset + i - startPageStartsAt];
-		}
-	}
-
+	const target = useFileBytes(offset, lookahead);
 	const dv = new DataView(target.buffer);
 	const le = endianness === Endianness.Little;
 
 	return <>
 		<TypesList style={{ gridTemplateColumns: "max-content ".repeat(columns) }}>
-			{dataInspectorProperties.map(([name, fn]) =>
-				<React.Fragment key={name}>
-					<dt>{name}</dt>
-					<dd>{fn(dv, le)}</dd>
+			{inspectableTypes.filter(t => target.length >= t.minBytes).map(({ label, convert }) =>
+				<React.Fragment key={label}>
+					<dt>{label}</dt>
+					<dd>{convert(dv, le)}</dd>
 				</React.Fragment>
 			)}
 		</TypesList>

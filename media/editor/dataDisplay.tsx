@@ -10,7 +10,7 @@ import { InspectorLocation, MessageType } from "../../shared/protocol";
 import { PastePopup } from "./copyPaste";
 import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import { DataInspectorAside } from "./dataInspector";
-import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
+import { useFileBytes, useGlobalHandler } from "./hooks";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, Range, RangeDirection } from "./util";
 
@@ -526,30 +526,10 @@ const DataRowContents: React.FC<{
 	width: number;
 	showDecodedText: boolean;
 }> = ({ offset, width, showDecodedText }) => {
-	const dataPageSize = useRecoilValue(select.dataPageSize);
-
-	const startPageNo = Math.floor(offset / dataPageSize);
-	const startPageStartsAt = startPageNo * dataPageSize;
-	const endPageNo = Math.floor((offset + width) / dataPageSize);
-	const endPageStartsAt = endPageNo * dataPageSize;
-
-	const [startPage] = useLastAsyncRecoilValue(select.editedDataPages(startPageNo));
-	const [endPage] = useLastAsyncRecoilValue(select.editedDataPages(endPageNo));
-
+	const rawBytes = useFileBytes(offset, width, true);
 	let memoValue = "";
-	let rawBytes = new Uint8Array(width);
-	for (let i = 0; i < width; i++) {
-		const boffset = offset + i;
-		const value = boffset >= endPageStartsAt
-			? endPage[boffset - endPageStartsAt]
-			: startPage[boffset - startPageStartsAt];
-		if (value === undefined) {
-			rawBytes = rawBytes.subarray(0, i);
-			break;
-		}
-
-		memoValue += "," + value;
-		rawBytes[i] = value;
+	for (const byte of rawBytes) {
+		memoValue += "," + byte;
 	}
 
 	const { bytes, chars } = useMemo(() => {
