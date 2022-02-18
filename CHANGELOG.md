@@ -1,5 +1,8 @@
 ## Release Notes
 
+## 1.9.5 - February 18, 2022
+- Data inspector location is now cofnigurable via the `hexeditor.inspectorType` setting.
+
 ## 1.9.4 - January 27, 2022
 - Fixed bug with copy and paste not working
 
