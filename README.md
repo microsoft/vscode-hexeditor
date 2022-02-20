@@ -20,16 +20,10 @@ There are three ways to open a file in the hex editor:
 The hex editor can be set as the default editor for certain file types by using the `workbench.editorAssociations` setting. For example, this would associate all files with extensions `.hex` and `.ini` to use the hex editor by default:
 
 ```json
-"workbench.editorAssociations": [
-  {
-    "viewType": "hexEditor.hexedit",
-    "filenamePattern": "*.hex"
-  },
-  {
-    "viewType": "hexEditor.hexedit",
-    "filenamePattern": "*.ini"
-  }
-],
+"workbench.editorAssociations": {
+    "*.hex": "hexEditor.hexedit",
+    "*.ini": "hexEditor.hexedit"
+},
 ```
 
 ## Configuring the Data Inspector
