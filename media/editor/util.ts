@@ -153,9 +153,7 @@ export function withinAnyRange(num: number, ranges: Range[]): boolean {
 export function generateCharacterRanges(): Range[] {
 	const ranges: Range[] = [];
 	ranges.push(new Range(0, 32));
-	ranges.push(new Range(127, 161));
-	ranges.push(new Range(173, 174));
-	ranges.push(new Range(256));
+	ranges.push(new Range(127));
 	return ranges;
 }
 
