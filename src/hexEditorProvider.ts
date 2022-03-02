@@ -209,46 +209,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			</html>`;
 	}
 
-	private getBodyHTML(): string {
-		return `
-		<div class="column left">
-			<div class="header" aria-hidden="true">00000000</div>
-			<div class="rowwrapper" id="hexaddr">
-			</div>
-		</div>
-		<div id="editor-container">
-			<div class="column middle">
-				<div class="header">
-					<span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0A</span><span>0B</span><span>0C</span><span>0D</span><span>0E</span><span>0F</span>
-				</div>
-				<div class="rowwrapper" id="hexbody">
-				</div>
-			</div>
-			<div class="column right">
-				<div class="header">DECODED TEXT</div>
-				<div class="rowwrapper" id="ascii">
-				</div>
-			</div>
-			<div id="scrollbar">
-				<div role="scrollbar" id="scroll-thumb">
-				</div>
-			</div>
-		</div>
-		<div id="search-container">
-		</div>
-		`;
-	}
-
-	private _requestId = 1;
-	private readonly _callbacks = new Map<number, (response: any) => void>();
-
-	private postMessageWithResponse<R = unknown>(panel: vscode.WebviewPanel, type: string, body: any): Promise<R> {
-		const requestId = this._requestId++;
-		const p = new Promise<R>(resolve => this._callbacks.set(requestId, resolve));
-		panel.webview.postMessage({ type, requestId, body });
-		return p;
-	}
-
 	private readEditorSettings(): IEditorSettings {
 		const config = vscode.workspace.getConfiguration("hexeditor");
 		const settings: IEditorSettings = { ...defaultEditorSettings };
