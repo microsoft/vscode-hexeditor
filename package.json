@@ -129,7 +129,7 @@
       "commandPalette": [
         {
           "command": "hexEditor.goToOffset",
-          "when": "hexEditor:showSidebarInspector"
+          "when": "hexEditor:isActive"
         }
       ]
     },

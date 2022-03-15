@@ -99,6 +99,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		document.onDidDispose(() => {
 			// Make the hex editor panel hidden since we're disposing of the webview
 			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", false);
+			vscode.commands.executeCommand("setContext", "hexEditor:isActive", false);
 			disposeAll(disposables);
 		});
 
@@ -120,6 +121,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		HexEditorProvider.currentWebview = messageHandler;
 
 		// Set the hex editor activity panel to be visible
+		vscode.commands.executeCommand("setContext", "hexEditor:isActive", true);
 		const showSidebarInspector = vscode.workspace.getConfiguration("hexeditor").get("inspectorType") === InspectorLocation.Sidebar;
 		if (showSidebarInspector) {
 			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", true);
@@ -135,6 +137,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 		// Detects when the webview changes visibility to update the activity bar accordingly
 		webviewPanel.onDidChangeViewState(e => {
+			vscode.commands.executeCommand("setContext", "hexEditor:isActive", e.webviewPanel.visible);
 			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", showSidebarInspector && e.webviewPanel.visible);
 			if (e.webviewPanel.visible) {
 				HexEditorProvider.currentWebview = messageHandler;
