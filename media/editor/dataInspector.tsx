@@ -3,7 +3,7 @@ import { css } from "@linaria/core";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRecoilValue } from "recoil";
 import { Endianness } from "../../shared/protocol";
-import { FocusedElement, getDataCellElement, useDisplayContext } from "./dataDisplayContext";
+import { FocusedElement, getDataCellElement, useCountSelected, useDisplayContext } from "./dataDisplayContext";
 import { inspectableTypes } from "./dataInspectorProperties";
 import { useFileBytes, usePersistedState } from "./hooks";
 import * as select from "./state";
@@ -100,6 +100,7 @@ const InspectorContents: React.FC<{
 }> = ({ offset, columns }) => {
 	const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
 	const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
+	const selectionCount = useCountSelected();
 	const target = useFileBytes(offset, lookahead);
 	const dv = new DataView(target.buffer);
 	const le = endianness === Endianness.Little;
@@ -112,6 +113,10 @@ const InspectorContents: React.FC<{
 					<dd>{target.length < minBytes ? <span className={endOfFileCls}>End of File</span> : convert(dv, le)}</dd>
 				</React.Fragment>
 			)}
+			<React.Fragment key={"Byte Count"}>
+				<dt>{"Byte Count"}</dt>
+				<dd>{target.length < 1 ? <span className={endOfFileCls}>End of File</span> : selectionCount.toString()}</dd>
+			</React.Fragment>
 		</TypesList>
 		<EndiannessToggle endianness={endianness} setEndianness={setEndianness} />
 	</>;

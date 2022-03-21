@@ -75,6 +75,15 @@ export class DisplayContext {
 	}
 
 	/**
+	 * Emitter that fires when the selection changes.
+	 */
+	public onDidChangeAnySelection(listener: (selection: readonly Range[]) => void): IDisposable {
+		return this.selectionChangeEmitter.addListener((evt) => {
+			listener(this.selection);
+		});
+	}
+
+	/**
 	 * Emitter that fires when the unsaved state for a single byte changes.
 	 */
 	public onDidChangeUnsavedState(forByte: number, listener: (isEdited: boolean) => void): IDisposable {
@@ -239,6 +248,20 @@ export class DisplayContext {
 
 	}
 
+	public countSelections(): number {
+		let selectedBytes = new Set();
+		for (const range of this._selection) {
+			for (var i = range.start; i < range.end; i++) {
+				if (selectedBytes.has(i)) {
+					selectedBytes.delete(i);
+				} else {
+					selectedBytes.add(i);
+				}
+			}
+		}
+		return selectedBytes.size
+	}
+
 	/**
 	 * Replaces the selection with the given ranges.
 	 */
@@ -296,6 +319,23 @@ export const useDisplayContext = (): DisplayContext => {
 	}
 
 	return ctx;
+};
+
+/** Hook that returns whether the given byte is selected */
+export const useCountSelected = (): number => {
+	const ctx = useDisplayContext();
+	const [selectionCount, setSelectionCount] = useState(ctx.countSelections());
+
+	useEffect(() => {
+		setSelectionCount(ctx.countSelections());
+
+		const disposable = ctx.onDidChangeAnySelection(range => {
+			setSelectionCount(ctx.countSelections())
+		});
+		return () => disposable.dispose();
+	}, []);
+
+	return selectionCount;
 };
 
 /** Hook that returns whether the given byte is selected */
