@@ -20,6 +20,8 @@ function readConfigFromPackageJson(extensionID: string): { version: string; aiKe
 	};
 }
 
+let myStatusBarItem: vscode.StatusBarItem;
+
 export function activate(context: vscode.ExtensionContext): void {
 	// Register the data inspector as a separate view on the side
 	const dataInspectorProvider = new DataInspectorView(context.extensionUri);
@@ -38,7 +40,20 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
 	context.subscriptions.push(HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider));
+	myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+	context.subscriptions.push(myStatusBarItem);
 }
+
+function updateStatusBarItem(count: number): void {
+	if (count > 0) {
+		myStatusBarItem.text = `${count} byte(s) selected`;
+		myStatusBarItem.show();
+	} else {
+		myStatusBarItem.hide();
+	}
+}
+
+HexEditorProvider.onDidChangeSelectionCount((e: number) => updateStatusBarItem(e));
 
 export function deactivate(): void {
 	telemetryReporter.dispose();
