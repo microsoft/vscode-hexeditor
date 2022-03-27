@@ -78,6 +78,10 @@ export class DisplayContext {
 	 * Emitter that fires when the selection changes.
 	 */
 	public onDidChangeAnySelection(listener: (selection: readonly Range[]) => void): IDisposable {
+		messageHandler.sendEvent({
+			type: MessageType.SetSelectedCount,
+			count: this.countSelections(),
+		});
 		return this.selectionChangeEmitter.addListener((evt) => {
 			listener(this.selection);
 		});
@@ -321,7 +325,7 @@ export const useDisplayContext = (): DisplayContext => {
 	return ctx;
 };
 
-/** Hook that returns whether the given byte is selected */
+/** Hook that returns the count of selected bytes */
 export const useCountSelected = (): number => {
 	const ctx = useDisplayContext();
 	const [selectionCount, setSelectionCount] = useState(ctx.countSelections());

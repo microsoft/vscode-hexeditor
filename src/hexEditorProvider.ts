@@ -153,6 +153,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<HexDocument>>();
 	public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
 
+	private readonly _onDidChangeSelectionCount = new vscode.EventEmitter<number>();
+	public readonly onDidChangeSelectionCount = this._onDidChangeSelectionCount.event;
+
 	public async saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Promise<void> {
 		await document.save(cancellation);
 
@@ -253,6 +256,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					isLargeFile: document.isLargeFile,
 					isReadonly: document.isReadonly,
 				};
+			case MessageType.SetSelectedCount:
+				this._onDidChangeSelectionCount.fire(message.count);
+				// return { type: MessageType.SetSelectedCount, count: message.count };
+				break;
+
 			case MessageType.ReadRangeRequest:
 				const data = await document.readBuffer(message.offset, message.bytes);
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
