@@ -113,10 +113,6 @@ const InspectorContents: React.FC<{
 					<dd>{target.length < minBytes ? <span className={endOfFileCls}>End of File</span> : convert(dv, le)}</dd>
 				</React.Fragment>
 			)}
-			<React.Fragment key={"Byte Count"}>
-				<dt>{"Byte Count"}</dt>
-				<dd>{target.length < 1 ? <span className={endOfFileCls}>End of File</span> : selectionCount.toString()}</dd>
-			</React.Fragment>
 		</TypesList>
 		<EndiannessToggle endianness={endianness} setEndianness={setEndianness} />
 	</>;
