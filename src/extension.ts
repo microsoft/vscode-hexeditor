@@ -6,6 +6,7 @@ import TelemetryReporter from "@vscode/extension-telemetry";
 import { DataInspectorView } from "./dataInspectorView";
 import { showGoToOffset } from "./goToOffset";
 import { HexEditorProvider } from "./hexEditorProvider";
+import StatusSelectionCount from "./statusSelectionCount";
 
 // Telemetry information
 const extensionID = "ms-vscode.hexeditor";
@@ -36,24 +37,14 @@ export function activate(context: vscode.ExtensionContext): void {
 			showGoToOffset(HexEditorProvider.currentWebview);
 		}
 	});
+	const statusBarCounter = new StatusSelectionCount()
 	context.subscriptions.push(goToOffsetCommand);
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
-	context.subscriptions.push(HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider));
-	myStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-	context.subscriptions.push(myStatusBarItem);
+	context.subscriptions.push(HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, statusBarCounter));
+
 }
 
-function updateStatusBarItem(count: number): void {
-	if (count > 0) {
-		myStatusBarItem.text = `${count} byte(s) selected`;
-		myStatusBarItem.show();
-	} else {
-		myStatusBarItem.hide();
-	}
-}
-
-HexEditorProvider.onDidChangeSelectionCount((e: number) => updateStatusBarItem(e));
 
 export function deactivate(): void {
 	telemetryReporter.dispose();

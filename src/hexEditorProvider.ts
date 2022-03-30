@@ -11,6 +11,7 @@ import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
 import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
+import StatusSelectionCount from "./statusSelectionCount";
 import { flattenBuffers, getCorrectArrayBuffer, randomString } from "./util";
 import { WebviewCollection } from "./webViewCollection";
 
@@ -24,10 +25,10 @@ const defaultEditorSettings: Readonly<IEditorSettings> = {
 const editorSettingsKeys = Object.keys(defaultEditorSettings) as readonly (keyof IEditorSettings)[];
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
-	public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView): vscode.Disposable {
+	public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView, statusSelectionCount: StatusSelectionCount): vscode.Disposable {
 		return vscode.window.registerCustomEditorProvider(
 			HexEditorProvider.viewType,
-			new HexEditorProvider(context, telemetryReporter, dataInspectorView),
+			new HexEditorProvider(context, telemetryReporter, dataInspectorView, statusSelectionCount),
 			{
 				supportsMultipleEditorsPerDocument: false
 			}
@@ -44,7 +45,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	constructor(
 		private readonly _context: vscode.ExtensionContext,
 		private readonly _telemetryReporter: TelemetryReporter,
-		private readonly _dataInspectorView: DataInspectorView
+		private readonly _dataInspectorView: DataInspectorView,
+		private readonly _statusSelectionCount: StatusSelectionCount
 	) { }
 
 	async openCustomDocument(
@@ -154,7 +156,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
 
 	private readonly _onDidChangeSelectionCount = new vscode.EventEmitter<number>();
-	public readonly onDidChangeSelectionCount = this._onDidChangeSelectionCount.event;
+	private readonly onDidChangeSelectionCount = this._onDidChangeSelectionCount.event;
 
 	public async saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Promise<void> {
 		await document.save(cancellation);
@@ -257,8 +259,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					isReadonly: document.isReadonly,
 				};
 			case MessageType.SetSelectedCount:
-				this._onDidChangeSelectionCount.fire(message.count);
-				// return { type: MessageType.SetSelectedCount, count: message.count };
+				this._statusSelectionCount.update(message.count);
 				break;
 
 			case MessageType.ReadRangeRequest:
