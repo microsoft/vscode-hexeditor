@@ -78,11 +78,11 @@ export class DisplayContext {
 	 * Emitter that fires when the selection changes.
 	 */
 	public onDidChangeAnySelection(listener: (selection: readonly Range[]) => void): IDisposable {
-		messageHandler.sendEvent({
-			type: MessageType.SetSelectedCount,
-			count: this.countSelections(),
-		});
 		return this.selectionChangeEmitter.addListener((evt) => {
+			messageHandler.sendEvent({
+				type: MessageType.SetSelectedCount,
+				count: this.countSelections(),
+			});
 			listener(this.selection);
 		});
 	}
