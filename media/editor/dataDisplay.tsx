@@ -108,7 +108,8 @@ export const DataHeader: React.FC = () => {
 		</DataCellGroup>
 		{editorSettings.showDecodedText && (
 			// Calculated decoded width so that the Data Inspector is displayed at the right position
-			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})` }}>
+			// Flex-shrink prevents the data inspector overlapping on narrow screens
+			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})`, flexShrink: 0 }}>
 				Decoded Text
 			</DataCellGroup>
 		)}

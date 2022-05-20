@@ -49,7 +49,9 @@ export const dataInspectorLocation = selector({
 		}
 
 		// rough approximation, if there's no enough horizontal width then use a hover instead
-		if (d.rowPxHeight * settings.columnWidth * 2 > d.width) {
+		// rowPxHeight * columnWidth is the width of the 'bytes' display. Double it
+		// for the Decoded Text, if any, plus some sensible padding.
+		if (d.rowPxHeight * settings.columnWidth * (settings.showDecodedText ? 2 : 1) + 100 > d.width) {
 			return InspectorLocation.Hover;
 		}
 
