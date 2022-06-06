@@ -153,7 +153,7 @@ export const useFileBytes = (offset: number, count: number, useLastAsync = false
 			return target.subarray(0, i);
 		}
 
-		target[i] = endPage[offset + i - endPageStartsAt];
+		target[i] = value;
 	}
 
 	return target;
