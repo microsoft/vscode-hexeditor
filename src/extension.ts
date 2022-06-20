@@ -26,8 +26,11 @@ export function activate(context: vscode.ExtensionContext): void {
 	const configValues = readConfigFromPackageJson(extensionID);
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider(DataInspectorView.viewType, dataInspectorProvider));
 	telemetryReporter = new TelemetryReporter(extensionID, configValues.version, configValues.aiKey);
-	const openWithCommand = vscode.commands.registerTextEditorCommand("hexEditor.openFile", (textEditor: vscode.TextEditor) => {
-		vscode.commands.executeCommand("vscode.openWith", textEditor.document.uri, "hexEditor.hexedit");
+	const openWithCommand = vscode.commands.registerCommand("hexEditor.openFile", () => {
+		const activeTabInput = vscode.window.tabGroups.activeTabGroup.activeTab?.input as { [key: string]: any, uri: vscode.Uri | undefined };
+		if (activeTabInput.uri) {
+			vscode.commands.executeCommand("vscode.openWith", activeTabInput.uri, "hexEditor.hexedit");
+		}
 	});
 	const goToOffsetCommand = vscode.commands.registerCommand("hexEditor.goToOffset", () => {
 		if (HexEditorProvider.currentWebview) {
