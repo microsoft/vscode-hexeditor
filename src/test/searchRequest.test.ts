@@ -54,12 +54,12 @@ Lorem ad ullamco ad deserunt voluptate ullamco et in commodo et exercitation dui
 
 	it("searches for literal", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, true, undefined), expectedForTestNeedle);
+		await expectMatches(new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, true, false, undefined), expectedForTestNeedle);
 	});
 
 	it("searches for literal case insensitive", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, false, undefined), [
+		await expectMatches(new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, false, false, undefined), [
 			...expectedForTestNeedle,
 			{ from: 1026, previous: new TextEncoder().encode("Laboris"), to: 1033 },
 		]);

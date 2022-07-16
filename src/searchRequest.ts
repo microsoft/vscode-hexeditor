@@ -71,6 +71,7 @@ export class LiteralSearchRequest implements ISearchRequest {
 		private readonly document: HexDocument,
 		private readonly query: LiteralSearchQuery,
 		private readonly isCaseSensitive: boolean,
+		private readonly isBinaryMode: boolean,
 		private readonly cap: number | undefined,
 	) {
 	}
@@ -82,13 +83,13 @@ export class LiteralSearchRequest implements ISearchRequest {
 
 	/** @inheritdoc */
 	public async *search(): AsyncIterableIterator<SearchResultsWithProgress> {
-		const { isCaseSensitive, query, document, cap } = this;
+		const { isCaseSensitive, isBinaryMode, query, document, cap } = this;
 		const collector = new ResultsCollector(await document.size(), cap);
 
 		const streamSearch = new LiteralSearch(
 			query.literal.map(c => c === "*" ? Wildcard : c),
 			(index, data) => collector.push(data, index, index + data.length),
-			isCaseSensitive ? undefined: caseInsensitiveEquivalency,
+			isCaseSensitive || isBinaryMode ? undefined : caseInsensitiveEquivalency,
 		);
 
 		for await (const chunk of document.readWithEdits(0)) {

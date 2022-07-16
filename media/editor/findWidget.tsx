@@ -234,6 +234,7 @@ export const FindWidget: React.FC = () => {
 				cap: isUncapped ? undefined : defaultResultCap,
 				query: queryOrError,
 				caseSensitive: isCaseSensitive,
+				binaryMode: isBinaryMode,
 			});
 		}, queryDebounce);
 
