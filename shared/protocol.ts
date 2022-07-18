@@ -164,7 +164,6 @@ export interface SearchRequestMessage {
 	query: LiteralSearchQuery | RegExpSearchQuery;
 	cap: number | undefined;
 	caseSensitive: boolean;
-	binaryMode: boolean;
 }
 
 export interface CancelSearchMessage {
