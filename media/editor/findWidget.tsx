@@ -233,7 +233,7 @@ export const FindWidget: React.FC = () => {
 				type: MessageType.SearchRequest,
 				cap: isUncapped ? undefined : defaultResultCap,
 				query: queryOrError,
-				caseSensitive: isCaseSensitive,
+				caseSensitive: isBinaryMode || isCaseSensitive,
 			});
 		}, queryDebounce);
 
