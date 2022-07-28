@@ -1,5 +1,17 @@
 ## Release Notes
 
+## 1.9.8 - July 28, 2022
+- Fixed bug causing binary search to be incorrect, thanks to [@varblane via #367](https://github.com/microsoft/vscode-hexeditor/pull/367)
+- Open active file in Hex Editor now works with non text editors
+
+## 1.9.7 - June 15, 2022
+- Fixed bug causing bytes at page boundaries to be incorrect
+- Fixed data overlapping in the data inspector
+
+## 1.9.6 - April 21, 2022
+- Fixed go to offset not working correctly
+- Changed default decoding of decoded text to ASCII
+
 ## 1.9.5 - February 18, 2022
 - Data inspector location is now cofnigurable via the `hexeditor.inspectorType` setting.
 
