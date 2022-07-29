@@ -14,6 +14,8 @@ export interface IInspectableType {
 }
 
 export const inspectableTypes: readonly IInspectableType[] = [
+	{ label: "binary", minBytes: 1, convert: dv => dv.getUint8(0).toString(2).padStart(8, "0") },
+
 	{ label: "uint8", minBytes: 1, convert: dv => dv.getUint8(0).toString() },
 	{ label: "int8", minBytes: 1, convert: dv => dv.getInt8(0).toString() },
 
