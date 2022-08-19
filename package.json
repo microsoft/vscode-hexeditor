@@ -79,6 +79,11 @@
             "type": "boolean",
             "default": true,
             "description": "Whether decoded text should be shown in the editor."
+          },
+          "hexeditor.showOpenFileButton": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show Hex Editor button in editor menu."
           }
         }
       }
@@ -135,7 +140,7 @@
       ],
       "editor/title": [
         {
-          "when": "activeEditor",
+          "when": "activeEditor && config.hexeditor.showOpenFileButton",
           "command": "hexEditor.openFile",
           "group": "navigation@1"
         }
