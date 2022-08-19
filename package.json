@@ -98,7 +98,8 @@
     "commands": [
       {
         "command": "hexEditor.openFile",
-        "title": "Hex Editor: Open Active File in Hex Editor"
+        "title": "Hex Editor: Open Active File in Hex Editor",
+        "icon": "$(file-binary)"
       },
       {
         "command": "hexEditor.goToOffset",
@@ -130,6 +131,13 @@
         {
           "command": "hexEditor.goToOffset",
           "when": "hexEditor:isActive"
+        }
+      ],
+      "editor/title": [
+        {
+          "when": "activeEditor",
+          "command": "hexEditor.openFile",
+          "group": "navigation@1"
         }
       ]
     },
