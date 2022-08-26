@@ -82,7 +82,7 @@
           },
           "hexeditor.showOpenFileButton": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "description": "Show Hex Editor button in editor menu."
           }
         }
