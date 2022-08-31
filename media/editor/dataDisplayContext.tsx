@@ -370,6 +370,7 @@ export const dataCellCls = css`
 	line-height: var(--cell-size);
 	text-align: center;
 	display: inline-block;
+	user-select: none;
 
 	&:focus {
 		outline-offset: 1px;
