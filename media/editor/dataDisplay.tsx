@@ -522,6 +522,13 @@ const DataCell: React.FC<{
 			onMouseLeave={onMouseLeave}
 			onKeyDown={onKeyDown}
 			data-key={focusedElement.key}
+			style={isChar ? {} : {
+				backgroundColor: `rgba(\
+					${(((value & 0xe0) >> 5) / ((1 << 3) - 1) * 0xff) | 0},\
+					${(((value & 0x1c) >> 2) / ((1 << 3) - 1) * 0xff) | 0},\
+					${((value & 0x3) / ((1 << 2) - 1) * 0xff) | 0},\
+					0.5)`
+			}}
 		>{firstOctetOfEdit !== undefined
 			? firstOctetOfEdit.toString(16).toUpperCase()
 			: children}</span>
