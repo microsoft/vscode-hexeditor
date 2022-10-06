@@ -1,5 +1,9 @@
 ## Release Notes
 
+## 1.9.9 - October 6, 2022
+- Fixed a bug where the custom and native selection could be shown at the same time in the main hex view
+- Binary type added to data inspector, thanks to [@jwr12135 via #370](https://github.com/microsoft/vscode-hexeditor/pull/370)
+
 ## 1.9.8 - July 28, 2022
 - Fixed bug causing binary search to be incorrect, thanks to [@varblane via #367](https://github.com/microsoft/vscode-hexeditor/pull/367)
 - Open active file in Hex Editor now works with non text editors
