@@ -79,6 +79,11 @@
             "type": "boolean",
             "default": true,
             "description": "Whether decoded text should be shown in the editor."
+          },
+          "hexeditor.showOpenFileButton": {
+            "type": "boolean",
+            "default": false,
+            "description": "Show Hex Editor button in editor menu."
           }
         }
       }
@@ -98,7 +103,8 @@
     "commands": [
       {
         "command": "hexEditor.openFile",
-        "title": "Hex Editor: Open Active File in Hex Editor"
+        "title": "Hex Editor: Open Active File in Hex Editor",
+        "icon": "$(file-binary)"
       },
       {
         "command": "hexEditor.goToOffset",
@@ -130,6 +136,13 @@
         {
           "command": "hexEditor.goToOffset",
           "when": "hexEditor:isActive"
+        }
+      ],
+      "editor/title": [
+        {
+          "when": "activeEditor && config.hexeditor.showOpenFileButton",
+          "command": "hexEditor.openFile",
+          "group": "navigation@1"
         }
       ]
     },
