@@ -11,12 +11,15 @@
 			"trace": false,
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
-			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}",
-			],
-			"outFiles": [
-				"${workspaceFolder}/out/**/*.js"
-			],
+			"debugWebviews": true,
+			"rendererDebugOptions": {
+				"sourceMapPathOverrides": {
+					// hack-around for https://github.com/evanw/esbuild/issues/2595
+					"../media/editor/*": "/*"
+				}
+			},
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+			"outFiles": ["${workspaceFolder}/out/**/*.js"]
 		},
 		{
 			"name": "Run Web Extension",
@@ -29,9 +32,7 @@
 				"--extensionDevelopmentKind=web",
 				"--crash-reporter-directory=${workspaceFolder}"
 			],
-			"outFiles": [
-				"${workspaceFolder}/dist/web/**/*.js"
-			],
+			"outFiles": ["${workspaceFolder}/dist/web/**/*.js"],
 			"preLaunchTask": "npm: compile"
 		},
 		{
@@ -43,9 +44,7 @@
 				"--extensionDevelopmentPath=${workspaceFolder}",
 				"--extensionTestsPath=${workspaceFolder}/dist/test.js"
 			],
-			"outFiles": [
-				"${workspaceFolder}/dist/**/*.js"
-			],
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"]
 		}
 	]
 }

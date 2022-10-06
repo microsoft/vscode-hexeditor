@@ -8,13 +8,13 @@ import { FromWebviewMessage, InspectorLocation, MessageHandler, MessageType, Rea
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { clamp, Range } from "./util";
 
-declare function acquireVsCodeApi(): ({
+const acquireVsCodeApi: () => ({
 	postMessage(msg: unknown): void;
 	getState(): any;
 	setState(value: any): void;
-});
+}) = (globalThis as any).acquireVsCodeApi;
 
-export const vscode = acquireVsCodeApi();
+export const vscode = acquireVsCodeApi?.();
 
 const handles: { [T in ToWebviewMessage["type"]]?: (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined } = {};
 
