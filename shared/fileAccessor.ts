@@ -22,6 +22,11 @@ export interface FileAccessor {
 	 */
 	readonly isReadonly?: boolean;
 
+	/**
+	 * Preferred page size of the accessor.
+	 */
+	readonly pageSize: number;
+
 	/** Implements a file watcher. */
 	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable;
 	/** Calculates the size of the associated document. Undefined if unbounded */

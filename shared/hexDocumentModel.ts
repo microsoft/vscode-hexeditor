@@ -87,6 +87,7 @@ export interface IEditTimeline {
 export class HexDocumentModel {
 	public readonly supportsLengthChanges: boolean;
 	public readonly isFiniteSize: boolean;
+	public readonly pageSize: number;
 	private readonly accessor: FileAccessor;
 	/** Guard to make sure only one save operation happens at a time */
 	private readonly saveGuard = Policy.bulkhead(1, Infinity);
@@ -100,6 +101,7 @@ export class HexDocumentModel {
 		this.supportsLengthChanges = options.supportsLengthChanges;
 		this.isFiniteSize = options.isFiniteSize;
 		this.accessor = options.accessor;
+		this.pageSize = options.accessor.pageSize;
 	}
 
 	/**

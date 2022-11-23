@@ -59,6 +59,7 @@ export interface IEditorSettings {
 export interface ReadyResponseMessage {
 	type: MessageType.ReadyResponse;
 	initialOffset: number;
+	pageSize: number;
 	edits: ISerializedEdits;
 	editorSettings: IEditorSettings;
 	unsavedEditIndex: number;
