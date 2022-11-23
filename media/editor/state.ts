@@ -188,9 +188,9 @@ export const offset = atom({
 });
 
 /** Size of data pages, in bytes */
-export const dataPageSize = atom({
+export const dataPageSize = selector({
 	key: "dataPageSize",
-	default: 128 * 1024
+	get: ({ get }) => get(readyQuery).pageSize,
 });
 
 /**

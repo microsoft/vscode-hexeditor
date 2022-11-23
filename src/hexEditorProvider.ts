@@ -253,6 +253,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					edits: serializeEdits(document.edits),
 					unsavedEditIndex: document.unsavedEditIndex,
 					fileSize: await document.size(),
+					pageSize: document.pageSize,
 					isLargeFile: document.isLargeFile,
 					isReadonly: document.isReadonly,
 				};
