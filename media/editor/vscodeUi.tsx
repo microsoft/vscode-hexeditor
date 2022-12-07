@@ -95,7 +95,7 @@ export const VsProgressIndicator = styled.div`
 	top: 0;
 	left: 0;
 	right: 0;
-	height: 3px;
+	height: 2px;
 	pointer-events: none;
 	overflow: hidden;
 	z-index: 1;
