@@ -267,7 +267,7 @@ export const DataDisplay: React.FC = () => {
 			} else {
 				const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
 				const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
-				ctx.addSelectionRange(nextRange);
+				ctx.replaceLastSelectionRange(nextRange);
 			}
 		} else {
 			ctx.setSelectionRanges([Range.single(next.byte)]);
