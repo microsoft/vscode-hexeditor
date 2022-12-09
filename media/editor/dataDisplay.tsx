@@ -49,6 +49,11 @@ const dataCellSelectedCls = css`
 	color: var(--vscode-editor-selectionForeground);
 `;
 
+const dataCellSelectedHoveredCls = css`
+	background: var(--vscode-editor-inactiveSelectionBackground);
+	color: inherit;
+`;
+
 const dataCellUnsavedCls = css`
 	background: var(--vscode-minimapGutter-modifiedBackground);
 `;
@@ -500,6 +505,9 @@ const DataCell: React.FC<{
 		});
 	}, [focusedElement]);
 
+	const isHovered = useIsHovered(focusedElement);
+	const isSelected = useIsSelected(byte);
+
 	return (
 		<span
 			ref={elRef}
@@ -510,8 +518,9 @@ const DataCell: React.FC<{
 				isChar && dataCellCharCls,
 				dataCellCls,
 				className,
-				useIsHovered(focusedElement) && dataCellHoveredCls,
-				useIsSelected(byte) && dataCellSelectedCls,
+				isHovered && dataCellHoveredCls,
+				isSelected && dataCellSelectedCls,
+				(isHovered && isSelected) && dataCellSelectedHoveredCls,
 				useIsUnsaved(byte) && dataCellUnsavedCls,
 			)}
 			onMouseEnter={onMouseEnter}
