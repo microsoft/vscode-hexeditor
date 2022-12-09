@@ -49,9 +49,9 @@ export class DisplayContext {
 	private readonly focusChangeGenericHandler = new EventEmitter<number | undefined>();
 
 	/**
-	 * Whether the user is currently selecting data.
+	 * If the user is currently selecting data, the 'anchor' byte they started from.
 	 */
-	public isSelecting = false;
+	public isSelecting?: number;
 
 	/**
 	 * Handler for when any focus changes.

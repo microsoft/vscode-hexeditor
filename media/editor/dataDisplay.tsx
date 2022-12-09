@@ -12,7 +12,7 @@ import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHove
 import { DataInspectorAside } from "./dataInspector";
 import { useFileBytes, useGlobalHandler } from "./hooks";
 import * as select from "./state";
-import { clamp, clsx, getAsciiCharacter, getScrollDimensions, Range, RangeDirection } from "./util";
+import { clamp, clsx, getAsciiCharacter, getScrollDimensions, Range } from "./util";
 
 const Header = styled.div`
 	font-weight: bold;
@@ -141,7 +141,7 @@ export const DataDisplay: React.FC = () => {
 	const [pasting, setPasting] = useState<{ target: HTMLElement; offset: number; data: string } | undefined>();
 
 	useEffect(() => {
-		const l = () => { ctx.isSelecting = false; };
+		const l = () => { ctx.isSelecting = undefined; };
 		window.addEventListener("mouseup", l, { passive: true });
 		return () => window.removeEventListener("mouseup", l);
 	}, []);
@@ -391,19 +391,16 @@ const DataCell: React.FC<{
 	const setReadonlyWarning = useSetRecoilState(select.showReadonlyWarningForEl);
 
 	const onMouseEnter = useCallback(() => {
-		const last = ctx.selection[0];
 		ctx.hoveredByte = focusedElement;
-		if (ctx.isSelecting && last) {
-			const newRange = last.direction === RangeDirection.Ascending
-				? new Range(last.start, byte + 1) : new Range(last.end, byte);
-			ctx.replaceLastSelectionRange(newRange);
+		if (ctx.isSelecting !== undefined) {
+			ctx.replaceLastSelectionRange(Range.inclusive(ctx.isSelecting, byte));
 		}
 	}, [byte, focusedElement]);
 
 	const onMouseLeave = useCallback((e: React.MouseEvent) => {
 		ctx.hoveredByte = undefined;
 		if ((e.buttons & 1) && !ctx.isSelecting) {
-			ctx.isSelecting = true;
+			ctx.isSelecting = byte;
 			if (e.ctrlKey || e.metaKey) {
 				ctx.addSelectionRange(Range.single(byte));
 			} else {
@@ -421,7 +418,7 @@ const DataCell: React.FC<{
 		ctx.focusedElement = focusedElement;
 
 		if (ctx.isSelecting) {
-			ctx.isSelecting = false;
+			ctx.isSelecting = undefined;
 		} else if (e.shiftKey && prevFocused) {
 			// on a shift key, the user is expanding the selection (or deselection)
 			// of an existing byte. We *don't* include that byte since we don't want
