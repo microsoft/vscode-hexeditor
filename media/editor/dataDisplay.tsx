@@ -207,7 +207,15 @@ export const DataDisplay: React.FC = () => {
 		ctx.unsavedRanges = unsavedRanges;
 	}, [editTimeline, unsavedEditIndex]);
 
-	const onKeyDown = (e: React.KeyboardEvent) => {
+
+	useGlobalHandler("keydown", (e: KeyboardEvent) => {
+		// handle keydown events not sent to a more specific element. The user can
+		// scroll to a point where the 'focused' element is no longer rendered,
+		// but we still want to allow use of arrow keys.
+		if (document.activeElement !== document.body && !containerRef.current?.contains(document.activeElement)) {
+			return;
+		}
+
 		const current = ctx.focusedElement || FocusedElement.zero;
 		const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
 
@@ -272,7 +280,7 @@ export const DataDisplay: React.FC = () => {
 		} else {
 			ctx.setSelectionRanges([Range.single(next.byte)]);
 		}
-	};
+	}, [dimensions, columnWidth, fileSize]);
 
 	useGlobalHandler<ClipboardEvent>("paste", evt => {
 		const target = document.activeElement;
@@ -298,11 +306,7 @@ export const DataDisplay: React.FC = () => {
 
 	const clearPasting = useCallback(() => setPasting(undefined), []);
 
-	return <div
-		ref={containerRef}
-		className={dataDisplayCls}
-		onKeyDown={onKeyDown}
-	>
+	return <div ref={containerRef} className={dataDisplayCls}>
 		<DataRows />
 		<PastePopup context={pasting} hide={clearPasting} />
 	</div>;
