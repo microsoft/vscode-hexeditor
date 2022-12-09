@@ -4,6 +4,7 @@ const linaria = require("@linaria/esbuild");
 
 const watch = process.argv.includes("--watch");
 const minify = !watch || process.argv.includes("--minify");
+const defineProd = process.argv.includes("--defineProd");
 
 // Build the editor provider
 esbuild
@@ -76,6 +77,11 @@ esbuild
 		watch,
 		platform: "browser",
 		outfile: "dist/editor.js",
+		define: defineProd
+			? {
+					"process.env.NODE_ENV": defineProd ? '"production"' : '"development"',
+			  }
+			: undefined,
 		plugins: [
 			svgr(),
 			linaria.default({
