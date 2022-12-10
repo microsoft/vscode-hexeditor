@@ -105,6 +105,7 @@ export interface ReloadMessage {
 export interface SetEditsMessage {
 	type: MessageType.SetEdits;
 	edits: ISerializedEdits;
+	replaceFileSize?: number | null;
 }
 
 /** Sets the displayed offset. */
@@ -233,7 +234,7 @@ export class MessageHandler<TTo, TFrom> {
 	constructor(
 		public messageHandler: (msg: TFrom) => Promise<TTo | undefined>,
 		private readonly postMessage: (msg: WebviewMessage<TTo>) => void,
-	) {}
+	) { }
 
 	/** Sends a request without waiting for a response */
 	public sendEvent(body: TTo): void {

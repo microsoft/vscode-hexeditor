@@ -55,9 +55,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const { document, accessor } = await HexDocument.create(uri, openContext, this._telemetryReporter);
 		const disposables: vscode.Disposable[] = [];
 
-		disposables.push(document.onDidRevert(() => {
+		disposables.push(document.onDidRevert(async () => {
+			const replaceFileSize = await document.size() ?? null;
 			for (const { messaging } of this.webviews.get(document.uri)) {
-				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() } });
+				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() }, replaceFileSize });
 				messaging.sendEvent({ type: MessageType.ReloadFromDisk });
 			}
 		}));
