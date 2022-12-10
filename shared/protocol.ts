@@ -56,12 +56,17 @@ export interface IEditorSettings {
 	defaultEndianness: Endianness;
 }
 
+export interface ICodeSettings {
+	scrollBeyondLastLine: boolean;
+}
+
 export interface ReadyResponseMessage {
 	type: MessageType.ReadyResponse;
 	initialOffset: number;
 	pageSize: number;
 	edits: ISerializedEdits;
 	editorSettings: IEditorSettings;
+	codeSettings: ICodeSettings;
 	unsavedEditIndex: number;
 	fileSize: number | undefined;
 	isReadonly: boolean;

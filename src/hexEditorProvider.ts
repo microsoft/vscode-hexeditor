@@ -5,7 +5,7 @@ import TelemetryReporter from "@vscode/extension-telemetry";
 import * as base64 from "js-base64";
 import * as vscode from "vscode";
 import { HexDocumentEditReference } from "../shared/hexDocumentModel";
-import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
+import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, ICodeSettings, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
@@ -213,6 +213,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			</html>`;
 	}
 
+	private readCodeSettings(): ICodeSettings {
+		const editorConfig = vscode.workspace.getConfiguration("editor");
+		return {
+			scrollBeyondLastLine: editorConfig.get("scrollBeyondLastLine", true)
+		};
+	}
+
 	private readEditorSettings(): IEditorSettings {
 		const config = vscode.workspace.getConfiguration("hexeditor");
 		const settings: IEditorSettings = { ...defaultEditorSettings };
@@ -251,6 +258,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					type: MessageType.ReadyResponse,
 					initialOffset: document.baseAddress,
 					editorSettings: this.readEditorSettings(),
+					codeSettings: this.readCodeSettings(),
 					edits: serializeEdits(document.edits),
 					unsavedEditIndex: document.unsavedEditIndex,
 					fileSize: await document.size(),

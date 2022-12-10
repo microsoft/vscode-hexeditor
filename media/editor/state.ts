@@ -85,6 +85,11 @@ export const isReadonly = selector({
 	get: ({ get }) => get(readyQuery).isReadonly,
 });
 
+export const codeSettings = selector({
+	key: "codeSettings",
+	get: ({ get }) => get(readyQuery).codeSettings,
+});
+
 export const showReadonlyWarningForEl = atom<HTMLElement | null>({
 	key: "showReadonlyWarningForEl",
 	default: null,
