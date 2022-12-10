@@ -16,14 +16,35 @@ const acquireVsCodeApi: () => ({
 
 export const vscode = acquireVsCodeApi?.();
 
-const handles: { [T in ToWebviewMessage["type"]]?: (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined } = {};
+type HandlerFn = (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined;
+
+const handles: { [T in ToWebviewMessage["type"]]?: HandlerFn | HandlerFn[] } = {};
 
 export const registerHandler = <T extends ToWebviewMessage["type"]>(typ: T, handler: (msg: ToWebviewMessage & { type: T }) => Promise<FromWebviewMessage> | void): void => {
-	handles[typ] = handler as any;
+	const cast = handler as HandlerFn;
+	const prev = handles[typ];
+	if (!prev) {
+		handles[typ] = cast;
+	} else if (typeof prev === "function") {
+		handles[typ] = [prev, cast];
+	} else {
+		prev.push(cast);
+	}
 };
 
 export const messageHandler = new MessageHandler<FromWebviewMessage, ToWebviewMessage>(
-	async msg => handles[msg.type]?.(msg),
+	async msg => {
+		const h = handles[msg.type];
+		if (!h) {
+			console.warn("unhandled message", msg);
+		} else if (typeof h === "function") {
+			return h(msg);
+		} else {
+			for (const fn of h) {
+				fn(msg);
+			}
+		}
+	},
 	msg => vscode.postMessage(msg)
 );
 
@@ -69,10 +90,27 @@ export const showReadonlyWarningForEl = atom<HTMLElement | null>({
 	default: null,
 });
 
+const diskFileSize = atom({
+	key: "diskFileSize",
+	default: selector({
+		key: "defaultDiskFileSize",
+		get: ({ get }) => get(readyQuery).fileSize,
+	}),
+	effects_UNSTABLE: [
+		fx => {
+			registerHandler(MessageType.SetEdits, msg => {
+				if (msg.replaceFileSize !== undefined) {
+					fx.setSelf(msg.replaceFileSize ?? undefined);
+				}
+			});
+		},
+	],
+});
+
 export const fileSize = selector({
 	key: "fileSize",
 	get: ({ get }) => {
-		const initial = get(readyQuery).fileSize;
+		const initial = get(diskFileSize);
 		const sizeDelta = get(editTimeline).sizeDelta;
 		return initial === undefined ? initial : initial + sizeDelta;
 	},
