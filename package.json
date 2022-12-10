@@ -190,10 +190,10 @@
     "@vscode/extension-telemetry": "0.6.2",
     "cockatiel": "^2.0.2",
     "js-base64": "^3.7.2",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-popper": "^2.2.5",
-    "recoil": "^0.5.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-popper": "^2.3.0",
+    "recoil": "^0.7.6",
     "vscode-webview-tools": "^0.1.1"
   }
 }
