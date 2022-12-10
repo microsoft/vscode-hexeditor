@@ -10,7 +10,7 @@ import { InspectorLocation, MessageType } from "../../shared/protocol";
 import { PastePopup } from "./copyPaste";
 import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import { DataInspectorAside } from "./dataInspector";
-import { useFileBytes, useGlobalHandler } from "./hooks";
+import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
 import { clamp, clsx, getAsciiCharacter, getScrollDimensions, Range } from "./util";
 
@@ -318,24 +318,41 @@ const DataRows: React.FC = () => {
 	const showDecodedText = useRecoilValue(select.showDecodedText);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize) ?? Infinity;
-	const endBytes = offset + select.getDisplayedBytes(dimensions, columnWidth);
+
+	const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
+	const dataPageSize = useRecoilValue(select.dataPageSize);
+
+	const startPageNo = Math.floor(offset / dataPageSize);
+	const startPageStartsAt = startPageNo * dataPageSize;
+	const endPageNo = Math.floor((offset + displayedBytes) / dataPageSize);
+	const endPageStartsAt = endPageNo * dataPageSize;
+
 	const rows: React.ReactChild[] = [];
-	let row = 0;
-	for (let i = offset; i < endBytes && i < fileSize; i += columnWidth) {
+	for (let i = startPageStartsAt; i <= endPageStartsAt && i < fileSize; i += dataPageSize) {
 		rows.push(
-			<DataRow
+			<DataPage
 				key={i}
-				offset={i}
-				top={row * dimensions.rowPxHeight}
-				width={columnWidth}
+				pageNo={i / dataPageSize}
+				pageStart={i}
+				rowsStart={Math.max(i, offset)}
+				rowsEnd={Math.min(i + dataPageSize, offset + displayedBytes)}
+				top={(i - offset) / columnWidth * dimensions.rowPxHeight}
+				columnWidth={columnWidth}
 				showDecodedText={showDecodedText}
+				fileSize={fileSize}
+				dimensions={dimensions}
 			/>,
 		);
-		row++;
 	}
 
 	return <>{rows}</>;
 };
+
+const dataPageCls = css`
+	position: absolute;
+	left: 0;
+	top: 0;
+`;
 
 const dataRowCls = css`
 	position: absolute;
@@ -363,16 +380,67 @@ const LoadingDataRow: React.FC<{ width: number; showDecodedText: boolean }> = ({
 	</>;
 };
 
-const DataRow: React.FC<{ top: number; offset: number; width: number; showDecodedText: boolean }> = ({ top, offset, width, showDecodedText }) => (
-	<div className={dataRowCls} style={{ transform: `translateY(${top}px)` }}>
-		<DataCellGroup>
-			<Address>{offset.toString(16).padStart(8, "0")}</Address>
-		</DataCellGroup>
-		<Suspense fallback={<LoadingDataRow width={width} showDecodedText={showDecodedText} />}>
-			<DataRowContents offset={offset} width={width} showDecodedText={showDecodedText} />
+interface IDataPageProps {
+	// Page number
+	pageNo: number,
+	// Start of the page
+	pageStart: number,
+	// the offset rows should start displaying at
+	rowsStart: number,
+	// the offset rows should finish displaying at
+	rowsEnd: number,
+	// count of many rows are displayed before this data page
+	top: number,
+
+	// common properties:
+	columnWidth: number,
+	fileSize: number,
+	showDecodedText: boolean,
+	dimensions: select.IDimensions,
+}
+
+const DataPage: React.FC<IDataPageProps> = props => (
+	<div className={dataPageCls} style={{ transform: `translateY(${props.top}px)` }}>
+		<Suspense fallback={<LoadingDataRows {...props} />}>
+			<DataPageContents {...props} />
 		</Suspense>
 	</div>
 );
+
+const generateRows = (props: IDataPageProps, fn: (offset: number) => React.ReactChild) => {
+	const rows: React.ReactNode[] = [];
+	let row = (props.rowsStart - props.pageStart) / props.columnWidth;
+	for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
+		rows.push(<div
+			key={i}
+			className={dataRowCls}
+			style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
+		>
+			<DataCellGroup>
+				<Address>{i.toString(16).padStart(8, "0")}</Address>
+			</DataCellGroup>
+			{fn(i)}
+		</div>);
+	}
+
+	return rows;
+};
+
+const LoadingDataRows: React.FC<IDataPageProps> = (props) => (
+	<>{generateRows(props, () => <LoadingDataRow width={props.columnWidth} showDecodedText={props.showDecodedText} />)}</>
+);
+
+const DataPageContents: React.FC<IDataPageProps> = (props) => {
+	const pageSelector = select.editedDataPages(props.pageNo);
+	const [data] = useLastAsyncRecoilValue(pageSelector);
+
+	return <>{generateRows(props, offset => <DataRowContents
+		offset={offset}
+		rawBytes={data.subarray(offset - props.pageStart, offset - props.pageStart + props.columnWidth)}
+		width={props.columnWidth}
+		showDecodedText={props.showDecodedText}
+	/>)}</>;
+};
 
 const keysToOctets = new Map([
 	["0", 0x0], ["1", 0x1], ["2", 0x2], ["3", 0x3], ["4", 0x4], ["5", 0x5],
@@ -543,8 +611,8 @@ const DataRowContents: React.FC<{
 	offset: number;
 	width: number;
 	showDecodedText: boolean;
-}> = ({ offset, width, showDecodedText }) => {
-	const rawBytes = useFileBytes(offset, width, true);
+	rawBytes: Uint8Array,
+}> = ({ offset, width, showDecodedText, rawBytes }) => {
 	let memoValue = "";
 	for (const byte of rawBytes) {
 		memoValue += "," + byte;

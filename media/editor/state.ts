@@ -228,7 +228,13 @@ export const offset = atom({
 /** Size of data pages, in bytes */
 export const dataPageSize = selector({
 	key: "dataPageSize",
-	get: ({ get }) => get(readyQuery).pageSize,
+	get: ({ get }) => {
+		const colWidth = get(columnWidth);
+		const pageSize = get(readyQuery).pageSize;
+		// Make sure the page size is a multiple of column width, since rendering
+		// happens in page chunks.
+		return Math.round(pageSize / colWidth) * colWidth;
+	}
 });
 
 /**
