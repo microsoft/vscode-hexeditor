@@ -57,6 +57,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	}
 
 	/**
+	 * Gets the preferred page size of the document.
+	 */
+	public get pageSize() {
+		return this.model.pageSize;
+	}
+
+	/**
 	 * Gets whether the model is read-only.
 	 */
 	public get isReadonly(): boolean {

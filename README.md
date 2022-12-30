@@ -28,9 +28,9 @@ The hex editor can be set as the default editor for certain file types by using 
 
 ## Configuring the Data Inspector
 
-By default the data inspector has a dedicated activity bar entry on the left that appears when the hex editor is opened, causing the explorer or whatever side bar you had opened to be hidden. If preferred, the hex editor view can be dragged into another view by dragging the ⬡ icon onto one of the other views.
+By default, the data inspector is shown just to the right of the data grid (or decoded text if enabled), but it can be configured (via the `hexeditor.inspectorType` setting) to instead show up while hovering over a data cell.
 
-This can be used in combination with the `hexeditor.dataInspector.autoReveal` setting to avoid revealing the side bar containing the data inspector all together.
+Another option is to give the data inspector a dedicated activity bar entry on the left (by setting `hexeditor.inspectorType` to `sidebar`) that appears when the hex editor is opened, causing the explorer or whatever sidebar you had opened to be hidden. If preferred, the hex editor view can be dragged into another view by dragging the ⬡ icon onto one of the other views. This can be used in combination with the `hexeditor.dataInspector.autoReveal` setting to avoid revealing the sidebar containing the data inspector altogether.
 
 ## Known Issues
 

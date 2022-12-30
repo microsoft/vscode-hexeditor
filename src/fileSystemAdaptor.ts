@@ -128,11 +128,14 @@ const retryOnENOENT = Policy.handleWhen(e => (e as any).code === "ENOENT")
 	.attempts(10)
 	.delay(50);
 
+const filePageSize = 128 * 1024;
+
 /** Native accessor using Node's filesystem. This can be used. */
 class NativeFileAccessor implements FileAccessor {
 	public readonly uri: string;
 	public readonly supportsIncremetalAccess = true;
 	private readonly handle: FileHandleContainer;
+	public readonly pageSize = filePageSize;
 
 	constructor(uri: vscode.Uri, private readonly fs: typeof import("fs")) {
 		this.uri = uri.toString();
@@ -219,6 +222,7 @@ class SimpleFileAccessor implements FileAccessor {
 	private readonly fsPath: string;
 	public readonly isReadonly: boolean;
 	public readonly uri: string;
+	public readonly pageSize = filePageSize;
 
 	constructor(uri: vscode.Uri) {
 		this.uri = uri.toString();
@@ -309,6 +313,13 @@ class DebugFileAccessor implements FileAccessor {
 	public readonly supportsIncremetalAccess = true;
 	public readonly uri: string;
 
+	/**
+	 * Page size is smaller than the native filesystem, since large pages are
+	 * problematic for embedded debuggers.
+	 * @see https://github.com/microsoft/debug-adapter-protocol/issues/322
+	 */
+	public readonly pageSize = 4 * 1024;
+
 	constructor(uri: vscode.Uri, public readonly isReadonly: boolean) {
 		this.uri = uri.toString();
 	}
@@ -323,9 +334,8 @@ class DebugFileAccessor implements FileAccessor {
 
 	async read(offset: number, data: Uint8Array): Promise<number> {
 		const contents = await vscode.workspace.fs.readFile(this.referenceRange(offset, offset + data.length));
-
-		const cpy = Math.min(data.length, contents.length - offset);
-		data.set(contents.subarray(offset, cpy + offset));
+		const cpy = Math.min(data.length, contents.length);
+		data.set(contents.subarray(0, cpy));
 		return cpy;
 	}
 

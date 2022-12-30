@@ -49,9 +49,9 @@ export class DisplayContext {
 	private readonly focusChangeGenericHandler = new EventEmitter<number | undefined>();
 
 	/**
-	 * Whether the user is currently selecting data.
+	 * If the user is currently selecting data, the 'anchor' byte they started from.
 	 */
-	public isSelecting = false;
+	public isSelecting?: number;
 
 	/**
 	 * Handler for when any focus changes.
@@ -414,6 +414,7 @@ export const dataCellCls = css`
 	line-height: var(--cell-size);
 	text-align: center;
 	display: inline-block;
+	user-select: none;
 
 	&:focus {
 		outline-offset: 1px;

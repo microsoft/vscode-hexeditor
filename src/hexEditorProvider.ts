@@ -5,7 +5,7 @@ import TelemetryReporter from "@vscode/extension-telemetry";
 import * as base64 from "js-base64";
 import * as vscode from "vscode";
 import { HexDocumentEditReference } from "../shared/hexDocumentModel";
-import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
+import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, ICodeSettings, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
@@ -57,9 +57,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		const { document, accessor } = await HexDocument.create(uri, openContext, this._telemetryReporter);
 		const disposables: vscode.Disposable[] = [];
 
-		disposables.push(document.onDidRevert(() => {
+		disposables.push(document.onDidRevert(async () => {
+			const replaceFileSize = await document.size() ?? null;
 			for (const { messaging } of this.webviews.get(document.uri)) {
-				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() } });
+				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() }, replaceFileSize });
 				messaging.sendEvent({ type: MessageType.ReloadFromDisk });
 			}
 		}));
@@ -101,6 +102,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		document.onDidDispose(() => {
 			// Make the hex editor panel hidden since we're disposing of the webview
 			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", false);
+			vscode.commands.executeCommand("setContext", "hexEditor:isActive", false);
 			disposeAll(disposables);
 		});
 
@@ -122,6 +124,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		HexEditorProvider.currentWebview = messageHandler;
 
 		// Set the hex editor activity panel to be visible
+		vscode.commands.executeCommand("setContext", "hexEditor:isActive", true);
 		const showSidebarInspector = vscode.workspace.getConfiguration("hexeditor").get("inspectorType") === InspectorLocation.Sidebar;
 		if (showSidebarInspector) {
 			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", true);
@@ -137,6 +140,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 		// Detects when the webview changes visibility to update the activity bar accordingly
 		webviewPanel.onDidChangeViewState(e => {
+			vscode.commands.executeCommand("setContext", "hexEditor:isActive", e.webviewPanel.visible);
 			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", showSidebarInspector && e.webviewPanel.visible);
 			if (e.webviewPanel.visible) {
 				HexEditorProvider.currentWebview = messageHandler;
@@ -214,6 +218,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			</html>`;
 	}
 
+	private readCodeSettings(): ICodeSettings {
+		const editorConfig = vscode.workspace.getConfiguration("editor");
+		return {
+			scrollBeyondLastLine: editorConfig.get("scrollBeyondLastLine", true)
+		};
+	}
+
 	private readEditorSettings(): IEditorSettings {
 		const config = vscode.workspace.getConfiguration("hexeditor");
 		const settings: IEditorSettings = { ...defaultEditorSettings };
@@ -252,9 +263,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					type: MessageType.ReadyResponse,
 					initialOffset: document.baseAddress,
 					editorSettings: this.readEditorSettings(),
+					codeSettings: this.readCodeSettings(),
 					edits: serializeEdits(document.edits),
 					unsavedEditIndex: document.unsavedEditIndex,
 					fileSize: await document.size(),
+					pageSize: document.pageSize,
 					isLargeFile: document.isLargeFile,
 					isReadonly: document.isReadonly,
 				};

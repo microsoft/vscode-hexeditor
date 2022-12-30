@@ -139,7 +139,7 @@ export const useFileBytes = (offset: number, count: number, useLastAsync = false
 	const endPageStartsAt = endPageNo * dataPageSize;
 
 	const startPageSelector = select.editedDataPages(startPageNo);
-	const endPageSelector = select.editedDataPages(startPageNo);
+	const endPageSelector = select.editedDataPages(endPageNo);
 
 	const startPage = useLastAsync ? useLastAsyncRecoilValue(startPageSelector)[0] : useRecoilValue(startPageSelector);
 	const endPage = useLastAsync ? useLastAsyncRecoilValue(endPageSelector)[0] : useRecoilValue(endPageSelector);
@@ -153,7 +153,7 @@ export const useFileBytes = (offset: number, count: number, useLastAsync = false
 			return target.subarray(0, i);
 		}
 
-		target[i] = endPage[offset + i - endPageStartsAt];
+		target[i] = value;
 	}
 
 	return target;

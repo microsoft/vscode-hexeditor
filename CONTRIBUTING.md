@@ -24,7 +24,7 @@ Manage any merge conflicts, commit them, and then push them to your fork.
 
 ## Prerequisites
 
-In order to download necessary tools, clone the repository, and install dependencies via `yarn` you need network access.
+In order to download necessary tools, clone the repository, and install dependencies through npm, you need network access.
 
 You'll need the following tools:
 
@@ -38,7 +38,7 @@ npm install
 
 ## Build and Run
 
-After cloning the extension and running `npm install` execute `npm run webpack-watch` to initiate webpack's file watcher and then use the debugger in VS Code to execute "Run Extension".
+After cloning the extension and running `npm install` execute `npm run watch` to initiate esbuild's file watcher and then use the debugger in VS Code to execute "Run Extension".
 
 ### Linting
 We use [eslint](https://eslint.org/) for linting our sources. You can run eslint across the sources by calling `npm run lint` from a terminal or command prompt.

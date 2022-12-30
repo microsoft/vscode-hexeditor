@@ -1,9 +1,9 @@
 import { css } from "@linaria/core";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
+import { DataDisplay } from "./dataDisplay";
 import * as select from "./state";
 import { Range } from "./util";
-import { DataDisplay } from "./dataDisplay";
 import { VirtualScrollContainer } from "./virtualScrollContainer";
 
 const wrapperCls = css`
@@ -22,6 +22,7 @@ export const ScrollContainer: React.FC = () => {
 	const dimension = useRecoilValue(select.dimensions);
 	const columnWidth = useRecoilValue(select.columnWidth);
 	const fileSize = useRecoilValue(select.fileSize);
+	const { scrollBeyondLastLine } = useRecoilValue(select.codeSettings);
 	const [bounds, setBounds] = useRecoilState(select.scrollBounds);
 	const [offset, setOffset] = useRecoilState(select.offset);
 	const previousOffset = useRef<number>();
@@ -53,9 +54,15 @@ export const ScrollContainer: React.FC = () => {
 		setScrollTop(dimension.rowPxHeight * (offset / columnWidth));
 	}, [offset]);
 
+	// If scrolling slowly, an individual scroll event might not be able to move
+	// to a new offset. This stores the "unused" scroll amount.
+	const accumulatedScroll = useRef(0);
+
 	const onScroll = useCallback((scrollTop: number) => {
 		// On scroll, figure out the offset displayed at the new position.
+		scrollTop += accumulatedScroll.current;
 		const rowNumber = Math.floor(scrollTop / dimension.rowPxHeight);
+		accumulatedScroll.current = scrollTop - (rowNumber * dimension.rowPxHeight);
 		const newOffset = rowNumber * columnWidth;
 		const newScrollTop = rowNumber * dimension.rowPxHeight;
 		previousOffset.current = newOffset;
@@ -64,12 +71,14 @@ export const ScrollContainer: React.FC = () => {
 		setScrollTop(newScrollTop);
 	}, [dimension, columnWidth, expandBoundsToContain]);
 
+	const extraScroll = scrollBeyondLastLine ? dimension.height / 2 : 0;
+
 	return (
 		<VirtualScrollContainer
 			className={wrapperCls}
 			scrollTop={scrollTop}
 			scrollStart={dimension.rowPxHeight * (bounds.start / columnWidth)}
-			scrollEnd={dimension.rowPxHeight * (bounds.end / columnWidth) + dimension.height / 2}
+			scrollEnd={dimension.rowPxHeight * (Math.ceil(bounds.end / columnWidth) + 1) + extraScroll}
 			onScroll={onScroll}
 		>
 			<DataDisplay />

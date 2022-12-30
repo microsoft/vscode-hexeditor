@@ -10,9 +10,9 @@ import { InspectorLocation, MessageType } from "../../shared/protocol";
 import { PastePopup } from "./copyPaste";
 import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import { DataInspectorAside } from "./dataInspector";
-import { useFileBytes, useGlobalHandler } from "./hooks";
+import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
-import { clamp, clsx, getAsciiCharacter, getScrollDimensions, Range, RangeDirection } from "./util";
+import { clamp, clsx, getAsciiCharacter, getScrollDimensions, Range } from "./util";
 
 const Header = styled.div`
 	font-weight: bold;
@@ -47,6 +47,11 @@ const dataCellHoveredCls = css`
 const dataCellSelectedCls = css`
 	background: var(--vscode-editor-selectionBackground);
 	color: var(--vscode-editor-selectionForeground);
+`;
+
+const dataCellSelectedHoveredCls = css`
+	background: var(--vscode-editor-inactiveSelectionBackground);
+	color: inherit;
 `;
 
 const dataCellUnsavedCls = css`
@@ -108,7 +113,8 @@ export const DataHeader: React.FC = () => {
 		</DataCellGroup>
 		{editorSettings.showDecodedText && (
 			// Calculated decoded width so that the Data Inspector is displayed at the right position
-			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})` }}>
+			// Flex-shrink prevents the data inspector overlapping on narrow screens
+			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})`, flexShrink: 0 }}>
 				Decoded Text
 			</DataCellGroup>
 		)}
@@ -140,7 +146,7 @@ export const DataDisplay: React.FC = () => {
 	const [pasting, setPasting] = useState<{ target: HTMLElement; offset: number; data: string } | undefined>();
 
 	useEffect(() => {
-		const l = () => { ctx.isSelecting = false; };
+		const l = () => { ctx.isSelecting = undefined; };
 		window.addEventListener("mouseup", l, { passive: true });
 		return () => window.removeEventListener("mouseup", l);
 	}, []);
@@ -201,7 +207,15 @@ export const DataDisplay: React.FC = () => {
 		ctx.unsavedRanges = unsavedRanges;
 	}, [editTimeline, unsavedEditIndex]);
 
-	const onKeyDown = (e: React.KeyboardEvent) => {
+
+	useGlobalHandler("keydown", (e: KeyboardEvent) => {
+		// handle keydown events not sent to a more specific element. The user can
+		// scroll to a point where the 'focused' element is no longer rendered,
+		// but we still want to allow use of arrow keys.
+		if (document.activeElement !== document.body && !containerRef.current?.contains(document.activeElement)) {
+			return;
+		}
+
 		const current = ctx.focusedElement || FocusedElement.zero;
 		const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
 
@@ -261,12 +275,12 @@ export const DataDisplay: React.FC = () => {
 			} else {
 				const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
 				const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
-				ctx.addSelectionRange(nextRange);
+				ctx.replaceLastSelectionRange(nextRange);
 			}
 		} else {
 			ctx.setSelectionRanges([Range.single(next.byte)]);
 		}
-	};
+	}, [dimensions, columnWidth, fileSize]);
 
 	useGlobalHandler<ClipboardEvent>("paste", evt => {
 		const target = document.activeElement;
@@ -292,11 +306,7 @@ export const DataDisplay: React.FC = () => {
 
 	const clearPasting = useCallback(() => setPasting(undefined), []);
 
-	return <div
-		ref={containerRef}
-		className={dataDisplayCls}
-		onKeyDown={onKeyDown}
-	>
+	return <div ref={containerRef} className={dataDisplayCls}>
 		<DataRows />
 		<PastePopup context={pasting} hide={clearPasting} />
 	</div>;
@@ -308,24 +318,41 @@ const DataRows: React.FC = () => {
 	const showDecodedText = useRecoilValue(select.showDecodedText);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize) ?? Infinity;
-	const endBytes = offset + select.getDisplayedBytes(dimensions, columnWidth);
+
+	const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
+	const dataPageSize = useRecoilValue(select.dataPageSize);
+
+	const startPageNo = Math.floor(offset / dataPageSize);
+	const startPageStartsAt = startPageNo * dataPageSize;
+	const endPageNo = Math.floor((offset + displayedBytes) / dataPageSize);
+	const endPageStartsAt = endPageNo * dataPageSize;
+
 	const rows: React.ReactChild[] = [];
-	let row = 0;
-	for (let i = offset; i < endBytes && i < fileSize; i += columnWidth) {
+	for (let i = startPageStartsAt; i <= endPageStartsAt && i < fileSize; i += dataPageSize) {
 		rows.push(
-			<DataRow
+			<DataPage
 				key={i}
-				offset={i}
-				top={row * dimensions.rowPxHeight}
-				width={columnWidth}
+				pageNo={i / dataPageSize}
+				pageStart={i}
+				rowsStart={Math.max(i, offset)}
+				rowsEnd={Math.min(i + dataPageSize, offset + displayedBytes)}
+				top={(i - offset) / columnWidth * dimensions.rowPxHeight}
+				columnWidth={columnWidth}
 				showDecodedText={showDecodedText}
+				fileSize={fileSize}
+				dimensions={dimensions}
 			/>,
 		);
-		row++;
 	}
 
 	return <>{rows}</>;
 };
+
+const dataPageCls = css`
+	position: absolute;
+	left: 0;
+	top: 0;
+`;
 
 const dataRowCls = css`
 	position: absolute;
@@ -353,16 +380,67 @@ const LoadingDataRow: React.FC<{ width: number; showDecodedText: boolean }> = ({
 	</>;
 };
 
-const DataRow: React.FC<{ top: number; offset: number; width: number; showDecodedText: boolean }> = ({ top, offset, width, showDecodedText }) => (
-	<div className={dataRowCls} style={{ transform: `translateY(${top}px)` }}>
-		<DataCellGroup>
-			<Address>{offset.toString(16).padStart(8, "0")}</Address>
-		</DataCellGroup>
-		<Suspense fallback={<LoadingDataRow width={width} showDecodedText={showDecodedText} />}>
-			<DataRowContents offset={offset} width={width} showDecodedText={showDecodedText} />
+interface IDataPageProps {
+	// Page number
+	pageNo: number,
+	// Start of the page
+	pageStart: number,
+	// the offset rows should start displaying at
+	rowsStart: number,
+	// the offset rows should finish displaying at
+	rowsEnd: number,
+	// count of many rows are displayed before this data page
+	top: number,
+
+	// common properties:
+	columnWidth: number,
+	fileSize: number,
+	showDecodedText: boolean,
+	dimensions: select.IDimensions,
+}
+
+const DataPage: React.FC<IDataPageProps> = props => (
+	<div className={dataPageCls} style={{ transform: `translateY(${props.top}px)` }}>
+		<Suspense fallback={<LoadingDataRows {...props} />}>
+			<DataPageContents {...props} />
 		</Suspense>
 	</div>
 );
+
+const generateRows = (props: IDataPageProps, fn: (offset: number) => React.ReactChild) => {
+	const rows: React.ReactNode[] = [];
+	let row = (props.rowsStart - props.pageStart) / props.columnWidth;
+	for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
+		rows.push(<div
+			key={i}
+			className={dataRowCls}
+			style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
+		>
+			<DataCellGroup>
+				<Address>{i.toString(16).padStart(8, "0")}</Address>
+			</DataCellGroup>
+			{fn(i)}
+		</div>);
+	}
+
+	return rows;
+};
+
+const LoadingDataRows: React.FC<IDataPageProps> = (props) => (
+	<>{generateRows(props, () => <LoadingDataRow width={props.columnWidth} showDecodedText={props.showDecodedText} />)}</>
+);
+
+const DataPageContents: React.FC<IDataPageProps> = (props) => {
+	const pageSelector = select.editedDataPages(props.pageNo);
+	const [data] = useLastAsyncRecoilValue(pageSelector);
+
+	return <>{generateRows(props, offset => <DataRowContents
+		offset={offset}
+		rawBytes={data.subarray(offset - props.pageStart, offset - props.pageStart + props.columnWidth)}
+		width={props.columnWidth}
+		showDecodedText={props.showDecodedText}
+	/>)}</>;
+};
 
 const keysToOctets = new Map([
 	["0", 0x0], ["1", 0x1], ["2", 0x2], ["3", 0x3], ["4", 0x4], ["5", 0x5],
@@ -390,19 +468,16 @@ const DataCell: React.FC<{
 	const setReadonlyWarning = useSetRecoilState(select.showReadonlyWarningForEl);
 
 	const onMouseEnter = useCallback(() => {
-		const last = ctx.selection[0];
 		ctx.hoveredByte = focusedElement;
-		if (ctx.isSelecting && last) {
-			const newRange = last.direction === RangeDirection.Ascending
-				? new Range(last.start, byte + 1) : new Range(last.end, byte);
-			ctx.replaceLastSelectionRange(newRange);
+		if (ctx.isSelecting !== undefined) {
+			ctx.replaceLastSelectionRange(Range.inclusive(ctx.isSelecting, byte));
 		}
 	}, [byte, focusedElement]);
 
 	const onMouseLeave = useCallback((e: React.MouseEvent) => {
 		ctx.hoveredByte = undefined;
 		if ((e.buttons & 1) && !ctx.isSelecting) {
-			ctx.isSelecting = true;
+			ctx.isSelecting = byte;
 			if (e.ctrlKey || e.metaKey) {
 				ctx.addSelectionRange(Range.single(byte));
 			} else {
@@ -420,7 +495,7 @@ const DataCell: React.FC<{
 		ctx.focusedElement = focusedElement;
 
 		if (ctx.isSelecting) {
-			ctx.isSelecting = false;
+			ctx.isSelecting = undefined;
 		} else if (e.shiftKey && prevFocused) {
 			// on a shift key, the user is expanding the selection (or deselection)
 			// of an existing byte. We *don't* include that byte since we don't want
@@ -502,6 +577,9 @@ const DataCell: React.FC<{
 		});
 	}, [focusedElement]);
 
+	const isHovered = useIsHovered(focusedElement);
+	const isSelected = useIsSelected(byte);
+
 	return (
 		<span
 			ref={elRef}
@@ -512,8 +590,9 @@ const DataCell: React.FC<{
 				isChar && dataCellCharCls,
 				dataCellCls,
 				className,
-				useIsHovered(focusedElement) && dataCellHoveredCls,
-				useIsSelected(byte) && dataCellSelectedCls,
+				isHovered && dataCellHoveredCls,
+				isSelected && dataCellSelectedCls,
+				(isHovered && isSelected) && dataCellSelectedHoveredCls,
 				useIsUnsaved(byte) && dataCellUnsavedCls,
 			)}
 			onMouseEnter={onMouseEnter}
@@ -532,8 +611,8 @@ const DataRowContents: React.FC<{
 	offset: number;
 	width: number;
 	showDecodedText: boolean;
-}> = ({ offset, width, showDecodedText }) => {
-	const rawBytes = useFileBytes(offset, width, true);
+	rawBytes: Uint8Array,
+}> = ({ offset, width, showDecodedText, rawBytes }) => {
 	let memoValue = "";
 	for (const byte of rawBytes) {
 		memoValue += "," + byte;

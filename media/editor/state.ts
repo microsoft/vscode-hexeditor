@@ -8,22 +8,43 @@ import { FromWebviewMessage, InspectorLocation, MessageHandler, MessageType, Rea
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { clamp, Range } from "./util";
 
-declare function acquireVsCodeApi(): ({
+const acquireVsCodeApi: () => ({
 	postMessage(msg: unknown): void;
 	getState(): any;
 	setState(value: any): void;
-});
+}) = (globalThis as any).acquireVsCodeApi;
 
-export const vscode = acquireVsCodeApi();
+export const vscode = acquireVsCodeApi?.();
 
-const handles: { [T in ToWebviewMessage["type"]]?: (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined } = {};
+type HandlerFn = (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined;
+
+const handles: { [T in ToWebviewMessage["type"]]?: HandlerFn | HandlerFn[] } = {};
 
 export const registerHandler = <T extends ToWebviewMessage["type"]>(typ: T, handler: (msg: ToWebviewMessage & { type: T }) => Promise<FromWebviewMessage> | void): void => {
-	handles[typ] = handler as any;
+	const cast = handler as HandlerFn;
+	const prev = handles[typ];
+	if (!prev) {
+		handles[typ] = cast;
+	} else if (typeof prev === "function") {
+		handles[typ] = [prev, cast];
+	} else {
+		prev.push(cast);
+	}
 };
 
 export const messageHandler = new MessageHandler<FromWebviewMessage, ToWebviewMessage>(
-	async msg => handles[msg.type]?.(msg),
+	async msg => {
+		const h = handles[msg.type];
+		if (!h) {
+			console.warn("unhandled message", msg);
+		} else if (typeof h === "function") {
+			return h(msg);
+		} else {
+			for (const fn of h) {
+				fn(msg);
+			}
+		}
+	},
 	msg => vscode.postMessage(msg)
 );
 
@@ -49,7 +70,9 @@ export const dataInspectorLocation = selector({
 		}
 
 		// rough approximation, if there's no enough horizontal width then use a hover instead
-		if (d.rowPxHeight * settings.columnWidth * 2 > d.width) {
+		// rowPxHeight * columnWidth is the width of the 'bytes' display. Double it
+		// for the Decoded Text, if any, plus some sensible padding.
+		if (d.rowPxHeight * settings.columnWidth * (settings.showDecodedText ? 2 : 1) + 100 > d.width) {
 			return InspectorLocation.Hover;
 		}
 
@@ -62,15 +85,37 @@ export const isReadonly = selector({
 	get: ({ get }) => get(readyQuery).isReadonly,
 });
 
+export const codeSettings = selector({
+	key: "codeSettings",
+	get: ({ get }) => get(readyQuery).codeSettings,
+});
+
 export const showReadonlyWarningForEl = atom<HTMLElement | null>({
 	key: "showReadonlyWarningForEl",
 	default: null,
 });
 
+const diskFileSize = atom({
+	key: "diskFileSize",
+	default: selector({
+		key: "defaultDiskFileSize",
+		get: ({ get }) => get(readyQuery).fileSize,
+	}),
+	effects_UNSTABLE: [
+		fx => {
+			registerHandler(MessageType.SetEdits, msg => {
+				if (msg.replaceFileSize !== undefined) {
+					fx.setSelf(msg.replaceFileSize ?? undefined);
+				}
+			});
+		},
+	],
+});
+
 export const fileSize = selector({
 	key: "fileSize",
 	get: ({ get }) => {
-		const initial = get(readyQuery).fileSize;
+		const initial = get(diskFileSize);
 		const sizeDelta = get(editTimeline).sizeDelta;
 		return initial === undefined ? initial : initial + sizeDelta;
 	},
@@ -186,9 +231,15 @@ export const offset = atom({
 });
 
 /** Size of data pages, in bytes */
-export const dataPageSize = atom({
+export const dataPageSize = selector({
 	key: "dataPageSize",
-	default: 128 * 1024
+	get: ({ get }) => {
+		const colWidth = get(columnWidth);
+		const pageSize = get(readyQuery).pageSize;
+		// Make sure the page size is a multiple of column width, since rendering
+		// happens in page chunks.
+		return Math.round(pageSize / colWidth) * colWidth;
+	}
 });
 
 /**

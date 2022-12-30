@@ -57,11 +57,17 @@ export interface IEditorSettings {
 	defaultEndianness: Endianness;
 }
 
+export interface ICodeSettings {
+	scrollBeyondLastLine: boolean;
+}
+
 export interface ReadyResponseMessage {
 	type: MessageType.ReadyResponse;
 	initialOffset: number;
+	pageSize: number;
 	edits: ISerializedEdits;
 	editorSettings: IEditorSettings;
+	codeSettings: ICodeSettings;
 	unsavedEditIndex: number;
 	fileSize: number | undefined;
 	isReadonly: boolean;
@@ -105,6 +111,7 @@ export interface ReloadMessage {
 export interface SetEditsMessage {
 	type: MessageType.SetEdits;
 	edits: ISerializedEdits;
+	replaceFileSize?: number | null;
 }
 
 /** Sets the displayed offset. */
@@ -240,7 +247,7 @@ export class MessageHandler<TTo, TFrom> {
 	constructor(
 		public messageHandler: (msg: TFrom) => Promise<TTo | undefined>,
 		private readonly postMessage: (msg: WebviewMessage<TTo>) => void,
-	) {}
+	) { }
 
 	/** Sends a request without waiting for a response */
 	public sendEvent(body: TTo): void {
