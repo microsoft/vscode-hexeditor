@@ -1,9 +1,9 @@
-import { styled } from "@linaria/react";
 import { css } from "@linaria/core";
+import { styled } from "@linaria/react";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRecoilValue } from "recoil";
 import { Endianness } from "../../shared/protocol";
-import { FocusedElement, getDataCellElement, useCountSelected, useDisplayContext } from "./dataDisplayContext";
+import { FocusedElement, getDataCellElement, useDisplayContext } from "./dataDisplayContext";
 import { inspectableTypes } from "./dataInspectorProperties";
 import { useFileBytes, usePersistedState } from "./hooks";
 import * as select from "./state";
@@ -100,7 +100,6 @@ const InspectorContents: React.FC<{
 }> = ({ offset, columns }) => {
 	const defaultEndianness = useRecoilValue(select.editorSettings).defaultEndianness;
 	const [endianness, setEndianness] = usePersistedState("endianness", defaultEndianness);
-	const selectionCount = useCountSelected();
 	const target = useFileBytes(offset, lookahead);
 	const dv = new DataView(target.buffer);
 	const le = endianness === Endianness.Little;

@@ -38,3 +38,29 @@ export abstract class Disposable {
 		return this._isDisposed;
 	}
 }
+
+export interface IDisposable { dispose(): void }
+
+export class DisposableValue<T extends IDisposable> {
+	private _value: T | undefined;
+
+	constructor(value?: T) {
+		this._value = value;
+	}
+
+	public get value(): T | undefined {
+		return this._value;
+	}
+
+	public set value(value: T | undefined) {
+		if (this._value === value) {
+			return;
+		}
+		this._value?.dispose();
+		this._value = value;
+	}
+
+	public dispose(): void {
+		this.value?.dispose();
+	}
+}

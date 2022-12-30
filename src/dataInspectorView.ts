@@ -2,14 +2,28 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
+import { InspectorLocation } from "../shared/protocol";
+import { Disposable } from "./dispose";
+import { HexEditorRegistry } from "./hexEditorRegistry";
 import { randomString } from "./util";
 
-export class DataInspectorView implements vscode.WebviewViewProvider {
+export class DataInspectorView extends Disposable implements vscode.WebviewViewProvider {
 	public static readonly viewType = "hexEditor.dataInspectorView";
 	private _view?: vscode.WebviewView;
 	private _lastMessage: unknown;
 
-	constructor(private readonly _extensionURI: vscode.Uri) { }
+	constructor(private readonly _extensionURI: vscode.Uri, registry: HexEditorRegistry) {
+		super();
+		this._register(registry.onDidChangeActiveDocument(doc => {
+			const inspectorType = vscode.workspace.getConfiguration("hexeditor").get("inspectorType");
+			const shouldShow = inspectorType === InspectorLocation.Sidebar && !!doc;
+
+			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", shouldShow);
+			if (shouldShow) {
+				this.show({ autoReveal: true });
+			}
+		}));
+	}
 
 	public resolveWebviewView(
 		webviewView: vscode.WebviewView,

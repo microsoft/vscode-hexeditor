@@ -129,7 +129,8 @@ export interface SetFocusedByteMessage {
 /** sets the count of selected bytes. */
 export interface SetSelectedCountMessage {
 	type: MessageType.SetSelectedCount;
-	count: number;
+	selected: number;
+	focused?: number;
 }
 
 /** Saves the current offset shown in the editor. */

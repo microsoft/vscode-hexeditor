@@ -1,10 +1,10 @@
+import { css } from "@linaria/core";
 import { EventEmitter, IDisposable } from "cockatiel";
 import { createContext, useContext, useEffect, useState } from "react";
 import { SetterOrUpdater } from "recoil";
 import { HexDocumentEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
 import { messageHandler, registerHandler } from "./state";
-import { css } from "@linaria/core";
 import { Range } from "./util";
 
 export class FocusedElement {
@@ -71,19 +71,6 @@ export class DisplayContext {
 			if (evt.range.includes(forByte)) {
 				listener(evt.isSingleSwap);
 			}
-		});
-	}
-
-	/**
-	 * Emitter that fires when the selection changes.
-	 */
-	public onDidChangeAnySelection(listener: (selection: readonly Range[]) => void): IDisposable {
-		return this.selectionChangeEmitter.addListener((evt) => {
-			messageHandler.sendEvent({
-				type: MessageType.SetSelectedCount,
-				count: this.countSelections(),
-			});
-			listener(this.selection);
 		});
 	}
 
@@ -228,6 +215,8 @@ export class DisplayContext {
 			this.focusedElement = new FocusedElement(false, msg.offset);
 			this.setSelectionRanges([Range.single(msg.offset)]);
 		});
+
+		this.selectionChangeEmitter.addListener(() => this.publishSelections());
 	}
 
 	/**
@@ -252,10 +241,10 @@ export class DisplayContext {
 
 	}
 
-	public countSelections(): number {
-		let selectedBytes = new Set();
+	private publishSelections() {
+		const selectedBytes = new Set();
 		for (const range of this._selection) {
-			for (var i = range.start; i < range.end; i++) {
+			for (let i = range.start; i < range.end; i++) {
 				if (selectedBytes.has(i)) {
 					selectedBytes.delete(i);
 				} else {
@@ -263,7 +252,12 @@ export class DisplayContext {
 				}
 			}
 		}
-		return selectedBytes.size
+
+		messageHandler.sendEvent({
+			type: MessageType.SetSelectedCount,
+			selected: selectedBytes.size,
+			focused: this._focusedByte?.byte
+		});
 	}
 
 	/**
@@ -323,23 +317,6 @@ export const useDisplayContext = (): DisplayContext => {
 	}
 
 	return ctx;
-};
-
-/** Hook that returns the count of selected bytes */
-export const useCountSelected = (): number => {
-	const ctx = useDisplayContext();
-	const [selectionCount, setSelectionCount] = useState(ctx.countSelections());
-
-	useEffect(() => {
-		setSelectionCount(ctx.countSelections());
-
-		const disposable = ctx.onDidChangeAnySelection(range => {
-			setSelectionCount(ctx.countSelections())
-		});
-		return () => disposable.dispose();
-	}, []);
-
-	return selectionCount;
 };
 
 /** Hook that returns whether the given byte is selected */
