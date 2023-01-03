@@ -8,11 +8,10 @@ import { HexDocumentEditReference } from "../shared/hexDocumentModel";
 import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, ICodeSettings, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
-import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
+import { HexEditorRegistry } from "./hexEditorRegistry";
 import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
 import { flattenBuffers, getCorrectArrayBuffer, randomString } from "./util";
-import { WebviewCollection } from "./webViewCollection";
 
 const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
@@ -24,10 +23,10 @@ const defaultEditorSettings: Readonly<IEditorSettings> = {
 const editorSettingsKeys = Object.keys(defaultEditorSettings) as readonly (keyof IEditorSettings)[];
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
-	public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView): vscode.Disposable {
+	public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView, registry: HexEditorRegistry): vscode.Disposable {
 		return vscode.window.registerCustomEditorProvider(
 			HexEditorProvider.viewType,
-			new HexEditorProvider(context, telemetryReporter, dataInspectorView),
+			new HexEditorProvider(context, telemetryReporter, dataInspectorView, registry),
 			{
 				supportsMultipleEditorsPerDocument: false
 			}
@@ -36,15 +35,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 	private static readonly viewType = "hexEditor.hexedit";
 
-	/** Currently-focused hex editor, if any. */
-	public static currentWebview?: ExtensionHostMessageHandler;
-
-	private readonly webviews = new WebviewCollection();
-
 	constructor(
 		private readonly _context: vscode.ExtensionContext,
 		private readonly _telemetryReporter: TelemetryReporter,
-		private readonly _dataInspectorView: DataInspectorView
+		private readonly _dataInspectorView: DataInspectorView,
+		private readonly _registry: HexEditorRegistry,
 	) { }
 
 	async openCustomDocument(
@@ -57,7 +52,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 		disposables.push(document.onDidRevert(async () => {
 			const replaceFileSize = await document.size() ?? null;
-			for (const { messaging } of this.webviews.get(document.uri)) {
+			for (const messaging of this._registry.getMessaging(document)) {
 				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() }, replaceFileSize });
 				messaging.sendEvent({ type: MessageType.ReloadFromDisk });
 			}
@@ -97,13 +92,6 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 		disposables.push(accessor.watch(onDidChange, onDidDelete));
 
-		document.onDidDispose(() => {
-			// Make the hex editor panel hidden since we're disposing of the webview
-			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", false);
-			vscode.commands.executeCommand("setContext", "hexEditor:isActive", false);
-			disposeAll(disposables);
-		});
-
 		return document;
 	}
 
@@ -118,39 +106,14 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		);
 
 		// Add the webview to our internal set of active webviews
-		this.webviews.add(document.uri, messageHandler, webviewPanel);
-		HexEditorProvider.currentWebview = messageHandler;
-
-		// Set the hex editor activity panel to be visible
-		vscode.commands.executeCommand("setContext", "hexEditor:isActive", true);
-		const showSidebarInspector = vscode.workspace.getConfiguration("hexeditor").get("inspectorType") === InspectorLocation.Sidebar;
-		if (showSidebarInspector) {
-			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", true);
-			this._dataInspectorView.show({
-				autoReveal: true
-			});
-		}
+		const handle = this._registry.add(document, messageHandler);
+		webviewPanel.onDidDispose(() => handle.dispose());
 
 		// Setup initial content for the webview
 		webviewPanel.webview.options = {
 			enableScripts: true,
 		};
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
-		// Detects when the webview changes visibility to update the activity bar accordingly
-		webviewPanel.onDidChangeViewState(e => {
-			vscode.commands.executeCommand("setContext", "hexEditor:isActive", e.webviewPanel.visible);
-			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", showSidebarInspector && e.webviewPanel.visible);
-			if (e.webviewPanel.visible) {
-				HexEditorProvider.currentWebview = messageHandler;
-				this._dataInspectorView.show({
-					autoReveal: true,
-					forceFocus: true
-				});
-			} else {
-				HexEditorProvider.currentWebview = undefined;
-			}
-		});
-
 		webviewPanel.webview.onDidReceiveMessage(e => messageHandler.handleMessage(e));
 	}
 
@@ -161,7 +124,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		await document.save(cancellation);
 
 		// Update all webviews that a save has just occured
-		for (const { messaging } of this.webviews.get(document.uri)) {
+		for (const messaging of this._registry.getMessaging(document)) {
 			messaging.sendEvent({ type: MessageType.Saved, unsavedEditIndex: document.unsavedEditIndex });
 		}
 	}
@@ -266,6 +229,10 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					isLargeFile: document.isLargeFile,
 					isReadonly: document.isReadonly,
 				};
+			case MessageType.SetSelectedCount:
+				document.selectionState = message;
+				break;
+
 			case MessageType.ReadRangeRequest:
 				const data = await document.readBuffer(message.offset, message.bytes);
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };

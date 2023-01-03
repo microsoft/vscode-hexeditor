@@ -10,6 +10,13 @@ import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
 import { SearchProvider } from "./searchProvider";
 
+export interface ISelectionState {
+	/** Number of selected bytes */
+	selected: number;
+	/** Focused byte, if any */
+	focused?: number;
+}
+
 export class HexDocument extends Disposable implements vscode.CustomDocument {
 	static async create(
 		uri: vscode.Uri,
@@ -45,6 +52,8 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	// Last save time
 	public lastSave = 0;
 
+	private _selectionState: ISelectionState = { selected: 0 };
+
 	/** Search provider for the document. */
 	public readonly searchProvider = new SearchProvider();
 
@@ -79,7 +88,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * Reads data including edits from the model, returning an iterable of
 	 * Uint8Array chunks.
 	 */
-	public readWithEdits(offset: number): AsyncIterableIterator<Uint8Array>	{
+	public readWithEdits(offset: number): AsyncIterableIterator<Uint8Array> {
 		return this.model.readWithEdits(offset);
 	}
 
@@ -123,6 +132,22 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this.model.dispose();
 		// Disposes of all the events attached to the custom document
 		super.dispose();
+	}
+
+	private readonly _onDidChangeSelectionState = this._register(new vscode.EventEmitter<ISelectionState>());
+
+	/**
+	 * Fired when the document selection or focus changes.
+	 */
+	public readonly onDidChangeSelectionState = this._onDidChangeSelectionState.event;
+
+	public get selectionState() {
+		return this._selectionState;
+	}
+
+	public set selectionState(state: ISelectionState) {
+		this._selectionState = state;
+		this._onDidChangeSelectionState.fire(state);
 	}
 
 	private readonly _onDidRevert = this._register(new vscode.EventEmitter<void>());

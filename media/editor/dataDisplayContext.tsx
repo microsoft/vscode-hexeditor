@@ -1,10 +1,10 @@
+import { css } from "@linaria/core";
 import { EventEmitter, IDisposable } from "cockatiel";
 import { createContext, useContext, useEffect, useState } from "react";
 import { SetterOrUpdater } from "recoil";
 import { HexDocumentEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
 import { messageHandler, registerHandler } from "./state";
-import { css } from "@linaria/core";
 import { Range } from "./util";
 
 export class FocusedElement {
@@ -215,6 +215,8 @@ export class DisplayContext {
 			this.focusedElement = new FocusedElement(false, msg.offset);
 			this.setSelectionRanges([Range.single(msg.offset)]);
 		});
+
+		this.selectionChangeEmitter.addListener(() => this.publishSelections());
 	}
 
 	/**
@@ -237,6 +239,25 @@ export class DisplayContext {
 
 		return selected;
 
+	}
+
+	private publishSelections() {
+		const selectedBytes = new Set();
+		for (const range of this._selection) {
+			for (let i = range.start; i < range.end; i++) {
+				if (selectedBytes.has(i)) {
+					selectedBytes.delete(i);
+				} else {
+					selectedBytes.add(i);
+				}
+			}
+		}
+
+		messageHandler.sendEvent({
+			type: MessageType.SetSelectedCount,
+			selected: selectedBytes.size,
+			focused: this._focusedByte?.byte
+		});
 	}
 
 	/**
