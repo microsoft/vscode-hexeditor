@@ -1,5 +1,9 @@
 ## Release Notes
 
+## 1.9.11 - January 25, 2023
+
+- Octal representation of the selected byte in the data inspector, thanks to [@brabli via #410](https://github.com/microsoft/vscode-hexeditor/pull/410)
+
 ## 1.9.10 - January 4, 2023
 
 - Add a badge indicating offset and selection size, thanks to [@MoralCode via #401](https://github.com/microsoft/vscode-hexeditor/pull/401)
