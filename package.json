@@ -20,11 +20,6 @@
     "Other"
   ],
   "icon": "icon.png",
-  "activationEvents": [
-    "onView:hexEditor.dataInspectorView",
-    "onCustomEditor:hexEditor.hexedit",
-    "onCommand:hexEditor.openFile"
-  ],
   "main": "./dist/extension.js",
   "browser": "./dist/web/extension.js",
   "capabilities": {
