@@ -1,0 +1,14 @@
+.data-cell {
+	font-family: var(--vscode-editor-font-family);
+	width: var(--cell-size);
+	height: var(--cell-size);
+	line-height: var(--cell-size);
+	text-align: center;
+	display: inline-block;
+	user-select: none;
+}
+
+.data-cell:focus {
+	outline-offset: 1px;
+	outline: var(--vscode-focusBorder) 2px solid;
+}

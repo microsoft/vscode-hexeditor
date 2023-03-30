@@ -1,62 +1,19 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license
 
-import { css } from "@linaria/core";
-import { styled } from "@linaria/react";
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import { InspectorLocation, MessageType } from "../../shared/protocol";
 import { PastePopup } from "./copyPaste";
-import { dataCellCls, FocusedElement, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
+import _style from "./dataDisplay.css";
+import { FocusedElement, dataCellCls, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import { DataInspectorAside } from "./dataInspector";
 import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
-import { clamp, clsx, getAsciiCharacter, getScrollDimensions, Range } from "./util";
+import { Range, clamp, clsx, getAsciiCharacter, getScrollDimensions, throwOnUndefinedAccessInDev } from "./util";
 
-const Header = styled.div`
-	font-weight: bold;
-	color: var(--vscode-editorLineNumber-activeForeground);
-	white-space: nowrap;
-	display: flex;
-	align-items: center;
-`;
-
-const Address = styled.div`
-	font-family: var(--vscode-editor-font-family);
-	color: var(--vscode-editorLineNumber-foreground);
-	text-transform: uppercase;
-	line-height: var(--cell-size);
-`;
-
-const DataCellGroup = styled.div`
-	padding: 0 calc(var(--cell-size) / 4);
-	display: inline-flex;
-	cursor: default;
-	user-select: text;
-`;
-
-const nonGraphicCharCls = css`
-	color: var(--vscode-tab-unfocusedInactiveForeground);
-`;
-
-const dataCellHoveredCls = css`
-	background: var(--vscode-editor-hoverHighlightBackground);
-`;
-
-const dataCellSelectedCls = css`
-	background: var(--vscode-editor-selectionBackground);
-	color: var(--vscode-editor-selectionForeground);
-`;
-
-const dataCellSelectedHoveredCls = css`
-	background: var(--vscode-editor-inactiveSelectionBackground);
-	color: inherit;
-`;
-
-const dataCellUnsavedCls = css`
-	background: var(--vscode-minimapGutter-modifiedBackground);
-`;
+const style = throwOnUndefinedAccessInDev(_style);
 
 const EmptyDataCell = () => (
 	<span
@@ -70,39 +27,25 @@ const Byte: React.FC<{ value: number }> = ({ value }) => (
 	<span className={dataCellCls}>{value.toString(16).padStart(2, "0").toUpperCase()}</span>
 );
 
-// why 'sticky' here? Well ultimately we want the rows to be fixed inside the
-// div but allow scrolling. "fixed" blocks scrolling when the mouse is over
-// the element, but sticky doesn't.
-const dataDisplayCls = css`
-	position: sticky;
-	inset: 0;
-	height: 0px;
-`;
 
 // Byte cells are square, and show two (hex) characters, but text cells show a
 // single character so can be narrower--by this constant multiplier.
 const textCellWidth = 0.7;
 
-const DataInspectorWrap = styled.div`
-	position: absolute;
-	top: var(--cell-size);
-	font-weight: normal;
-	z-index: 2;
-	line-height: var(--cell-size);
-	left: calc(var(--cell-size) / 4);
-	right: var(--scrollbar-width);
-	overflow: hidden;
 
-	dl {
-		gap: 0 0.4rem !important;
-	}
-`;
+const DataCellGroup: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, ...props }) => (
+	<div className={style.dataCellGroup} {...props}>{children}</div>
+);
+
+const Address: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, ...props }) => (
+	<div className={style.address} {...props}>{children}</div>
+);
 
 export const DataHeader: React.FC = () => {
 	const editorSettings = useRecoilValue(select.editorSettings);
 	const inspectorLocation = useRecoilValue(select.dataInspectorLocation);
 
-	return <Header>
+	return <div className={style.header}>
 		<DataCellGroup style={{ visibility: "hidden" }} aria-hidden="true">
 			<Address>00000000</Address>
 		</DataCellGroup>
@@ -119,7 +62,7 @@ export const DataHeader: React.FC = () => {
 			</DataCellGroup>
 		)}
 		{inspectorLocation === InspectorLocation.Aside && <DataInspector />}
-	</Header>;
+	</div>;
 };
 
 /** Component that shows a Data Inspector header, and the inspector itself directly below when appropriate. */
@@ -127,9 +70,9 @@ const DataInspector: React.FC = () => {
 	const [isInspecting, setIsInspecting] = useState(false);
 	return <DataCellGroup style={{ position: "relative", flexGrow: 1 }}>
 		{isInspecting ? "Data Inspector" : null}
-		<DataInspectorWrap style={{ "--scrollbar-width": `${getScrollDimensions().width}px` } as React.CSSProperties}>
+		<div className={style.dataInspectorWrap} style={{ "--scrollbar-width": `${getScrollDimensions().width}px` } as React.CSSProperties}>
 			<DataInspectorAside onInspecting={setIsInspecting} />
-		</DataInspectorWrap>
+		</div>
 	</DataCellGroup>;
 };
 
@@ -306,7 +249,7 @@ export const DataDisplay: React.FC = () => {
 
 	const clearPasting = useCallback(() => setPasting(undefined), []);
 
-	return <div ref={containerRef} className={dataDisplayCls}>
+	return <div ref={containerRef} className={style.dataDisplay}>
 		<DataRows />
 		<PastePopup context={pasting} hide={clearPasting} />
 	</div>;
@@ -348,19 +291,6 @@ const DataRows: React.FC = () => {
 	return <>{rows}</>;
 };
 
-const dataPageCls = css`
-	position: absolute;
-	left: 0;
-	top: 0;
-`;
-
-const dataRowCls = css`
-	position: absolute;
-	left: 0;
-	top: 0;
-	display: flex;
-`;
-
 const LoadingDataRow: React.FC<{ width: number; showDecodedText: boolean }> = ({ width, showDecodedText }) => {
 	const cells: React.ReactNode[] = [];
 	const text = "LOADING";
@@ -400,7 +330,7 @@ interface IDataPageProps {
 }
 
 const DataPage: React.FC<IDataPageProps> = props => (
-	<div className={dataPageCls} style={{ transform: `translateY(${props.top}px)` }}>
+	<div className={style.dataPage} style={{ transform: `translateY(${props.top}px)` }}>
 		<Suspense fallback={<LoadingDataRows {...props} />}>
 			<DataPageContents {...props} />
 		</Suspense>
@@ -413,7 +343,7 @@ const generateRows = (props: IDataPageProps, fn: (offset: number) => React.React
 	for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
 		rows.push(<div
 			key={i}
-			className={dataRowCls}
+			className={style.dataRow}
 			style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
 		>
 			<DataCellGroup>
@@ -451,10 +381,6 @@ const keysToOctets = new Map([
 for (const [key, value] of keysToOctets) {
 	keysToOctets.set(key.toUpperCase(), value);
 }
-
-const dataCellCharCls = css`
-	width: calc(var(--cell-size) * 0.7) !important;
-`;
 
 const DataCell: React.FC<{
 	byte: number;
@@ -587,13 +513,13 @@ const DataCell: React.FC<{
 			onFocus={onFocus}
 			onBlur={onBlur}
 			className={clsx(
-				isChar && dataCellCharCls,
+				isChar && style.dataCellChar,
 				dataCellCls,
 				className,
-				isHovered && dataCellHoveredCls,
-				isSelected && dataCellSelectedCls,
-				(isHovered && isSelected) && dataCellSelectedHoveredCls,
-				useIsUnsaved(byte) && dataCellUnsavedCls,
+				isHovered && style.dataCellHovered,
+				isSelected && style.dataCellSelected,
+				(isHovered && isSelected) && style.dataCellSelectedHovered,
+				useIsUnsaved(byte) && style.dataCellUnsaved,
 			)}
 			onMouseEnter={onMouseEnter}
 			onMouseDown={onMouseDown}
@@ -644,7 +570,7 @@ const DataRowContents: React.FC<{
 					key={i}
 					byte={boffset}
 					isChar={true}
-					className={char === undefined ? nonGraphicCharCls : undefined}
+					className={char === undefined ? style.nonGraphicChar : undefined}
 					value={value}
 				>{char === undefined ? "." : char}</DataCell>);
 			}

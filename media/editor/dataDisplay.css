@@ -1,0 +1,81 @@
+.header {
+	font-weight: bold;
+	color: var(--vscode-editorLineNumber-activeForeground);
+	white-space: nowrap;
+	display: flex;
+	align-items: center;
+}
+
+.address {
+	font-family: var(--vscode-editor-font-family);
+	color: var(--vscode-editorLineNumber-foreground);
+	text-transform: uppercase;
+	line-height: var(--cell-size);
+}
+
+.data-cell-group {
+	padding: 0 calc(var(--cell-size) / 4);
+	display: inline-flex;
+	cursor: default;
+	user-select: text;
+}
+
+.non-graphic-char {
+	color: var(--vscode-tab-unfocusedInactiveForeground);
+}
+
+.data-cell-hovered {
+	background: var(--vscode-editor-hoverHighlightBackground);
+}
+
+.data-cell-selected {
+	background: var(--vscode-editor-selectionBackground);
+	color: var(--vscode-editor-selectionForeground);
+}
+
+.data-cell-selected-hovered {
+	background: var(--vscode-editor-inactiveSelectionBackground);
+	color: inherit;
+}
+
+.data-cell-unsaved {
+	background: var(--vscode-minimapGutter-modifiedBackground);
+}
+
+.data-display {
+	position: sticky;
+	inset: 0;
+	height: 0px;
+}
+
+.data-inspector-wrap {
+	position: absolute;
+	top: var(--cell-size);
+	font-weight: normal;
+	z-index: 2;
+	line-height: var(--cell-size);
+	left: calc(var(--cell-size) / 4);
+	right: var(--scrollbar-width);
+	overflow: hidden;
+}
+
+.data-inspector-wrap dl {
+	gap: 0 0.4rem !important;
+}
+
+.data-page {
+	position: absolute;
+	left: 0;
+	top: 0;
+}
+
+.data-row {
+	position: absolute;
+	left: 0;
+	top: 0;
+	display: flex;
+}
+
+.data-cell-char {
+	width: calc(var(--cell-size) * 0.7) !important;
+}

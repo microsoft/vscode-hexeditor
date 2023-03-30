@@ -1,0 +1,35 @@
+.handle {
+	background: var(--vscode-scrollbarSlider-background);
+	flex-grow: 1;
+	transform-origin: 0 0;
+}
+
+.dragging .handle {
+	background: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+.scrollbar-container {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.scrollbar-container:hover .handle {
+	background: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+.interaction-blocker {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 1;
+}
+
+.container {
+	position: relative;
+}

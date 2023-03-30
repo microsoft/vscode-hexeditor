@@ -1,13 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license
 
-import { styled } from "@linaria/react";
 import * as base64 from "js-base64";
 import React, { useCallback, useMemo, useState } from "react";
 import { MessageType, PasteMode } from "../../shared/protocol";
+import _style from "./copyPaste.css";
 import { useUniqueId } from "./hooks";
 import { messageHandler } from "./state";
+import { throwOnUndefinedAccessInDev } from "./util";
 import { VsButton, VsWidgetPopover } from "./vscodeUi";
+
+const style = throwOnUndefinedAccessInDev(_style);
 
 const enum Encoding {
 	Base64 = "base64",
@@ -35,19 +38,6 @@ const decode: { [key in Encoding]: (data: string) => Uint8Array } = {
 	[Encoding.Utf8]: d => new TextEncoder().encode(d),
 };
 
-const RadioList = styled.div`
-	display: flex;
-	margin-bottom: 12px;
-
-	> * {
-		margin-right: 8px;
-	}
-`;
-
-const RadioContainer = styled.div`
-	display: flex;
-	align-items: center;
-`;
 
 const EncodingOption: React.FC<{
 	value: Encoding;
@@ -56,7 +46,7 @@ const EncodingOption: React.FC<{
 	onChecked: (encoding: Encoding) => void;
 }> = ({ value, enabled, checked, onChecked }) => {
 	const id = useUniqueId();
-	return <RadioContainer>
+	return <div className={style.radioContainer}>
 		<input
 			id={id}
 			type="radio"
@@ -71,7 +61,7 @@ const EncodingOption: React.FC<{
 			}}
 		/>
 		<label htmlFor={id}>{encodingLabel[value]}</label>
-	</RadioContainer>;
+	</div>;
 };
 
 const InsertionOption: React.FC<{
@@ -81,7 +71,7 @@ const InsertionOption: React.FC<{
 	onChecked: (encoding: PasteMode) => void;
 }> = ({ value, label, checked, onChecked }) => {
 	const id = useUniqueId();
-	return <RadioContainer>
+	return <div className={style.radioContainer}>
 		<input
 			id={id}
 			type="radio"
@@ -95,14 +85,8 @@ const InsertionOption: React.FC<{
 			}}
 		/>
 		<label htmlFor={id}>{label}</label>
-	</RadioContainer>;
+	</div>;
 };
-
-const ButtonWrap = styled.div`
-	display: flex;
-	width: 100%;
-	justify-content: center;
-`;
 
 export const PastePopup: React.FC<{
 	context?: { target: HTMLElement; data: string; offset: number; };
@@ -128,7 +112,7 @@ export const PastePopup: React.FC<{
 	}, [decoded, mode, hide, context?.offset]);
 
 	return <VsWidgetPopover anchor={context?.target || null} hide={hide} visible={!!context}>
-		<RadioList>
+		<div className={style.radioList}>
 			<span>Paste as:</span>
 			{encodings.map(e => <EncodingOption
 				key={e}
@@ -136,20 +120,20 @@ export const PastePopup: React.FC<{
 				enabled={isData[e](context?.data || "")}
 				checked={e === encoding}
 				onChecked={setEncoding}
-				/>
+			/>
 			)}
-		</RadioList>
-		<RadioList>
+		</div>
+		<div className={style.radioList}>
 			<span>Paste mode:</span>
 			<InsertionOption label="Replace" checked={mode == PasteMode.Replace} value={PasteMode.Replace} onChecked={setMode} />
 			<InsertionOption label="Insert" checked={mode == PasteMode.Insert} value={PasteMode.Insert} onChecked={setMode} />
-		</RadioList>
-		<ButtonWrap>
+		</div>
+		<div className={style.buttonWrap}>
 			<VsButton disabled={!decodedValid} onClick={doReplace}>
 				{decodedValid
 					? <>{mode === PasteMode.Replace ? "Replace" : "Insert"} {decoded.length} bytes</>
 					: "Encoding Error"}
-				</VsButton>
-		</ButtonWrap>
+			</VsButton>
+		</div>
 	</VsWidgetPopover>;
 };

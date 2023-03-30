@@ -3,7 +3,28 @@
 
 // Assorted helper functions
 
-import { css } from "@linaria/core";
+import _style from "./util.css";
+
+/**
+ * Wraps the object in another object that throws when accessing undefined properties.
+ */
+export const throwOnUndefinedAccessInDev = <T extends object>(value: T): T => {
+	if (process.env.NODE_ENV === "production") {
+		return value; // check that react does too, and esbuild defines
+	}
+
+	return new Proxy<T>(value, {
+		get: (target, prop) => {
+			if (prop in target) {
+				return (target as any)[prop];
+			}
+
+			throw new Error(`Accessing undefined property ${String(prop)}`);
+		}
+	});
+};
+
+const style = throwOnUndefinedAccessInDev(_style);
 
 export const isMac = navigator.userAgent.indexOf("Mac OS X") >= 0;
 
@@ -226,13 +247,6 @@ export const parseHexDigit = (s: string): number | undefined => {
 	}
 };
 
-const scrollbarCls = css`
-	position: absolute;
-	visibility: hidden;
-	overflow: scroll;
-	width: 100px;
-	height: 100px;
-`;
 
 /** Calculates the dimensions of the browser scrollbar */
 export const getScrollDimensions = (() => {
@@ -243,7 +257,7 @@ export const getScrollDimensions = (() => {
 		}
 
 		const el = document.createElement("div");
-		el.classList.add(scrollbarCls);
+		el.classList.add(style.scrollbar);
 		document.body.appendChild(el);
 		const width = (el.offsetWidth - el.clientWidth);
 		const height = (el.offsetHeight - el.clientHeight);

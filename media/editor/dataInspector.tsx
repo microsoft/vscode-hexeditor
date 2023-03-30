@@ -1,13 +1,15 @@
-import { css } from "@linaria/core";
-import { styled } from "@linaria/react";
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useRecoilValue } from "recoil";
 import { Endianness } from "../../shared/protocol";
 import { FocusedElement, getDataCellElement, useDisplayContext } from "./dataDisplayContext";
+import _style from "./dataInspector.css";
 import { inspectableTypes } from "./dataInspectorProperties";
 import { useFileBytes, usePersistedState } from "./hooks";
 import * as select from "./state";
+import { throwOnUndefinedAccessInDev } from "./util";
 import { VsTooltipPopover } from "./vscodeUi";
+
+const style = throwOnUndefinedAccessInDev(_style);
 
 /** Component that shows a data inspector when bytes are hovered. */
 export const DataInspectorHover: React.FC = () => {
@@ -74,25 +76,6 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
 
 const lookahead = 8;
 
-const TypesList = styled.dl`
-	display: grid;
-	gap: 0.3rem 1rem;
-	align-items: center;
-	margin: 0;
-	max-width: calc(100vw - 30px);
-
-	dd, dl {
-		margin: 0;
-	}
-
-	dd {
-		font-family: var(--vscode-editor-font-family);
-		user-select: auto;
-	}
-`;
-
-const endOfFileCls = css`opacity: 0.8`;
-
 /** Inner contents of the data inspector, reused between the hover and aside inspector views. */
 const InspectorContents: React.FC<{
 	offset: number;
@@ -105,33 +88,25 @@ const InspectorContents: React.FC<{
 	const le = endianness === Endianness.Little;
 
 	return <>
-		<TypesList style={{ gridTemplateColumns: "max-content ".repeat(columns) }}>
+		<dl className={style.types} style={{ gridTemplateColumns: "max-content ".repeat(columns) }}>
 			{inspectableTypes.map(({ label, convert, minBytes }) =>
 				<React.Fragment key={label}>
 					<dt>{label}</dt>
-					<dd>{target.length < minBytes ? <span className={endOfFileCls}>End of File</span> : convert(dv, le)}</dd>
+					<dd>{target.length < minBytes ? <span style={{ opacity: 0.8 }}>End of File</span> : convert(dv, le)}</dd>
 				</React.Fragment>
 			)}
-		</TypesList>
+		</dl>
 		<EndiannessToggle endianness={endianness} setEndianness={setEndianness} />
 	</>;
 };
 
-const EndiannessToggleContainer = styled.div`
-	display: flex;
-	align-items: center;
-
-	input {
-		margin: 0 0.3rem 0 0;
-	}
-`;
 
 /** Controlled checkbox that toggles between little and big endian. */
 const EndiannessToggle: React.FC<{
 	endianness: Endianness;
 	setEndianness: (e: Endianness) => void;
 }> = ({ endianness, setEndianness }) => (
-	<EndiannessToggleContainer>
+	<div className={style.endiannessToggleContainer}>
 		<input
 			type="checkbox"
 			id="endian-checkbox"
@@ -139,5 +114,5 @@ const EndiannessToggle: React.FC<{
 			onChange={evt => setEndianness(evt.target.checked ? Endianness.Little : Endianness.Big)}
 		/>
 		<label htmlFor="endian-checkbox">Little Endian</label>
-	</EndiannessToggleContainer>
+	</div>
 );

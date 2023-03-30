@@ -1,0 +1,12 @@
+.gear {
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.content {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	grid-gap: 0.5em;
+	align-items: center;
+}

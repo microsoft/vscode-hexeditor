@@ -1,11 +1,13 @@
-import { css } from "@linaria/core";
 import { EventEmitter, IDisposable } from "cockatiel";
 import { createContext, useContext, useEffect, useState } from "react";
 import { SetterOrUpdater } from "recoil";
 import { HexDocumentEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
+import _style from "./dataDisplayContext.css";
 import { messageHandler, registerHandler } from "./state";
-import { Range } from "./util";
+import { Range, throwOnUndefinedAccessInDev } from "./util";
+
+const style = throwOnUndefinedAccessInDev(_style);
 
 export class FocusedElement {
 	public static readonly zero = new FocusedElement(false, 0);
@@ -384,20 +386,7 @@ export const useIsUnsaved = (byte: number): boolean => {
 	return unsaved;
 };
 
-export const dataCellCls = css`
-	font-family: var(--vscode-editor-font-family);
-	width: var(--cell-size);
-	height: var(--cell-size);
-	line-height: var(--cell-size);
-	text-align: center;
-	display: inline-block;
-	user-select: none;
-
-	&:focus {
-		outline-offset: 1px;
-		outline: var(--vscode-focusBorder) 2px solid;
-	}
-`;
+export const dataCellCls = style.dataCell;
 
 export const getDataCellElement = (element: FocusedElement) =>
 	document.querySelector(`.${dataCellCls}[data-key="${element.key}"]`);

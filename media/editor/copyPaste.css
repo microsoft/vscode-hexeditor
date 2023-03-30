@@ -1,0 +1,19 @@
+.radio-list {
+	display: flex;
+	margin-bottom: 12px;
+}
+
+.radio-list > * {
+	margin-right: 8px;
+}
+
+.radio-container {
+	display: flex;
+	align-items: center;
+}
+
+.button-wrap {
+	display: flex;
+	width: 100%;
+	justify-content: center;
+}

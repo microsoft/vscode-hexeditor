@@ -1,6 +1,6 @@
 const esbuild = require("esbuild");
 const svgr = require("esbuild-plugin-svgr");
-const linaria = require("@linaria/esbuild");
+const css = require("esbuild-css-modules-plugin");
 
 const watch = process.argv.includes("--watch");
 const minify = !watch || process.argv.includes("--minify");
@@ -82,14 +82,6 @@ esbuild
 					"process.env.NODE_ENV": defineProd ? '"production"' : '"development"',
 			  }
 			: undefined,
-		plugins: [
-			svgr(),
-			linaria.default({
-				sourceMap: watch,
-				babelOptions: {
-					presets: ["@babel/preset-typescript", "@babel/preset-react"],
-				},
-			}),
-		],
+		plugins: [svgr(), css({ v2: true, filter: /\.css$/i })],
 	})
 	.catch(() => process.exit(1));

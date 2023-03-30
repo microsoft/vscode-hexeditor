@@ -14,10 +14,13 @@
 	"typescript.preferences.quoteStyle": "double",
 	"editor.formatOnSave": true,
 	"[typescriptreact]": {
-		"editor.defaultFormatter": "vscode.typescript-language-features"
+	"editor.defaultFormatter": "vscode.typescript-language-features"
 	},
 	"[typescript]": {
 		"editor.defaultFormatter": "vscode.typescript-language-features"
+	},
+	"[css]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
 	"editor.codeActionsOnSave": {
 		"source.organizeImports": true
