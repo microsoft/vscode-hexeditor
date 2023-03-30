@@ -1,15 +1,12 @@
-import { css } from "@linaria/core";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { DataDisplay } from "./dataDisplay";
+import _style from "./scrollContainer.css";
 import * as select from "./state";
-import { Range } from "./util";
+import { Range, throwOnUndefinedAccessInDev } from "./util";
 import { VirtualScrollContainer } from "./virtualScrollContainer";
 
-const wrapperCls = css`
-	flex-grow: 1;
-	flex-basis: 0;
-`;
+const style = throwOnUndefinedAccessInDev(_style);
 
 /**
  * "Overscroll" of data that the hex editor will try to load. For example, if
@@ -75,7 +72,7 @@ export const ScrollContainer: React.FC = () => {
 
 	return (
 		<VirtualScrollContainer
-			className={wrapperCls}
+			className={style.wrapper}
 			scrollTop={scrollTop}
 			scrollStart={dimension.rowPxHeight * (bounds.start / columnWidth)}
 			scrollEnd={dimension.rowPxHeight * (Math.ceil(bounds.end / columnWidth) + 1) + extraScroll}

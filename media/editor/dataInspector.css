@@ -1,0 +1,26 @@
+.types {
+	display: grid;
+	gap: 0.3rem 1rem;
+	align-items: center;
+	margin: 0;
+	max-width: calc(100vw - 30px);
+}
+
+.types dd {
+
+	font-family: var(--vscode-editor-font-family);
+	user-select: auto;
+}
+
+.types dd, .types dl {
+	margin: 0;
+}
+
+.endianness-toggle-container {
+	display: flex;
+	align-items: center;
+}
+
+.endianness-toggle-container input {
+	margin: 0 0.3rem 0 0;
+}

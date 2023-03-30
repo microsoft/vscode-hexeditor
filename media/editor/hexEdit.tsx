@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { styled } from "@linaria/react";
 import React, { Suspense, useLayoutEffect, useMemo } from "react";
 import { render } from "react-dom";
 import { RecoilRoot, useRecoilState, useRecoilValue, useSetRecoilState } from "recoil";
@@ -10,31 +9,16 @@ import { DataHeader } from "./dataDisplay";
 import { DataDisplayContext, DisplayContext } from "./dataDisplayContext";
 import { DataInspectorHover } from "./dataInspector";
 import { FindWidget } from "./findWidget";
+import _style from "./hexEdit.css";
 import { useTheme } from "./hooks";
 import { ReadonlyWarning } from "./readonlyWarning";
 import { ScrollContainer } from "./scrollContainer";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
+import { throwOnUndefinedAccessInDev } from "./util";
 import { VsProgressIndicator } from "./vscodeUi";
 
-const Container = styled.div`
-	display: flex;
-	flex-direction: column;
-	width: 100vw;
-	height: 100vh;
-
-	:global() {
-		body {
-			margin: 0;
-			padding: 0;
-		}
-
-		html {
-			padding: 0;
-			overflow: hidden;
-		}
-	}
-`;
+const style = throwOnUndefinedAccessInDev(_style);
 
 const Root: React.FC = () => {
 	const setDimensions = useSetRecoilState(select.dimensions);
@@ -72,14 +56,14 @@ const Editor: React.FC = () => {
 	}
 
 	return <DataDisplayContext.Provider value={ctx}>
-		<Container style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
+		<div className={style.container} style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
 			<FindWidget />
 			<SettingsGear />
 			<DataHeader />
 			<ScrollContainer />
 			<ReadonlyWarning />
 			{inspectorLocation === InspectorLocation.Hover && <DataInspectorHover />}
-		</Container>
+		</div>
 	</DataDisplayContext.Provider>;
 };
 

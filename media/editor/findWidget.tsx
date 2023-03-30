@@ -1,5 +1,3 @@
-import { css } from "@linaria/core";
-import { styled } from "@linaria/react";
 import ArrowDown from "@vscode/codicons/src/icons/arrow-down.svg";
 import ArrowUp from "@vscode/codicons/src/icons/arrow-up.svg";
 import CaseSensitive from "@vscode/codicons/src/icons/case-sensitive.svg";
@@ -15,65 +13,14 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
 import { LiteralSearchQuery, MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
-import { dataCellCls, FocusedElement, useDisplayContext } from "./dataDisplayContext";
+import { FocusedElement, dataCellCls, useDisplayContext } from "./dataDisplayContext";
+import _style from "./findWidget.css";
 import { usePersistedState } from "./hooks";
 import * as select from "./state";
-import { clsx, hexDecode, isHexString, parseHexDigit, Range } from "./util";
+import { Range, clsx, hexDecode, isHexString, parseHexDigit, throwOnUndefinedAccessInDev } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
 
-const Wrapper = styled.div`
-	position: absolute;
-	top: 0;
-	right: 28px;
-	width: 50%;
-	max-width: 420px;
-	transform: translateY(-100%);
-	transition: transform 300ms;
-	border: 1px solid var(--vscode-contrastBorder);
-	color: var(--vscode-editorWidget-foreground);
-	background: var(--vscode-editorWidget-background);
-	padding: 2px;
-	z-index: 1;
-	display: flex;
-`;
-
-const InputRow = styled.div`
-	display: flex;
-	align-items: center;
-	justify-content: start;
-	margin: 2px 0;
-`;
-
-const resultBadgeCls = css`
-	margin: 0 0 0 3px;
-	padding: 2px 0 0 2px;
-	min-width: 69px;
-	font-size: 0.9em;
-	white-space: nowrap;
-
-	> a {
-		cursor: pointer;
-	}
-`;
-
-const visibleCls = css`
-	transform: translateY(0);
-	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
-`;
-
-const replaceToggleCls = css`
-	align-self: stretch;
-	height: initial !important;
-	margin: 1px !important;
-	padding: 0 !important;
-`;
-
-const ControlsContainer = styled.div`
-	width: 0;
-	flex-grow: 1;
-`;
-
-const textFieldCls = css`flex-grow: 1`;
+const style = throwOnUndefinedAccessInDev(_style);
 
 const queryDebounce = 200;
 
@@ -361,19 +308,19 @@ export const FindWidget: React.FC = () => {
 
 	const toggleFindReplace = useCallback(() => setReplaceVisible(v => !v), []);
 
-	return <Wrapper tabIndex={visible ? undefined : -1} className={clsx(visible && visibleCls)}>
+	return <div tabIndex={visible ? undefined : -1} className={clsx(style.wrapper, visible && style.visible)}>
 		{results.progress < 1 && <VsProgressIndicator />}
 		{!ctx.isReadonly && (
-			<VsIconButton title="Toggle Replace" onClick={toggleFindReplace} className={replaceToggleCls}>
+			<VsIconButton title="Toggle Replace" onClick={toggleFindReplace} className={style.replaceToggle}>
 				{replaceVisible ? <ChevronDown /> : <ChevronRight />}
 			</VsIconButton>
 		)}
-		<ControlsContainer>
-			<InputRow>
+		<div className={style.controlsContainer}>
+			<div className={style.inputRow}>
 				<VsTextFieldGroup
 					buttons={3}
 					ref={textFieldRef}
-					outerClassName={textFieldCls}
+					outerClassName={style.textField}
 					placeholder={isBinaryMode ? "Find Bytes (hex)" : "Find Text"}
 					value={query}
 					onChange={onQueryChange}
@@ -403,10 +350,10 @@ export const FindWidget: React.FC = () => {
 				<VsIconButton title="Close Widget (Esc)" onClick={closeWidget}>
 					<Close />
 				</VsIconButton>
-			</InputRow>
-			{replaceVisible && <InputRow>
+			</div>
+			{replaceVisible && <div className={style.inputRow}>
 				<VsTextFieldGroup
-					outerClassName={textFieldCls}
+					outerClassName={style.textField}
 					buttons={0}
 					value={replace}
 					onChange={onReplaceChange}
@@ -420,9 +367,9 @@ export const FindWidget: React.FC = () => {
 				<VsIconButton disabled={typeof replaceOrError === "string" || results.progress < 1 || !results.results.length} onClick={replaceAll} title="Replace All Matches">
 					<ReplaceAll />
 				</VsIconButton>
-			</InputRow>}
-		</ControlsContainer>
-	</Wrapper>;
+			</div>}
+		</div>
+	</div>;
 };
 
 
@@ -436,7 +383,7 @@ const ResultBadge: React.FC<{
 		? <a role="button" title={`More than ${results.results.length} results, click to find all`} onClick={onUncap}>{resultCountStr}+</a>
 		: <span title={`${results.results.length} results`}>{resultCountStr}</span>;
 
-	return <div className={resultBadgeCls}>
+	return <div className={style.resultBadge}>
 		{results.progress < 1
 			? `Found ${resultCountStr}...`
 			: !results.results.length

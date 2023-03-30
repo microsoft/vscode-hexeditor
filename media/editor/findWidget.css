@@ -1,0 +1,55 @@
+.wrapper {
+	position: absolute;
+	top: 0;
+	right: 28px;
+	width: 50%;
+	max-width: 420px;
+	transform: translateY(-100%);
+	transition: transform 300ms;
+	border: 1px solid var(--vscode-contrastBorder);
+	color: var(--vscode-editorWidget-foreground);
+	background: var(--vscode-editorWidget-background);
+	padding: 2px;
+	z-index: 1;
+	display: flex;
+}
+
+.input-row {
+	display: flex;
+	align-items: center;
+	justify-content: start;
+	margin: 2px 0;
+}
+
+.result-badge {
+	margin: 0 0 0 3px;
+	padding: 2px 0 0 2px;
+	min-width: 69px;
+	font-size: 0.9em;
+	white-space: nowrap;
+}
+
+.result-badge a {
+	cursor: pointer;
+}
+
+.visible {
+	transform: translateY(0);
+	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
+}
+
+.replace-toggle {
+	align-self: stretch;
+	height: initial !important;
+	margin: 1px !important;
+	padding: 0 !important;
+}
+
+.controls-container {
+	width: 0;
+	flex-grow: 1;
+}
+
+.text-field {
+	flex-grow: 1;
+}

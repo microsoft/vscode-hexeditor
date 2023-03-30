@@ -1,48 +1,9 @@
-import { css } from "@linaria/core";
-import { styled } from "@linaria/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useSize } from "./hooks";
-import { clamp, clsx, getScrollDimensions } from "./util";
+import { clamp, clsx, getScrollDimensions, throwOnUndefinedAccessInDev } from "./util";
+import _style from "./virtualScrollContainer.css";
 
-const Handle = styled.div`
-	background: var(--vscode-scrollbarSlider-background);
-	flex-grow: 1;
-	transform-origin: 0 0;
-`;
-
-const draggingCls = css`
-	${Handle} {
-		background: var(--vscode-scrollbarSlider-activeBackground);
-	}
-`;
-
-const ScrollbarContainer = styled.div`
-	position: absolute;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	display: flex;
-	flex-direction: column;
-
-	:hover ${Handle} {
-		background: var(--vscode-scrollbarSlider-hoverBackground);
-	}
-`;
-
-
-const scrollInterationBlockerCls = css`
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	z-index: 1;
-`;
-
-const containerCls = css`
-	position: relative;
-`;
-
+const style = throwOnUndefinedAccessInDev(_style);
 
 /**
  * Generic virtual scroll container. We use this instead
@@ -70,7 +31,7 @@ export const VirtualScrollContainer: React.FC<{
 	const scrollHeight = scrollEnd - scrollStart;
 	const visible = scrollHeight > size.height;
 
-	let style: React.CSSProperties | undefined;
+	let scrollStyle: React.CSSProperties | undefined;
 	let handleTop: number;
 	let handleHeight: number;
 	if (visible) {
@@ -81,7 +42,7 @@ export const VirtualScrollContainer: React.FC<{
 		// Likewise, the distance from the top is how far through the scrollHeight
 		// the current scrollTop is--adjusting for the handle height to keep it on screen.
 		handleTop = Math.min(1, (scrollTop - scrollStart) / (scrollHeight - size.height)) * (size.height - handleHeight);
-		style = {
+		scrollStyle = {
 			opacity: 1,
 			pointerEvents: "auto",
 			transform: `translateY(${handleTop}px) scaleY(${handleHeight / size.height})`
@@ -137,7 +98,7 @@ export const VirtualScrollContainer: React.FC<{
 		}
 
 		const blocker = document.createElement("div");
-		blocker.classList.add(scrollInterationBlockerCls);
+		blocker.classList.add(style.interactionBlocker);
 		document.body.appendChild(blocker);
 
 		const onMove = (evt: MouseEvent) => {
@@ -159,14 +120,14 @@ export const VirtualScrollContainer: React.FC<{
 		};
 	}, [drag, scrollHeight, size.height]);
 
-	return <div className={clsx(containerCls, className)} onWheel={onWheel}>
+	return <div className={clsx(style.container, className)} onWheel={onWheel}>
 		{children}
-		<ScrollbarContainer style={{
+		<div style={{
 			opacity: visible ? 1 : 0,
 			pointerEvents: visible ? "auto" : "none",
 			width: getScrollDimensions().width,
-		}} className={clsx(drag && draggingCls)} ref={wrapperRef} onMouseDown={onBarMouseDown}>
-			<Handle role="scrollbar" style={style} onMouseDown={onHandleMouseDown} />
-		</ScrollbarContainer>
+		}} className={clsx(style.scrollbarContainer, drag && style.dragging)} ref={wrapperRef} onMouseDown={onBarMouseDown}>
+			<div className={style.handle} role="scrollbar" style={scrollStyle} onMouseDown={onHandleMouseDown} />
+		</div>
 	</div>;
 };

@@ -1,15 +1,12 @@
 import SettingsGearIcon from "@vscode/codicons/src/icons/settings-gear.svg";
 import React, { useState } from "react";
 import { useRecoilState } from "recoil";
+import _style from "./settings.css";
 import * as select from "./state";
+import { throwOnUndefinedAccessInDev } from "./util";
 import { VsIconButton, VsTextField, VsWidgetPopover } from "./vscodeUi";
-import { css } from "@linaria/core";
 
-const settingsGearCls = css`
-	position: absolute;
-	top: 0;
-	left: 0;
-`;
+const style = throwOnUndefinedAccessInDev(_style);
 
 export const SettingsGear: React.FC = () => {
 	const [isOpen, setIsOpen] = useState(false);
@@ -17,7 +14,7 @@ export const SettingsGear: React.FC = () => {
 
 	return (
 		<>
-			<VsIconButton title="Open Settings" className={settingsGearCls} onClick={() => setIsOpen(!isOpen)} ref={setAnchor}>
+			<VsIconButton title="Open Settings" className={style.gear} onClick={() => setIsOpen(!isOpen)} ref={setAnchor}>
 				<SettingsGearIcon />
 			</VsIconButton>
 			<VsWidgetPopover anchor={anchor} hide={() => setIsOpen(false)} visible={isOpen}>
@@ -27,14 +24,7 @@ export const SettingsGear: React.FC = () => {
 	);
 };
 
-const contentCls = css`
-	display: grid;
-	grid-template-columns: 1fr auto;
-	grid-gap: 0.5em;
-	align-items: center;
-`;
-
-const SettingsContent: React.FC = () => <div className={contentCls}>
+const SettingsContent: React.FC = () => <div className={style.content}>
 	<TextCheckbox />
 	<ColumnWidth />
 </div>;
@@ -42,7 +32,7 @@ const SettingsContent: React.FC = () => <div className={contentCls}>
 const TextCheckbox: React.FC = () => {
 	const [settings, updateSettings] = useRecoilState(select.editorSettings);
 
-  return (
+	return (
 		<>
 			<label htmlFor="text-checkbox">Show Decoded Text</label>
 			<input
@@ -66,7 +56,7 @@ const ColumnWidth: React.FC = () => {
 		});
 	};
 
-  return (
+	return (
 		<>
 			<label htmlFor="column-width">Bytes per Row</label>
 			<VsTextField
