@@ -2,10 +2,12 @@
 // Licensed under the MIT license.
 import { Policy } from "cockatiel";
 import type fs from "fs";
+import type os from "os";
 import * as vscode from "vscode";
 import { FileAccessor, FileWriteOp } from "../shared/fileAccessor";
 
 declare function require(_name: "fs"): typeof fs;
+declare function require(_name: "os"): typeof os;
 
 export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Array): Promise<FileAccessor> => {
 	if (uri.scheme === "untitled") {
@@ -21,10 +23,20 @@ export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Ar
 	// todo@connor4312/lramos: push forward extension host API for this.
 	if (uri.scheme === "file") {
 		try {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			// eslint-disable @typescript-eslint/no-var-requires
 			const fs = require("fs");
-			if ((await fs.promises.stat(uri.fsPath)).isFile()) {
-				return new NativeFileAccessor(uri, fs);
+			const os = require("os");
+			// eslint-enable @typescript-eslint/no-var-requires	
+
+			const fileStats = await fs.promises.stat(uri.fsPath);
+			const { uid, gid } = os.userInfo();
+
+			const isReadonly: boolean = (uid === -1 || uid === fileStats.uid) ? !(fileStats.mode & 0o200) :	// owner		 
+										(gid === fileStats.gid) ? !(fileStats.mode & 0o020) : // group
+										!(fileStats.mode & 0o002); // other	
+
+			if (fileStats.isFile()) {
+				return new NativeFileAccessor(uri, isReadonly, fs);
 			}
 		} catch {
 			// probably not node.js, or file does not exist
@@ -39,16 +51,12 @@ class FileHandleContainer {
 	private handle?: fs.promises.FileHandle;
 	private disposeTimeout?: NodeJS.Timeout;
 	private disposed = false;
-	private _isReadonly?: boolean;
 
 	constructor(
 		public readonly path: string,
+		public readonly flags: number,
 		private readonly _fs: typeof fs,
 	) { }
-
-	public get isReadonly() {
-		return this._isReadonly;
-	}
 
 	/** Borrows the file handle to run the function. */
 	public borrow<R>(fn: (handle: fs.promises.FileHandle) => R): Promise<R> {
@@ -107,21 +115,9 @@ class FileHandleContainer {
 		while (this.borrowQueue.length) {
 			if (!this.handle) {
 				try {
-					this.handle = await this._fs.promises.open(this.path, this._fs.constants.O_RDWR | this._fs.constants.O_CREAT);
-					this._isReadonly = false;
+					this.handle = await this._fs.promises.open(this.path, this.flags | this._fs.constants.O_CREAT);
 				} catch (e) {
-					// attemps to open in read-only mode if permission error is caught
-					if ((e as NodeJS.ErrnoException).code === 'EPERM' ||
-						(e as NodeJS.ErrnoException).code === 'EACCES') {
-						try {
-							this.handle = await this._fs.promises.open(this.path, this._fs.constants.O_RDONLY | this._fs.constants.O_CREAT);
-							this._isReadonly = true;
-						} catch (e) {
-							return this.rejectAll(e as Error);
-						}
-					} else {
-						return this.rejectAll(e as Error);
-					}
+					return this.rejectAll(e as Error);
 				}
 			}
 
@@ -153,15 +149,14 @@ class NativeFileAccessor implements FileAccessor {
 	public readonly supportsIncremetalAccess = true;
 	private readonly handle: FileHandleContainer;
 	public readonly pageSize = filePageSize;
+	public readonly isReadonly?: boolean | undefined;
 
-	constructor(uri: vscode.Uri, private readonly fs: typeof import("fs")) {
+	constructor(uri: vscode.Uri, isReadonly: boolean, private readonly fs: typeof import("fs")) {
 		this.uri = uri.toString();
-		this.handle = new FileHandleContainer(uri.fsPath, fs);
+		this.isReadonly = isReadonly;
+		this.handle = new FileHandleContainer(uri.fsPath, isReadonly ? fs.constants.O_RDONLY : fs.constants.O_RDWR, fs);
 	}
 
-	public get isReadonly() {
-		return this.handle.isReadonly;
-	}
 
 	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable {
 		return watchWorkspaceFile(this.uri, onDidChange, onDidDelete);
