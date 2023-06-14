@@ -4,8 +4,6 @@ trigger:
   branches:
     include:
       - main
-  tags:
-    include: ["*"]
 pr: none
 
 resources:
@@ -15,6 +13,12 @@ resources:
       name: microsoft/vscode-engineering
       ref: main
       endpoint: Monaco
+
+parameters:
+  - name: publishExtension
+    displayName: 🚀 Publish Extension
+    type: boolean
+    default: false
 
 extends:
   template: azure-pipelines/extension/stable.yml@templates
@@ -30,3 +34,5 @@ extends:
         displayName: Run ESLint
       - script: xvfb-run -a npm test
         displayName: Run Tests
+
+    publishExtension: ${{ parameters.publishExtension }}
