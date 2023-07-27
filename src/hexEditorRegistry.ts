@@ -35,6 +35,7 @@ export class HexEditorRegistry extends Disposable {
 	constructor() {
 		super();
 		this._register(vscode.window.tabGroups.onDidChangeTabs(this.onChangedTabs, this));
+		this._register(vscode.window.tabGroups.onDidChangeTabGroups(this.onChangedTabs, this));
 		this.onChangedTabs();
 	}
 
