@@ -97,7 +97,7 @@ export const DataDisplay: React.FC = () => {
 	// When the focused byte changes, make sure it's in view
 	useEffect(() => {
 		const disposable = ctx.onDidChangeAnyFocus(byte => {
-			if (!byte) {
+			if (byte === undefined) {
 				return;
 			}
 
