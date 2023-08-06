@@ -34,7 +34,4 @@ Another option is to give the data inspector a dedicated activity bar entry on t
 
 ## Known Issues
 
-- Undoing a pending edit causes editor to get into a bad state [#161](https://github.com/microsoft/vscode-hexeditor/issues/161)
-- Searching in large files can become hit or miss [#149](https://github.com/microsoft/vscode-hexeditor/issues/149)
-
-To track all issues / file a new issue please go to the Github repo https://github.com/microsoft/vscode-hexeditor/issues
+To track existing issues or report a new one, please visit the GitHub Issues page at https://github.com/microsoft/vscode-hexeditor/issues
