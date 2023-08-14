@@ -8,6 +8,7 @@ import { HexDocumentEditReference } from "../shared/hexDocumentModel";
 import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, ICodeSettings, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
+import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
@@ -91,6 +92,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		};
 
 		disposables.push(accessor.watch(onDidChange, onDidDelete));
+
+		document.onDidDispose(() => disposeAll(disposables));
 
 		return document;
 	}
