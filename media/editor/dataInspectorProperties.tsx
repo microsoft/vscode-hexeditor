@@ -1,3 +1,5 @@
+import { getAsciiCharacter } from "./util";
+
 /** Reads a uint24 at offset 0 from the buffer. */
 const getUint24 = (arrayBuffer: ArrayBuffer, le: boolean) => {
 	const buf = new Uint8Array(arrayBuffer);
@@ -76,9 +78,8 @@ export const inspectableTypes: readonly IInspectableType[] = [
 		label: "UTF-8",
 		minBytes: 1,
 		convert: dv => {
-			const utf8 = new TextDecoder("utf-8").decode(dv.buffer);
-			for (const char of utf8) return char;
-			return utf8;
+			const utf8 = getAsciiCharacter(dv.getUint8(0));
+			return utf8 == undefined ? "" : utf8;
 		},
 	},
 	{
