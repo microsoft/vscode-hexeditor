@@ -105,4 +105,31 @@ export const inspectableTypes: readonly IInspectableType[] = [
 			return utf8;
 		},
 	},
+	{
+		label: "BIG5",
+		minBytes: 2,
+		convert: dv => {
+			const utf8 = new TextDecoder("big5").decode(dv.buffer);
+			for (const char of utf8) return char;
+			return utf8;
+		},
+	},
+	{
+		label: "EUC-KR",
+		minBytes: 2,
+		convert: dv => {
+			const utf8 = new TextDecoder("euc-kr").decode(dv.buffer);
+			for (const char of utf8) return char;
+			return utf8;
+		},
+	},
+	{
+		label: "EUC-JP",
+		minBytes: 2,
+		convert: dv => {
+			const utf8 = new TextDecoder("euc-jp").decode(dv.buffer);
+			for (const char of utf8) return char;
+			return utf8;
+		},
+	},
 ];
