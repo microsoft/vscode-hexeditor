@@ -124,10 +124,10 @@ export const inspectableTypes: readonly IInspectableType[] = [
 		},
 	},
 	{
-		label: "EUC-JP",
+		label: "SHIFT-JIS",
 		minBytes: 2,
 		convert: dv => {
-			const utf8 = new TextDecoder("euc-jp").decode(dv.buffer);
+			const utf8 = new TextDecoder("shift-jis").decode(dv.buffer);
 			for (const char of utf8) return char;
 			return utf8;
 		},
