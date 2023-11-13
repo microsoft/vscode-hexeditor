@@ -115,10 +115,10 @@ export const inspectableTypes: readonly IInspectableType[] = [
 		},
 	},
 	{
-		label: "EUC-KR",
+		label: "ISO-2022-KR",
 		minBytes: 2,
 		convert: dv => {
-			const utf8 = new TextDecoder("euc-kr").decode(dv.buffer);
+			const utf8 = new TextDecoder("iso-2022-kr").decode(dv.buffer);
 			for (const char of utf8) return char;
 			return utf8;
 		},
