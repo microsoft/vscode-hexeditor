@@ -106,8 +106,8 @@
         "title": "Hex Editor: Go To Offset"
       },
       {
-        "command": "hexEditor.selectUntilOffset",
-        "title": "Hex Editor: Select Until Offset"
+        "command": "hexEditor.selectBetweenOffsets",
+        "title": "Hex Editor: Select Between Offsets"
       }
     ],
     "viewsContainers": {

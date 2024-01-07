@@ -4,7 +4,7 @@ import { ExtensionHostMessageHandler, MessageType } from "../shared/protocol";
 const addressRe = /^0x[a-f0-9]+$/i;
 const decimalRe = /^[0-9]+$/i;
 
-export const showSelectUntilOffset = (messaging: ExtensionHostMessageHandler): void => {
+export const showSelectBetweenOffsets = (messaging: ExtensionHostMessageHandler): void => {
     const startingInput = vscode.window.createInputBox();
     const endingInput = vscode.window.createInputBox();
     startingInput.placeholder = "Enter offset to select from";
