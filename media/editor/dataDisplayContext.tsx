@@ -218,6 +218,15 @@ export class DisplayContext {
 			this.setSelectionRanges([Range.single(msg.offset)]);
 		});
 
+		registerHandler(MessageType.SetFocusedByteRange, msg => {
+			if (!document.hasFocus()) {
+				window.focus();
+			}
+
+			this.focusedElement = new FocusedElement(false, msg.startingOffset);
+			this.setSelectionRanges([Range.inclusive(msg.startingOffset, msg.endingOffset)]);
+		});
+
 		this.selectionChangeEmitter.addListener(() => this.publishSelections());
 	}
 

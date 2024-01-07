@@ -15,6 +15,7 @@ export const enum MessageType {
 	StashDisplayedOffset,
 	GoToOffset,
 	SetFocusedByte,
+	SetFocusedByteRange,
 	SetSelectedCount,
 	PopDisplayedOffset,
 	//#endregion
@@ -126,6 +127,13 @@ export interface SetFocusedByteMessage {
 	offset: number;
 }
 
+/** Focuses a byte range in the editor. */
+export interface SetFocusedByteRangeMessage {
+	type: MessageType.SetFocusedByteRange;
+	startingOffset: number;
+	endingOffset: number;
+}
+
 /** sets the count of selected bytes. */
 export interface SetSelectedCountMessage {
 	type: MessageType.SetSelectedCount;
@@ -152,6 +160,7 @@ export type ToWebviewMessage =
 	| GoToOffsetMessage
 	| SetEditsMessage
 	| SetFocusedByteMessage
+	| SetFocusedByteRangeMessage
 	| PopDisplayedOffsetMessage
 	| StashDisplayedOffsetMessage;
 
