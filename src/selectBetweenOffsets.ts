@@ -13,6 +13,7 @@ export const showSelectBetweenOffsets = (messaging: ExtensionHostMessageHandler)
 
     messaging.sendEvent({ type: MessageType.StashDisplayedOffset });
 
+    let inputOffset: number | undefined;
     let fromOffset: number | undefined;
     let toOffset: number | undefined;
     let accepted = false;
@@ -22,73 +23,58 @@ export const showSelectBetweenOffsets = (messaging: ExtensionHostMessageHandler)
 
     // if there is a selection, use the focused offset as the starting offset
     if (selectionState !== undefined && selectionState.selected > 0 && selectionState.focused !== undefined) {
-        fromOffset = selectionState.focused;
+        inputOffset = selectionState.focused;
         // converting to hex to increase readability
-        startingInput.value = `0x${fromOffset.toString(16)}`;
+        startingInput.value = `0x${inputOffset.toString(16)}`;
     }
 
-    startingInput.onDidChangeValue(value => {
-        if (!value) {
-            fromOffset = undefined;
-        } else if (addressRe.test(value)) {
-            fromOffset = parseInt(value.slice(2), 16);
-        } else if (decimalRe.test(value)) {
-            fromOffset = parseInt(value, 10);
-        } else {
-            startingInput.validationMessage = "Offset must be provided as a decimal (12345) or hex (0x12345) address";
-            return;
-        }
+    startingInput.onDidChangeValue(changeValueHelper);
+    endingInput.onDidChangeValue(changeValueHelper);
 
-        startingInput.validationMessage = "";
-        if (fromOffset !== undefined) {
-            startingInput.validationMessage = "";
-            messaging.sendEvent({ type: MessageType.GoToOffset, offset: fromOffset });
-        }
-    });
+    startingInput.onDidHide(hideHelper);
+    endingInput.onDidHide(hideHelper);
 
     startingInput.onDidAccept(() => {
-        if (fromOffset !== undefined) {
+        if (inputOffset !== undefined) {
+            fromOffset = inputOffset;
             endingInput.show();
         }
     });
-
-    startingInput.onDidHide(() => {
-        if (!accepted) {
-            messaging.sendEvent({ type: MessageType.PopDisplayedOffset });
-        }
-    });
-
-    endingInput.onDidChangeValue(value => {
-        if (!value) {
-            toOffset = undefined;
-        } else if (addressRe.test(value)) {
-            toOffset = parseInt(value.slice(2), 16);
-        } else if (decimalRe.test(value)) {
-            toOffset = parseInt(value, 10);
-        } else {
-            startingInput.validationMessage = "Offset must be provided as a decimal (12345) or hex (0x12345) address";
-            return;
-        }
-
-        startingInput.validationMessage = "";
-        if (toOffset !== undefined) {
-            startingInput.validationMessage = "";
-            messaging.sendEvent({ type: MessageType.GoToOffset, offset: toOffset });
-        }
-    });
-
     endingInput.onDidAccept(() => {
-        accepted = true;
+        if (inputOffset !== undefined) {
+            toOffset = inputOffset;
+        }
+
         if (fromOffset !== undefined && toOffset !== undefined) {
+            accepted = true;
             messaging.sendEvent({ type: MessageType.SetFocusedByteRange, startingOffset: fromOffset, endingOffset: toOffset });
         }
     });
 
-    endingInput.onDidHide(() => {
+    startingInput.show();
+
+    function hideHelper() {
         if (!accepted) {
             messaging.sendEvent({ type: MessageType.PopDisplayedOffset });
         }
-    });
+    }
 
-    startingInput.show();
+    function changeValueHelper(value: string) {
+        if (!value) {
+            inputOffset = undefined;
+        } else if (addressRe.test(value)) {
+            inputOffset = parseInt(value.slice(2), 16);
+        } else if (decimalRe.test(value)) {
+            inputOffset = parseInt(value, 10);
+        } else {
+            startingInput.validationMessage = "Offset must be provided as a decimal (12345) or hex (0x12345) address";
+            return;
+        }
+
+        startingInput.validationMessage = "";
+        if (inputOffset !== undefined) {
+            startingInput.validationMessage = "";
+            messaging.sendEvent({ type: MessageType.GoToOffset, offset: inputOffset });
+        }
+    }
 };
