@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { ExtensionHostMessageHandler, MessageType } from "../shared/protocol";
+import { HexDocument, ISelectionState } from "./hexDocument";
 
 const addressRe = /^0x[a-f0-9]+$/i;
 const decimalRe = /^[0-9]+$/i;
@@ -15,6 +16,16 @@ export const showSelectBetweenOffsets = (messaging: ExtensionHostMessageHandler)
     let fromOffset: number | undefined;
     let toOffset: number | undefined;
     let accepted = false;
+
+    // acquire selection state from current HexDocument
+    const selectionState: ISelectionState | undefined = HexDocument.currentHexDocument?.selectionState;
+
+    // if there is a selection, use the focused offset as the starting offset
+    if (selectionState !== undefined && selectionState.selected > 0 && selectionState.focused !== undefined) {
+        fromOffset = selectionState.focused;
+        // converting to hex to increase readability
+        startingInput.value = `0x${fromOffset.toString(16)}`;
+    }
 
     startingInput.onDidChangeValue(value => {
         if (!value) {
