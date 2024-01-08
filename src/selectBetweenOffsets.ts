@@ -1,11 +1,12 @@
 import * as vscode from "vscode";
 import { ExtensionHostMessageHandler, MessageType } from "../shared/protocol";
-import { HexDocument, ISelectionState } from "./hexDocument";
+import { ISelectionState } from "./hexDocument";
+import { HexEditorRegistry } from "./hexEditorRegistry";
 
 const addressRe = /^0x[a-f0-9]+$/i;
 const decimalRe = /^[0-9]+$/i;
 
-export const showSelectBetweenOffsets = (messaging: ExtensionHostMessageHandler): void => {
+export const showSelectBetweenOffsets = (messaging: ExtensionHostMessageHandler, registry: HexEditorRegistry): void => {
     const startingInput = vscode.window.createInputBox();
     const endingInput = vscode.window.createInputBox();
     startingInput.placeholder = "Enter offset to select from";
@@ -18,8 +19,8 @@ export const showSelectBetweenOffsets = (messaging: ExtensionHostMessageHandler)
     let toOffset: number | undefined;
     let accepted = false;
 
-    // acquire selection state from current HexDocument
-    const selectionState: ISelectionState | undefined = HexDocument.currentHexDocument?.selectionState;
+    // acquire selection state from active HexDocument
+    const selectionState: ISelectionState | undefined = registry.activeDocument?.selectionState;
 
     // if there is a selection, use the focused offset as the starting offset
     if (selectionState !== undefined && selectionState.selected > 0 && selectionState.focused !== undefined) {

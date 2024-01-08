@@ -18,8 +18,6 @@ export interface ISelectionState {
 }
 
 export class HexDocument extends Disposable implements vscode.CustomDocument {
-	static currentHexDocument: HexDocument | undefined;
-
 	static async create(
 		uri: vscode.Uri,
 		{ backupId, untitledDocumentData }: vscode.CustomDocumentOpenContext,
@@ -48,8 +46,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
 		const isLargeFile = !backupId && !accessor.supportsIncremetalAccess && ((fileSize ?? 0) > maxFileSize);
-		this.currentHexDocument = new HexDocument(model, isLargeFile, baseAddress);
-		return { document: this.currentHexDocument, accessor };
+		return { document: new HexDocument(model, isLargeFile, baseAddress), accessor };
 	}
 
 	// Last save time

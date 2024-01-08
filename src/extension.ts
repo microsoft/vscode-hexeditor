@@ -49,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const selectBetweenOffsetsCommand = vscode.commands.registerCommand("hexEditor.selectBetweenOffsets", () => {
 		const first = registry.activeMessaging[Symbol.iterator]().next();
 		if (first.value) {
-			showSelectBetweenOffsets(first.value);
+			showSelectBetweenOffsets(first.value, registry);
 		}
 	});
 	context.subscriptions.push(new StatusSelectionCount(registry));
