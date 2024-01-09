@@ -6,76 +6,84 @@ import { HexEditorRegistry } from "./hexEditorRegistry";
 const addressRe = /^0x[a-f0-9]+$/i;
 const decimalRe = /^[0-9]+$/i;
 
-export const showSelectBetweenOffsets = (messaging: ExtensionHostMessageHandler, registry: HexEditorRegistry): void => {
-    const startingInput = vscode.window.createInputBox();
-    const endingInput = vscode.window.createInputBox();
-    startingInput.placeholder = "Enter offset to select from";
-    endingInput.placeholder = "Enter offset to select until";
-
+export const showSelectBetweenOffsets = async (messaging: ExtensionHostMessageHandler, registry: HexEditorRegistry): Promise<void> => {
     messaging.sendEvent({ type: MessageType.StashDisplayedOffset });
 
-    let inputOffset: number | undefined;
-    let fromOffset: number | undefined;
-    let toOffset: number | undefined;
-    let accepted = false;
+    let focusedOffset: string | undefined = undefined;
 
     // acquire selection state from active HexDocument
     const selectionState: ISelectionState | undefined = registry.activeDocument?.selectionState;
 
     // if there is a selection, use the focused offset as the starting offset
     if (selectionState !== undefined && selectionState.selected > 0 && selectionState.focused !== undefined) {
-        inputOffset = selectionState.focused;
         // converting to hex to increase readability
-        startingInput.value = `0x${inputOffset.toString(16)}`;
+        focusedOffset = `0x${selectionState.focused.toString(16)}`;
     }
 
-    startingInput.onDidChangeValue(changeValueHelper);
-    endingInput.onDidChangeValue(changeValueHelper);
-
-    startingInput.onDidHide(hideHelper);
-    endingInput.onDidHide(hideHelper);
-
-    startingInput.onDidAccept(() => {
-        if (inputOffset !== undefined) {
-            fromOffset = inputOffset;
-            endingInput.show();
-        }
-    });
-    endingInput.onDidAccept(() => {
-        if (inputOffset !== undefined) {
-            toOffset = inputOffset;
-        }
-
-        if (fromOffset !== undefined && toOffset !== undefined) {
-            accepted = true;
-            messaging.sendEvent({ type: MessageType.SetFocusedByteRange, startingOffset: fromOffset, endingOffset: toOffset });
-        }
-    });
-
-    startingInput.show();
-
-    function hideHelper() {
-        if (!accepted) {
-            messaging.sendEvent({ type: MessageType.PopDisplayedOffset });
+    const offset1 = await getOffset("Enter offset to select from", focusedOffset);
+    if (offset1 !== undefined) {
+        const offset2 = await getOffset("Enter offset to select until");
+        if (offset2 !== undefined) {
+            messaging.sendEvent({ type: MessageType.SetFocusedByteRange, startingOffset: offset1, endingOffset: offset2 });
         }
     }
 
-    function changeValueHelper(value: string) {
-        if (!value) {
-            inputOffset = undefined;
-        } else if (addressRe.test(value)) {
-            inputOffset = parseInt(value.slice(2), 16);
-        } else if (decimalRe.test(value)) {
-            inputOffset = parseInt(value, 10);
-        } else {
-            startingInput.validationMessage = "Offset must be provided as a decimal (12345) or hex (0x12345) address";
-            return;
+    async function getOffset(inputBoxTitle: string, value?: string): Promise<number | undefined> {
+        const disposables: vscode.Disposable[] = [];
+        try {
+            return await new Promise<number | undefined>((resolve, _reject) => {
+                const input = vscode.window.createInputBox();
+                input.title = inputBoxTitle;
+                input.value = value || "";
+                input.prompt = inputBoxTitle;
+                input.ignoreFocusOut = true;
+                input.placeholder = inputBoxTitle;
+                disposables.push(
+                    input.onDidAccept(() => {
+                        const value = input.value;
+                        input.enabled = false;
+                        input.busy = true;
+                        const offset = validate(value);
+                        if (offset !== undefined) {
+                            resolve(offset);
+                        }
+                        input.enabled = true;
+                        input.busy = false;
+                    }),
+                    input.onDidChangeValue(text => {
+                        const offset = validate(text);
+
+                        if (offset === undefined) {
+                            input.validationMessage = "Offset must be provided as a decimal (12345) or hex (0x12345) address";
+                        }
+                        else {
+                            input.validationMessage = "";
+                            messaging.sendEvent({ type: MessageType.GoToOffset, offset: offset });
+                        }
+                    }),
+                    input.onDidHide(() => {
+                        messaging.sendEvent({ type: MessageType.PopDisplayedOffset });
+                        resolve(undefined);
+                    }),
+                    input
+                );
+                input.show();
+            });
+        } finally {
+            disposables.forEach(d => d.dispose());
         }
 
-        startingInput.validationMessage = "";
-        if (inputOffset !== undefined) {
-            startingInput.validationMessage = "";
-            messaging.sendEvent({ type: MessageType.GoToOffset, offset: inputOffset });
+        function validate(text: string): number | undefined {
+            let validatedOffset: number | undefined = undefined;
+            if (!text) {
+                validatedOffset = undefined;
+            } else if (addressRe.test(text)) {
+                validatedOffset = parseInt(text.slice(2), 16);
+            } else if (decimalRe.test(text)) {
+                validatedOffset = parseInt(text, 10);
+            }
+
+            return validatedOffset;
         }
     }
 };
