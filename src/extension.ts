@@ -7,6 +7,7 @@ import { DataInspectorView } from "./dataInspectorView";
 import { showGoToOffset } from "./goToOffset";
 import { HexEditorProvider } from "./hexEditorProvider";
 import { HexEditorRegistry } from "./hexEditorRegistry";
+import { showSelectBetweenOffsets } from "./selectBetweenOffsets";
 import StatusSelectionCount from "./statusSelectionCount";
 
 function readConfigFromPackageJson(extension: vscode.Extension<any>): { extId: string; version: string; aiKey: string } {
@@ -45,8 +46,15 @@ export function activate(context: vscode.ExtensionContext): void {
 			showGoToOffset(first.value);
 		}
 	});
+	const selectBetweenOffsetsCommand = vscode.commands.registerCommand("hexEditor.selectBetweenOffsets", () => {
+		const first = registry.activeMessaging[Symbol.iterator]().next();
+		if (first.value) {
+			showSelectBetweenOffsets(first.value, registry);
+		}
+	});
 	context.subscriptions.push(new StatusSelectionCount(registry));
 	context.subscriptions.push(goToOffsetCommand);
+	context.subscriptions.push(selectBetweenOffsetsCommand);
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
 	context.subscriptions.push(HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, registry));

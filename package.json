@@ -104,6 +104,10 @@
       {
         "command": "hexEditor.goToOffset",
         "title": "Hex Editor: Go To Offset"
+      },
+      {
+        "command": "hexEditor.selectBetweenOffsets",
+        "title": "Hex Editor: Select Between Offsets"
       }
     ],
     "viewsContainers": {
