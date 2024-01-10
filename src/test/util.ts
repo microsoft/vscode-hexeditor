@@ -3,12 +3,12 @@
  *--------------------------------------------------------*/
 
 import { createHash, randomBytes } from "crypto";
+import { promises as fs } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { promises as fs } from "fs";
-import { accessFile } from "../fileSystemAdaptor";
 import * as vscode from "vscode";
 import { FileAccessor } from "../../shared/fileAccessor";
+import { accessFile } from "../fileSystemAdaptor";
 
 let testFiles: string[] = [];
 
@@ -32,7 +32,7 @@ afterEach(async () => {
 
 /** Simple, slow, seedable pseudo-random number generator */
 export const pseudoRandom = (seed: string | Buffer): () => number => () => {
-	const digest = createHash("md5").update(seed).digest();
+	const digest = createHash("sha256").update(seed).digest();
 	seed = digest;
 	return digest.readUInt32BE() / 0xFF_FF_FF_FF;
 };
