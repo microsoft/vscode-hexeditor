@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { window } from "vscode";
+import { l10n, window } from "vscode";
 
 export function randomString(len = 32): string {
 	let text = "";
@@ -19,7 +19,7 @@ export async function openOffsetInput(): Promise<string | undefined> {
 	return window.showInputBox({
 		placeHolder: "Enter offset to go to",
 		validateInput: text => {
-			return text.length > 8 || new RegExp("^[a-fA-F0-9]+$").test(text) ? null : "Invalid offset string";
+			return text.length > 8 || new RegExp("^[a-fA-F0-9]+$").test(text) ? null : l10n.t("Invalid offset string");
 		}
 	});
 }
@@ -37,8 +37,8 @@ export const utf8Length = (str: string): number => {
 	if (typeof Buffer !== "undefined") {
 		return Buffer.byteLength(str);
 	} else {
-	// todo: maybe doing some loops by hand here would be faster? does it matter?
-	return new Blob([str]).size;
+		// todo: maybe doing some loops by hand here would be faster? does it matter?
+		return new Blob([str]).size;
 	}
 };
 

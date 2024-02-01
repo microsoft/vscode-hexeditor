@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect } from "react";
 import { useRecoilState } from "recoil";
 import * as select from "./state";
+import { strings } from "./strings";
 import { VsTooltipPopover } from "./vscodeUi";
 
 export const ReadonlyWarning: React.FC = () => {
@@ -17,6 +18,6 @@ export const ReadonlyWarning: React.FC = () => {
 	});
 
 	return <VsTooltipPopover anchor={anchor} hide={hide} visible={!!anchor}>
-		Cannot edit in read-only editor
+		{strings.readonlyWarning}
 	</VsTooltipPopover>;
 };

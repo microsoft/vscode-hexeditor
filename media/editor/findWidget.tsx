@@ -13,11 +13,13 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
 import { LiteralSearchQuery, MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
+import { placeholder1 } from "../../shared/strings";
 import { Range } from "../../shared/util/range";
 import { FocusedElement, dataCellCls, useDisplayContext } from "./dataDisplayContext";
 import _style from "./findWidget.css";
 import { usePersistedState } from "./hooks";
 import * as select from "./state";
+import { strings } from "./strings";
 import { clsx, hexDecode, isHexString, parseHexDigit, throwOnUndefinedAccessInDev } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
 
@@ -71,7 +73,7 @@ const getReplaceOrError = (replace: string, isBinaryMode: boolean) => {
 	if (isBinaryMode) {
 		return isHexString(replace)
 			? hexDecode(replace)
-			: "Only hexadecimal characters (0-9 and a-f) are allowed";
+			: strings.onlyHexChars;
 	}
 
 	return new TextEncoder().encode(replace);
@@ -79,7 +81,7 @@ const getReplaceOrError = (replace: string, isBinaryMode: boolean) => {
 
 const getSearchQueryOrError = (query: string, isBinaryMode: boolean, isRegexp: boolean): SearchRequestMessage["query"] | string => {
 	if (isBinaryMode) {
-		return parseHexStringWithPlaceholders(query) || "Only hexadecimal characters (0-9, a-f, and ?? placeholders) are allowed";
+		return parseHexStringWithPlaceholders(query) || strings.onlyHexCharsAndPlaceholders;
 	}
 
 	if (isRegexp) {
@@ -322,33 +324,33 @@ export const FindWidget: React.FC = () => {
 					buttons={3}
 					ref={textFieldRef}
 					outerClassName={style.textField}
-					placeholder={isBinaryMode ? "Find Bytes (hex)" : "Find Text"}
+					placeholder={isBinaryMode ? strings.findBytes : strings.findText}
 					value={query}
 					onChange={onQueryChange}
 					onKeyDown={onFindKeyDown}
 					error={typeof queryOrError === "string" ? queryOrError : undefined}
 				>
-					{!isBinaryMode && <VsIconCheckbox checked={isRegexp} onToggle={setIsRegexp} title="Regular Expression Search">
+					{!isBinaryMode && <VsIconCheckbox checked={isRegexp} onToggle={setIsRegexp} title={strings.regexSearch}>
 						<RegexIcon />
 					</VsIconCheckbox>}
-					<VsIconCheckbox checked={isBinaryMode} onToggle={setIsBinaryMode} title="Search in Binary Mode">
+					<VsIconCheckbox checked={isBinaryMode} onToggle={setIsBinaryMode} title={strings.searchInBinaryMode}>
 						<BinaryFile />
 					</VsIconCheckbox>
-					<VsIconCheckbox checked={isCaseSensitive} onToggle={setIsCaseSensitive} title="Case Sensitive">
+					<VsIconCheckbox checked={isCaseSensitive} onToggle={setIsCaseSensitive} title={strings.caseSensitive}>
 						<CaseSensitive />
 					</VsIconCheckbox>
 				</VsTextFieldGroup>
 				<ResultBadge onUncap={() => setUncapped(true)} results={results} selectedResult={selectedResult} />
-				<VsIconButton title="Cancel Search" disabled={results.progress === 1} onClick={stopSearch}>
+				<VsIconButton title={strings.cancelSearch} disabled={results.progress === 1} onClick={stopSearch}>
 					<SearchStop />
 				</VsIconButton>
-				<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(-1)} title="Previous Match">
+				<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(-1)} title={strings.previousMatch}>
 					<ArrowUp />
 				</VsIconButton>
-				<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(1)} title="Next Match">
+				<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(1)} title={strings.nextMatch}>
 					<ArrowDown />
 				</VsIconButton>
-				<VsIconButton title="Close Widget (Esc)" onClick={closeWidget}>
+				<VsIconButton title={strings.closeWidget} onClick={closeWidget}>
 					<Close />
 				</VsIconButton>
 			</div>
@@ -359,13 +361,13 @@ export const FindWidget: React.FC = () => {
 					value={replace}
 					onChange={onReplaceChange}
 					onKeyDown={onReplaceKeyDown}
-					placeholder="Replace"
+					placeholder={strings.replace}
 					error={typeof replaceOrError === "string" ? replaceOrError : undefined}
 				/>
-				<VsIconButton disabled={typeof replaceOrError === "string" || selectedResult === undefined} onClick={replaceSelected} title="Replace Selected Match">
+				<VsIconButton disabled={typeof replaceOrError === "string" || selectedResult === undefined} onClick={replaceSelected} title={strings.replaceSelectedMatch}>
 					<Replace />
 				</VsIconButton>
-				<VsIconButton disabled={typeof replaceOrError === "string" || results.progress < 1 || !results.results.length} onClick={replaceAll} title="Replace All Matches">
+				<VsIconButton disabled={typeof replaceOrError === "string" || results.progress < 1 || !results.results.length} onClick={replaceAll} title={strings.replaceAllMatches}>
 					<ReplaceAll />
 				</VsIconButton>
 			</div>}
@@ -381,14 +383,14 @@ const ResultBadge: React.FC<{
 }> = ({ results, selectedResult, onUncap }) => {
 	const resultCountStr = resultCountFormat.format(results.results.length);
 	const resultCountComponent = results.capped
-		? <a role="button" title={`More than ${results.results.length} results, click to find all`} onClick={onUncap}>{resultCountStr}+</a>
-		: <span title={`${results.results.length} results`}>{resultCountStr}</span>;
+		? <a role="button" title={strings.resultOverflow.replace(placeholder1, results.results.length.toString())} onClick={onUncap}>{resultCountStr}+</a>
+		: <span title={strings.resultCount.replace(placeholder1, results.results.length.toString())}>{resultCountStr}</span>;
 
 	return <div className={style.resultBadge}>
 		{results.progress < 1
-			? `Found ${resultCountStr}...`
+			? strings.foundNResults.replace(placeholder1, resultCountStr)
 			: !results.results.length
-				? "No results"
+				? strings.noResults
 				: selectedResult !== undefined
 					? <>{selectedFormat.format(selectedResult + 1)} of {resultCountComponent}</>
 					: <>{resultCountComponent} results</>}
