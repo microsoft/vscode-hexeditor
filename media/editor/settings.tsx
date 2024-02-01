@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { useRecoilState } from "recoil";
 import _style from "./settings.css";
 import * as select from "./state";
+import { strings } from "./strings";
 import { throwOnUndefinedAccessInDev } from "./util";
 import { VsIconButton, VsTextField, VsWidgetPopover } from "./vscodeUi";
 
@@ -14,7 +15,7 @@ export const SettingsGear: React.FC = () => {
 
 	return (
 		<>
-			<VsIconButton title="Open Settings" className={style.gear} onClick={() => setIsOpen(!isOpen)} ref={setAnchor}>
+			<VsIconButton title={strings.openSettings} className={style.gear} onClick={() => setIsOpen(!isOpen)} ref={setAnchor}>
 				<SettingsGearIcon />
 			</VsIconButton>
 			<VsWidgetPopover anchor={anchor} hide={() => setIsOpen(false)} visible={isOpen}>
@@ -34,7 +35,7 @@ const TextCheckbox: React.FC = () => {
 
 	return (
 		<>
-			<label htmlFor="text-checkbox">Show Decoded Text</label>
+			<label htmlFor="text-checkbox">{strings.showDecodedText}</label>
 			<input
 				type="checkbox"
 				id="text-checkbox"
@@ -58,7 +59,7 @@ const ColumnWidth: React.FC = () => {
 
 	return (
 		<>
-			<label htmlFor="column-width">Bytes per Row</label>
+			<label htmlFor="column-width">{strings.bytesPerRow}</label>
 			<VsTextField
 				type="number"
 				id="column-width"

@@ -15,6 +15,7 @@ import { ReadonlyWarning } from "./readonlyWarning";
 import { ScrollContainer } from "./scrollContainer";
 import { SettingsGear } from "./settings";
 import * as select from "./state";
+import { strings } from "./strings";
 import { throwOnUndefinedAccessInDev } from "./util";
 import { VsProgressIndicator } from "./vscodeUi";
 
@@ -51,7 +52,7 @@ const Editor: React.FC = () => {
 
 	if (isLargeFile && !bypassLargeFilePrompt) {
 		return <div>
-			<p>Opening this large file may cause instability. <a id="open-anyway" role="button" onClick={() => setBypassLargeFile(true)}>Open anyways</a></p>
+			<p>{strings.openLargeFileWarning} <a id="open-anyway" role="button" onClick={() => setBypassLargeFile(true)}>{strings.openAnyways}</a></p>
 		</div>;
 	}
 

@@ -12,6 +12,7 @@ import { FocusedElement, dataCellCls, useDisplayContext, useIsFocused, useIsHove
 import { DataInspectorAside } from "./dataInspector";
 import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
+import { strings } from "./strings";
 import { clamp, clsx, getAsciiCharacter, getScrollDimensions, throwOnUndefinedAccessInDev } from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
@@ -59,7 +60,7 @@ export const DataHeader: React.FC = () => {
 			// Calculated decoded width so that the Data Inspector is displayed at the right position
 			// Flex-shrink prevents the data inspector overlapping on narrow screens
 			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})`, flexShrink: 0 }}>
-				Decoded Text
+				{strings.decodedText}
 			</DataCellGroup>
 		)}
 		{inspectorLocation === InspectorLocation.Aside && <DataInspector />}
@@ -294,7 +295,7 @@ const DataRows: React.FC = () => {
 
 const LoadingDataRow: React.FC<{ width: number; showDecodedText: boolean }> = ({ width, showDecodedText }) => {
 	const cells: React.ReactNode[] = [];
-	const text = "LOADING";
+	const text = strings.loadingUpper;
 	for (let i = 0; i < width; i++) {
 		const str = (text[i * 2] || ".") + (text[i * 2 + 1] || ".");
 		cells.push(<span
@@ -458,7 +459,7 @@ const DataCell: React.FC<{
 			return;
 		}
 
-		if (e.key === "Backspace" || e.key === "Delete") {
+		if (e.key === "Delete") {
 			// this is a bit of a hack, but this is kind of tricky: we got a delete
 			// for a range, and the edit must be undoable, but we aren't ensured to
 			// have the data paged in for the range. So make a separate request

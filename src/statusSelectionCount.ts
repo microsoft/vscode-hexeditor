@@ -44,11 +44,11 @@ export default class StatusSelectionCount extends Disposable {
 		const nFocus = focused !== undefined ? numberFormat.format(focused) : undefined;
 		const nSelected = selected > 1 ? numberFormat.format(selected) : undefined;
 		if (nFocus && nSelected) {
-			this.item.text = `Byte ${nFocus} (${nSelected} selected)`;
+			this.item.text = vscode.l10n.t("Byte {0} ({1} selected)", nFocus, nSelected);
 		} else if (nSelected) {
-			this.item.text = `${nSelected} selected`;
+			this.item.text = vscode.l10n.t("{0} selected", nSelected);
 		} else if (nFocus) {
-			this.item.text = `Byte ${nFocus}`;
+			this.item.text = vscode.l10n.t("Byte {0}", nFocus);
 		} else {
 			this.item.hide();
 			return;

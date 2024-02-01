@@ -120,8 +120,8 @@ export class DataInspectorView extends Disposable implements vscode.WebviewViewP
                   </div>
                   <div class="grid-item endian-select">
                     <select id="endianness">
-                      <option value="little" ${endianness === "little" ? "selected" : ""}>Little Endian</option>
-                      <option value="big" ${endianness === "big" ? "selected" : ""}>Big Endian</option>
+                      <option value="little" ${endianness === "little" ? "selected" : ""}>${vscode.l10n.t("Little Endian")}</option>
+                      <option value="big" ${endianness === "big" ? "selected" : ""}>${vscode.l10n.t("Big Endian")}</option>
                     </select>
                   </div>
                 </div>

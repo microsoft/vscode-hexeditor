@@ -7,6 +7,7 @@ import * as vscode from "vscode";
 import { HexDocumentEdit, HexDocumentEditOp, HexDocumentEditReference } from "../shared/hexDocumentModel";
 import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, ICodeSettings, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
+import { ILocalizedStrings, placeholder1 } from "../shared/strings";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
@@ -59,6 +60,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			}
 		}));
 
+		const overwrite = vscode.l10n.t("Overwrite");
 		const onDidChange = async () => {
 			if (document.isSynced) {
 				// If we executed a save recently the change was probably caused by us
@@ -70,20 +72,19 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				return;
 			}
 
-			const message = "This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.";
-			const overwrite = "Overwrite";
-			const revert = "Revert";
+			const message = vscode.l10n.t("This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.");
+			const revert = vscode.l10n.t("Revert");
 			const selected = await vscode.window.showWarningMessage(message, overwrite, revert);
 			if (selected === overwrite) {
 				vscode.commands.executeCommand("workbench.action.files.save");
-			} else if (selected === "Revert") {
+			} else if (selected === revert) {
 				vscode.commands.executeCommand("workbench.action.files.revert");
 			}
 		};
 
 		const onDidDelete = () => {
-			vscode.window.showWarningMessage("This file has been deleted! Saving now will create a new file on disk.", "Overwrite", "Close Editor").then((response) => {
-				if (response === "Overwrite") {
+			vscode.window.showWarningMessage(vscode.l10n.t("This file has been deleted! Saving now will create a new file on disk.", overwrite, vscode.l10n.t("Close Editor"))).then((response) => {
+				if (response === overwrite) {
 					vscode.commands.executeCommand("workbench.action.files.save");
 				} else if (response === "Close Editor") {
 					vscode.commands.executeCommand("workbench.action.closeActiveEditor");
@@ -154,6 +155,43 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 
 		// Use a nonce to allow certain scripts to be run
 		const nonce = randomString();
+		const strings: ILocalizedStrings = {
+			pasteAs: vscode.l10n.t("Paste as"),
+			pasteMode: vscode.l10n.t("Paste mode"),
+			replace: vscode.l10n.t("Replace"),
+			insert: vscode.l10n.t("Insert"),
+			bytes: vscode.l10n.t("bytes"),
+			encodingError: vscode.l10n.t("Encoding Error"),
+			decodedText: vscode.l10n.t("Decoded Text"),
+			loadingUpper: vscode.l10n.t("LOADING"),
+			loadingDotDotDot: vscode.l10n.t("Loading..."),
+			littleEndian: vscode.l10n.t("Little Endian"),
+			onlyHexChars: vscode.l10n.t("Only hexadecimal characters (0-9 and a-f) are allowed"),
+			onlyHexCharsAndPlaceholders: vscode.l10n.t("Only hexadecimal characters (0-9, a-f, and ?? placeholders) are allowed"),
+			toggleReplace: vscode.l10n.t("Toggle Replace"),
+			findBytes: vscode.l10n.t("Find Bytes (hex)"),
+			findText: vscode.l10n.t("Find Text"),
+			regexSearch: vscode.l10n.t("Regular Expression Search"),
+			searchInBinaryMode: vscode.l10n.t("Search in Binary Mode"),
+			caseSensitive: vscode.l10n.t("Case Sensitive"),
+			cancelSearch: vscode.l10n.t("Cancel Search"),
+			previousMatch: vscode.l10n.t("Previous Match"),
+			nextMatch: vscode.l10n.t("Next Match"),
+			closeWidget: vscode.l10n.t("Close Widget (Esc)"),
+			replaceAllMatches: vscode.l10n.t("Replace All Matches"),
+			replaceSelectedMatch: vscode.l10n.t("Replace Selected Match"),
+			resultOverflow: vscode.l10n.t("More than {0} results, click to find all", placeholder1),
+			resultCount: vscode.l10n.t("{0} results", placeholder1),
+			foundNResults: vscode.l10n.t("Found {0}...", placeholder1),
+			noResults: vscode.l10n.t("No results"),
+			openLargeFileWarning: vscode.l10n.t("Opening this large file may cause instability."),
+			openAnyways: vscode.l10n.t("Open Anyways"),
+			readonlyWarning: vscode.l10n.t("Cannot edit in read-only editor."),
+			openSettings: vscode.l10n.t("Open Settings"),
+			showDecodedText: vscode.l10n.t("Show Decoded Text"),
+			bytesPerRow: vscode.l10n.t("Bytes per row"),
+			close: vscode.l10n.t("Close"),
+		};
 
 		return /* html */`
 			<!DOCTYPE html>
@@ -170,6 +208,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 				<link href="${styleUri}" rel="stylesheet" />
+				<script nonce="${nonce}">globalThis.LOC_STRINGS=${JSON.stringify(strings)}</script>
 				<script nonce="${nonce}" src="${scriptUri}" defer></script>
 
 				<title>Hex Editor</title>

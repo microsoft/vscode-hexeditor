@@ -6,6 +6,7 @@ import _style from "./dataInspector.css";
 import { inspectableTypes } from "./dataInspectorProperties";
 import { useFileBytes, usePersistedState } from "./hooks";
 import * as select from "./state";
+import { strings } from "./strings";
 import { throwOnUndefinedAccessInDev } from "./util";
 import { VsTooltipPopover } from "./vscodeUi";
 
@@ -42,7 +43,7 @@ export const DataInspectorHover: React.FC = () => {
 	return <VsTooltipPopover
 		anchor={anchor}
 		hide={() => setInspected(undefined)} visible={true}>
-		<Suspense fallback="Loading...">
+		<Suspense fallback={strings.loadingDotDotDot}>
 			<InspectorContents columns={4} offset={inspected.byte} />
 		</Suspense>
 	</VsTooltipPopover>;
@@ -113,6 +114,6 @@ const EndiannessToggle: React.FC<{
 			checked={endianness === Endianness.Little}
 			onChange={evt => setEndianness(evt.target.checked ? Endianness.Little : Endianness.Big)}
 		/>
-		<label htmlFor="endian-checkbox">Little Endian</label>
+		<label htmlFor="endian-checkbox">{strings.littleEndian}</label>
 	</div>
 );

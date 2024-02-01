@@ -7,6 +7,7 @@ import { MessageType, PasteMode } from "../../shared/protocol";
 import _style from "./copyPaste.css";
 import { useUniqueId } from "./hooks";
 import { messageHandler } from "./state";
+import { strings } from "./strings";
 import { throwOnUndefinedAccessInDev } from "./util";
 import { VsButton, VsWidgetPopover } from "./vscodeUi";
 
@@ -113,7 +114,7 @@ export const PastePopup: React.FC<{
 
 	return <VsWidgetPopover anchor={context?.target || null} hide={hide} visible={!!context}>
 		<div className={style.radioList}>
-			<span>Paste as:</span>
+			<span>{strings.pasteAs}:</span>
 			{encodings.map(e => <EncodingOption
 				key={e}
 				value={e}
@@ -124,15 +125,15 @@ export const PastePopup: React.FC<{
 			)}
 		</div>
 		<div className={style.radioList}>
-			<span>Paste mode:</span>
-			<InsertionOption label="Replace" checked={mode == PasteMode.Replace} value={PasteMode.Replace} onChecked={setMode} />
-			<InsertionOption label="Insert" checked={mode == PasteMode.Insert} value={PasteMode.Insert} onChecked={setMode} />
+			<span>{strings.pasteMode}:</span>
+			<InsertionOption label={strings.replace} checked={mode == PasteMode.Replace} value={PasteMode.Replace} onChecked={setMode} />
+			<InsertionOption label={strings.insert} checked={mode == PasteMode.Insert} value={PasteMode.Insert} onChecked={setMode} />
 		</div>
 		<div className={style.buttonWrap}>
 			<VsButton disabled={!decodedValid} onClick={doReplace}>
 				{decodedValid
-					? <>{mode === PasteMode.Replace ? "Replace" : "Insert"} {decoded.length} bytes</>
-					: "Encoding Error"}
+					? <>{mode === PasteMode.Replace ? strings.replace : strings.insert} {decoded.length} {strings.bytes}</>
+					: strings.encodingError}
 			</VsButton>
 		</div>
 	</VsWidgetPopover>;

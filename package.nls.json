@@ -1,0 +1,16 @@
+{
+	"name": "Hex Editor",
+	"description": "Allows viewing and editing files in a hex editor",
+
+	"hexeditor.inspectorType": "Where the data inspector should be shown in the hex editor.",
+	"hexeditor.maxFileSize": "The max file size (in MB) that the editor will try to open before warning you.",
+	"hexeditor.dataInspector.autoReveal": "Whether to auto reveal the data inspector when the hex editor is opened.",
+	"hexeditor.defaultEndianness": "The endianness selected when loading the editor.",
+	"hexeditor.columnWidth": "The number of bytes per row to show in the editor.",
+	"hexeditor.showDecodedText": "Whether decoded text should be shown in the editor.",
+	"hexeditor.showOpenFileButton": "Show Hex Editor button in editor menu.",
+	"hexEditor.openFile": "Open Active File in Hex Editor",
+	"hexEditor.goToOffset": "Go To Offset",
+	"hexEditor.selectBetweenOffsets": "Select Between Offsets",
+	"dataInspectorView": "Data Inspector"
+}
