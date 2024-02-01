@@ -26,14 +26,14 @@ export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Ar
 			// eslint-disable @typescript-eslint/no-var-requires
 			const fs = require("fs");
 			const os = require("os");
-			// eslint-enable @typescript-eslint/no-var-requires	
+			// eslint-enable @typescript-eslint/no-var-requires
 
 			const fileStats = await fs.promises.stat(uri.fsPath);
 			const { uid, gid } = os.userInfo();
 
-			const isReadonly: boolean = (uid === -1 || uid === fileStats.uid) ? !(fileStats.mode & 0o200) :	// owner		 
-										(gid === fileStats.gid) ? !(fileStats.mode & 0o020) : // group
-										!(fileStats.mode & 0o002); // other	
+			const isReadonly: boolean = (uid === -1 || uid === fileStats.uid) ? !(fileStats.mode & 0o200) :	// owner
+				(gid === fileStats.gid) ? !(fileStats.mode & 0o020) : // group
+					!(fileStats.mode & 0o002); // other
 
 			if (fileStats.isFile()) {
 				return new NativeFileAccessor(uri, isReadonly, fs);
@@ -379,13 +379,17 @@ class DebugFileAccessor implements FileAccessor {
 	}
 }
 
-const watchWorkspaceFile = (uri: string, onDidChange: () => void, onDidDelete: () => void) => {
+const watchWorkspaceFile = (uri: string, onDidChange: () => void, onDidDelete: () => void): vscode.Disposable => {
 	const base = uri.split("/");
 	const fileName = base.pop()!;
 	const pattern = new vscode.RelativePattern(vscode.Uri.parse(base.join("/")), fileName);
 
 	const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-	watcher.onDidChange(onDidChange);
-	watcher.onDidDelete(onDidDelete);
-	return watcher;
+	const l1 = watcher.onDidChange(onDidChange);
+	const l2 = watcher.onDidDelete(onDidDelete);
+	return new vscode.Disposable(() => {
+		l1.dispose();
+		l2.dispose();
+		watcher.dispose();
+	});
 };
