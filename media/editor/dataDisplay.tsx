@@ -4,14 +4,15 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
-import { InspectorLocation, MessageType } from "../../shared/protocol";
+import { DeleteAcceptedMessage, InspectorLocation, MessageType } from "../../shared/protocol";
+import { Range } from "../../shared/util/range";
 import { PastePopup } from "./copyPaste";
 import _style from "./dataDisplay.css";
 import { FocusedElement, dataCellCls, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
 import { DataInspectorAside } from "./dataInspector";
 import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
-import { Range, clamp, clsx, getAsciiCharacter, getScrollDimensions, throwOnUndefinedAccessInDev } from "./util";
+import { clamp, clsx, getAsciiCharacter, getScrollDimensions, throwOnUndefinedAccessInDev } from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
@@ -455,6 +456,17 @@ const DataCell: React.FC<{
 	const onKeyDown = useCallback((e: React.KeyboardEvent) => {
 		if (e.metaKey || e.ctrlKey || e.altKey) {
 			return;
+		}
+
+		if (e.key === "Backspace" || e.key === "Delete") {
+			// this is a bit of a hack, but this is kind of tricky: we got a delete
+			// for a range, and the edit must be undoable, but we aren't ensured to
+			// have the data paged in for the range. So make a separate request
+			// that will result in the extension host sending the edit to us.
+			select.messageHandler.sendRequest<DeleteAcceptedMessage>({
+				type: MessageType.RequestDeletes,
+				deletes: ctx.getSelectionRanges().map(r => ({ start: r.start, end: r.end })),
+			}).then(() => ctx.setSelectionRanges([]));
 		}
 
 		let newValue: number;

@@ -4,7 +4,7 @@ const fileImports = [
 	() => import("./backup.test"),
 	() => import("./hexDocumentModel.test"),
 	() => import("./searchRequest.test"),
-	() => import("./literalSearch.test"),
+	() => import("./range.test"),
 ];
 
 export async function run(): Promise<void> {

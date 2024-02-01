@@ -3,9 +3,10 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { SetterOrUpdater } from "recoil";
 import { HexDocumentEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
+import { Range, getRangeSelectionsFromStack } from "../../shared/util/range";
 import _style from "./dataDisplayContext.css";
 import { messageHandler, registerHandler } from "./state";
-import { Range, throwOnUndefinedAccessInDev } from "./util";
+import { throwOnUndefinedAccessInDev } from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
@@ -253,22 +254,23 @@ export class DisplayContext {
 	}
 
 	private publishSelections() {
-		const selectedBytes = new Set();
-		for (const range of this._selection) {
-			for (let i = range.start; i < range.end; i++) {
-				if (selectedBytes.has(i)) {
-					selectedBytes.delete(i);
-				} else {
-					selectedBytes.add(i);
-				}
-			}
+		let selected = 0;
+		for (const range of this.getSelectionRanges()) {
+			selected += range.size;
 		}
 
 		messageHandler.sendEvent({
 			type: MessageType.SetSelectedCount,
-			selected: selectedBytes.size,
+			selected: selected,
 			focused: this._focusedByte?.byte
 		});
+	}
+
+	/**
+	 * Gets selected ranges.
+	 */
+	public getSelectionRanges(): Range[] {
+		return getRangeSelectionsFromStack(this._selection);
 	}
 
 	/**

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
+import { Range } from "../../shared/util/range";
 import { DataDisplay } from "./dataDisplay";
 import _style from "./scrollContainer.css";
 import * as select from "./state";
-import { Range, throwOnUndefinedAccessInDev } from "./util";
+import { throwOnUndefinedAccessInDev } from "./util";
 import { VirtualScrollContainer } from "./virtualScrollContainer";
 
 const style = throwOnUndefinedAccessInDev(_style);

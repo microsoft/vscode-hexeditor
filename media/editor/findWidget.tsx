@@ -13,11 +13,12 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
 import { LiteralSearchQuery, MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
+import { Range } from "../../shared/util/range";
 import { FocusedElement, dataCellCls, useDisplayContext } from "./dataDisplayContext";
 import _style from "./findWidget.css";
 import { usePersistedState } from "./hooks";
 import * as select from "./state";
-import { Range, clsx, hexDecode, isHexString, parseHexDigit, throwOnUndefinedAccessInDev } from "./util";
+import { clsx, hexDecode, isHexString, parseHexDigit, throwOnUndefinedAccessInDev } from "./util";
 import { VsIconButton, VsIconCheckbox, VsProgressIndicator, VsTextFieldGroup } from "./vscodeUi";
 
 const style = throwOnUndefinedAccessInDev(_style);
