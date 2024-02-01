@@ -18,12 +18,14 @@ export const enum MessageType {
 	SetFocusedByteRange,
 	SetSelectedCount,
 	PopDisplayedOffset,
+	DeleteAccepted,
 	//#endregion
 	//#region from webview
 	ReadyRequest,
 	OpenDocument,
 	ReadRangeRequest,
 	MakeEdits,
+	RequestDeletes,
 	SearchRequest,
 	CancelSearch,
 	ClearDataInspector,
@@ -113,6 +115,7 @@ export interface SetEditsMessage {
 	type: MessageType.SetEdits;
 	edits: ISerializedEdits;
 	replaceFileSize?: number | null;
+	appendOnly?: boolean;
 }
 
 /** Sets the displayed offset. */
@@ -151,6 +154,11 @@ export interface PopDisplayedOffsetMessage {
 	type: MessageType.PopDisplayedOffset;
 }
 
+/** Acks a deletion request. */
+export interface DeleteAcceptedMessage {
+	type: MessageType.DeleteAccepted;
+}
+
 export type ToWebviewMessage =
 	| ReadyResponseMessage
 	| ReadRangeResponseMessage
@@ -162,7 +170,8 @@ export type ToWebviewMessage =
 	| SetFocusedByteMessage
 	| SetFocusedByteRangeMessage
 	| PopDisplayedOffsetMessage
-	| StashDisplayedOffsetMessage;
+	| StashDisplayedOffsetMessage
+	| DeleteAcceptedMessage;
 
 export interface OpenDocumentMessage {
 	type: MessageType.OpenDocument;
@@ -230,6 +239,11 @@ export interface CopyMessage {
 	asText: boolean;
 }
 
+export interface RequestDeletesMessage {
+	type: MessageType.RequestDeletes;
+	deletes: { start: number; end: number }[];
+}
+
 export type FromWebviewMessage =
 	| OpenDocumentMessage
 	| ReadRangeMessage
@@ -242,7 +256,8 @@ export type FromWebviewMessage =
 	| ReadyRequestMessage
 	| UpdateEditorSettings
 	| PasteMessage
-	| CopyMessage;
+	| CopyMessage
+	| RequestDeletesMessage;
 
 export type ExtensionHostMessageHandler = MessageHandler<ToWebviewMessage, FromWebviewMessage>;
 export type WebviewMessageHandler = MessageHandler<FromWebviewMessage, ToWebviewMessage>;

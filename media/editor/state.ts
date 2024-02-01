@@ -6,7 +6,8 @@ import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import { FromWebviewMessage, InspectorLocation, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
-import { clamp, Range } from "./util";
+import { Range } from "../../shared/util/range";
+import { clamp } from "./util";
 
 const acquireVsCodeApi: () => ({
 	postMessage(msg: unknown): void;
@@ -290,7 +291,8 @@ export const edits = atom<readonly HexDocumentEdit[]>({
 			});
 
 			registerHandler(MessageType.SetEdits, msg => {
-				fx.setSelf(deserializeEdits(msg.edits));
+				const edits = deserializeEdits(msg.edits);
+				fx.setSelf(prev => msg.appendOnly ? [...(prev instanceof DefaultValue ? [] : prev), ...edits] : edits);
 			});
 		}
 	]

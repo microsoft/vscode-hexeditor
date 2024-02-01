@@ -4,7 +4,7 @@
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as base64 from "js-base64";
 import * as vscode from "vscode";
-import { HexDocumentEditReference } from "../shared/hexDocumentModel";
+import { HexDocumentEdit, HexDocumentEditOp, HexDocumentEditReference } from "../shared/hexDocumentModel";
 import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, ICodeSettings, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { DataInspectorView } from "./dataInspectorView";
@@ -258,6 +258,17 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				const encoded = message.asText ? new TextDecoder().decode(flatParts) : base64.fromUint8Array(flatParts);
 				vscode.env.clipboard.writeText(encoded);
 				return;
+			}
+			case MessageType.RequestDeletes: {
+				const bytes = await Promise.all(message.deletes.map(d => document.readBufferWithEdits(d.start, d.end - d.start)));
+				const edits = bytes.map((e, i): HexDocumentEdit => ({
+					op: HexDocumentEditOp.Delete,
+					previous: e,
+					offset: message.deletes[i].start,
+				}));
+				messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(edits), appendOnly: true });
+				this.publishEdit(messaging, document, document.makeEdits(edits));
+				return { type: MessageType.DeleteAccepted };
 			}
 			case MessageType.CancelSearch:
 				document.searchProvider.cancel();
