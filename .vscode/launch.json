@@ -8,7 +8,6 @@
 		{
 			"name": "Run Extension",
 			"type": "extensionHost",
-			"trace": false,
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
 			"debugWebviews": true,
@@ -19,7 +18,7 @@
 				}
 			},
 			"args": ["--extensionDevelopmentPath=${workspaceFolder}"],
-			"outFiles": ["${workspaceFolder}/out/**/*.js"]
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"]
 		},
 		{
 			"name": "Run Web Extension",
