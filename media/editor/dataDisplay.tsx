@@ -195,7 +195,7 @@ export const DataDisplay: React.FC = () => {
 			delta *= 8;
 		}
 
-		const next = new FocusedElement(current.char, clamp(0, current.byte + delta, fileSize ?? Infinity));
+		const next = new FocusedElement(current.char, clamp(0, current.byte + delta, fileSize !== undefined ? fileSize - 1 : Infinity));
 		if (next.key === current.key) {
 			return;
 		}
@@ -402,7 +402,7 @@ const DataCell: React.FC<{
 
 	const onMouseLeave = useCallback((e: React.MouseEvent) => {
 		ctx.hoveredByte = undefined;
-		if ((e.buttons & 1) && !ctx.isSelecting) {
+		if ((e.buttons & 1) && ctx.isSelecting === undefined) {
 			ctx.isSelecting = byte;
 			if (e.ctrlKey || e.metaKey) {
 				ctx.addSelectionRange(Range.single(byte));
@@ -420,7 +420,7 @@ const DataCell: React.FC<{
 		const prevFocused = ctx.focusedElement;
 		ctx.focusedElement = focusedElement;
 
-		if (ctx.isSelecting) {
+		if (ctx.isSelecting !== undefined) {
 			ctx.isSelecting = undefined;
 		} else if (e.shiftKey && prevFocused) {
 			// on a shift key, the user is expanding the selection (or deselection)
