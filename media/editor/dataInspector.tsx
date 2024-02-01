@@ -25,7 +25,7 @@ export const DataInspectorHover: React.FC = () => {
 				clearTimeout(hoverTimeout);
 				hoverTimeout = undefined;
 			}
-			if (target && !ctx.isSelecting) {
+			if (target && ctx.isSelecting === undefined) {
 				setInspected(undefined);
 				hoverTimeout = setTimeout(() => setInspected(target), 500);
 			}
