@@ -6,7 +6,7 @@ import { getRangeSelectionsFromStack, Range } from "../../shared/util/range";
 
 describe("Range", () => {
 
-	describe.only("getRangeSelectionsFromStack", () => {
+	describe("getRangeSelectionsFromStack", () => {
 		it("works for a single", () => {
 			expect(getRangeSelectionsFromStack([new Range(10, 20)])).to.deep.equal([new Range(10, 20)]);
 		});

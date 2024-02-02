@@ -1,12 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { HexDocument } from "./hexDocument";
-import { LiteralSearchQuery, RegExpSearchQuery, SearchResult, SearchResultsWithProgress } from "../shared/protocol";
 import { Disposable } from "vscode";
-import { utf8Length } from "./util";
-import { caseInsensitiveEquivalency, LiteralSearch, Wildcard } from "./literalSearch";
+import { LiteralSearchQuery, RegExpSearchQuery, SearchResult, SearchResultsWithProgress } from "../shared/protocol";
 import { Uint8ArrayMap } from "../shared/util/uint8ArrayMap";
+import { HexDocument } from "./hexDocument";
+import { LiteralSearch, Wildcard, caseInsensitiveEquivalency } from "./literalSearch";
 
 /** Type that defines a search request created from the {@link SearchProvider} */
 export interface ISearchRequest extends Disposable {
@@ -148,7 +147,7 @@ export class RegexSearchRequest implements ISearchRequest {
 		let strStart = 0;
 
 		const { re, document } = this;
-		const decoder = new TextDecoder();
+		const decoder = new TextDecoder("ascii");
 		const encoder = new TextEncoder();
 		const collector = new ResultsCollector(await document.size(), this.cap);
 
@@ -162,8 +161,8 @@ export class RegexSearchRequest implements ISearchRequest {
 
 			let lastReIndex = 0;
 			for (const match of str.matchAll(re)) {
-				const start = strStart + utf8Length(str.slice(0, match.index!));
-				const length = utf8Length(match[0]);
+				const start = strStart + str.slice(0, match.index!).length;
+				const length = match[0].length;
 				collector.push(encoder.encode(match[0]), start, start + length);
 				lastReIndex = match.index! + match[0].length;
 			}
