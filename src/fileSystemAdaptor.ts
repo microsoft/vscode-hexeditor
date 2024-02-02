@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
-import { Policy } from "cockatiel";
+import { ConstantBackoff, handleWhen, retry } from "cockatiel";
 import type fs from "fs";
 import type os from "os";
 import * as vscode from "vscode";
@@ -9,7 +9,10 @@ import { FileAccessor, FileWriteOp } from "../shared/fileAccessor";
 declare function require(_name: "fs"): typeof fs;
 declare function require(_name: "os"): typeof os;
 
-export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Array): Promise<FileAccessor> => {
+export const accessFile = async (
+	uri: vscode.Uri,
+	untitledDocumentData?: Uint8Array,
+): Promise<FileAccessor> => {
 	if (uri.scheme === "untitled") {
 		return new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array());
 	}
@@ -31,9 +34,12 @@ export const accessFile = async (uri: vscode.Uri, untitledDocumentData?: Uint8Ar
 			const fileStats = await fs.promises.stat(uri.fsPath);
 			const { uid, gid } = os.userInfo();
 
-			const isReadonly: boolean = (uid === -1 || uid === fileStats.uid) ? !(fileStats.mode & 0o200) :	// owner
-				(gid === fileStats.gid) ? !(fileStats.mode & 0o020) : // group
-					!(fileStats.mode & 0o002); // other
+			const isReadonly: boolean =
+				uid === -1 || uid === fileStats.uid
+					? !(fileStats.mode & 0o200) // owner
+					: gid === fileStats.gid
+						? !(fileStats.mode & 0o020) // group
+						: !(fileStats.mode & 0o002); // other
 
 			if (fileStats.isFile()) {
 				return new NativeFileAccessor(uri, isReadonly, fs);
@@ -56,7 +62,7 @@ class FileHandleContainer {
 		public readonly path: string,
 		public readonly flags: number,
 		private readonly _fs: typeof fs,
-	) { }
+	) {}
 
 	/** Borrows the file handle to run the function. */
 	public borrow<R>(fn: (handle: fs.promises.FileHandle) => R): Promise<R> {
@@ -115,7 +121,10 @@ class FileHandleContainer {
 		while (this.borrowQueue.length) {
 			if (!this.handle) {
 				try {
-					this.handle = await this._fs.promises.open(this.path, this.flags | this._fs.constants.O_CREAT);
+					this.handle = await this._fs.promises.open(
+						this.path,
+						this.flags | this._fs.constants.O_CREAT,
+					);
 				} catch (e) {
 					return this.rejectAll(e as Error);
 				}
@@ -136,10 +145,13 @@ class FileHandleContainer {
 	}
 }
 
-const retryOnENOENT = Policy.handleWhen(e => (e as any).code === "ENOENT")
-	.retry()
-	.attempts(10)
-	.delay(50);
+const retryOnENOENT = retry(
+	handleWhen(e => (e as any).code === "ENOENT"),
+	{
+		maxAttempts: 50,
+		backoff: new ConstantBackoff(50),
+	},
+);
 
 const filePageSize = 128 * 1024;
 
@@ -151,12 +163,19 @@ class NativeFileAccessor implements FileAccessor {
 	public readonly pageSize = filePageSize;
 	public readonly isReadonly?: boolean | undefined;
 
-	constructor(uri: vscode.Uri, isReadonly: boolean, private readonly fs: typeof import("fs")) {
+	constructor(
+		uri: vscode.Uri,
+		isReadonly: boolean,
+		private readonly fs: typeof import("fs"),
+	) {
 		this.uri = uri.toString();
 		this.isReadonly = isReadonly;
-		this.handle = new FileHandleContainer(uri.fsPath, isReadonly ? fs.constants.O_RDONLY : fs.constants.O_RDWR, fs);
+		this.handle = new FileHandleContainer(
+			uri.fsPath,
+			isReadonly ? fs.constants.O_RDONLY : fs.constants.O_RDWR,
+			fs,
+		);
 	}
-
 
 	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable {
 		return watchWorkspaceFile(this.uri, onDidChange, onDidDelete);
@@ -181,7 +200,10 @@ class NativeFileAccessor implements FileAccessor {
 		});
 	}
 
-	async writeStream(stream: AsyncIterable<Uint8Array>, cancellation?: vscode.CancellationToken): Promise<void> {
+	async writeStream(
+		stream: AsyncIterable<Uint8Array>,
+		cancellation?: vscode.CancellationToken,
+	): Promise<void> {
 		// We write to a tmp file for two reasons:
 		// - writes can mess up any reads that we do, so this simplifies lots of things
 		// - sometimes the written file will be shorter than the original
@@ -190,7 +212,10 @@ class NativeFileAccessor implements FileAccessor {
 		// minimal impact on performance.
 
 		const tmpName = `${this.handle.path}.tmp`;
-		const tmp = await this.fs.promises.open(tmpName, this.fs.constants.O_WRONLY | this.fs.constants.O_CREAT | this.fs.constants.O_TRUNC);
+		const tmp = await this.fs.promises.open(
+			tmpName,
+			this.fs.constants.O_WRONLY | this.fs.constants.O_CREAT | this.fs.constants.O_TRUNC,
+		);
 		try {
 			let offset = 0;
 			for await (const chunk of stream) {
@@ -261,7 +286,10 @@ class SimpleFileAccessor implements FileAccessor {
 		return cpy;
 	}
 
-	async writeStream(stream: AsyncIterable<Uint8Array>, cancellation?: vscode.CancellationToken): Promise<void> {
+	async writeStream(
+		stream: AsyncIterable<Uint8Array>,
+		cancellation?: vscode.CancellationToken,
+	): Promise<void> {
 		let length = 0;
 		const chunks: ArrayLike<number>[] = [];
 		for await (const chunk of stream) {
@@ -336,7 +364,10 @@ class DebugFileAccessor implements FileAccessor {
 	 */
 	public readonly pageSize = 4 * 1024;
 
-	constructor(uri: vscode.Uri, public readonly isReadonly: boolean) {
+	constructor(
+		uri: vscode.Uri,
+		public readonly isReadonly: boolean,
+	) {
 		this.uri = uri.toString();
 	}
 
@@ -349,7 +380,9 @@ class DebugFileAccessor implements FileAccessor {
 	}
 
 	async read(offset: number, data: Uint8Array): Promise<number> {
-		const contents = await vscode.workspace.fs.readFile(this.referenceRange(offset, offset + data.length));
+		const contents = await vscode.workspace.fs.readFile(
+			this.referenceRange(offset, offset + data.length),
+		);
 		const cpy = Math.min(data.length, contents.length);
 		data.set(contents.subarray(0, cpy));
 		return cpy;
@@ -360,10 +393,14 @@ class DebugFileAccessor implements FileAccessor {
 	}
 
 	async writeBulk(ops: readonly FileWriteOp[]): Promise<void> {
-		await Promise.all(ops.map(op => vscode.workspace.fs.writeFile(
-			this.referenceRange(op.offset, op.offset + op.data.length),
-			op.data
-		)));
+		await Promise.all(
+			ops.map(op =>
+				vscode.workspace.fs.writeFile(
+					this.referenceRange(op.offset, op.offset + op.data.length),
+					op.data,
+				),
+			),
+		);
 	}
 
 	private referenceRange(from: number, to: number) {
@@ -379,7 +416,11 @@ class DebugFileAccessor implements FileAccessor {
 	}
 }
 
-const watchWorkspaceFile = (uri: string, onDidChange: () => void, onDidDelete: () => void): vscode.Disposable => {
+const watchWorkspaceFile = (
+	uri: string,
+	onDidChange: () => void,
+	onDidDelete: () => void,
+): vscode.Disposable => {
 	const base = uri.split("/");
 	const fileName = base.pop()!;
 	const pattern = new vscode.RelativePattern(vscode.Uri.parse(base.join("/")), fileName);

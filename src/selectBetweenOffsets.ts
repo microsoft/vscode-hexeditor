@@ -6,7 +6,10 @@ import { HexEditorRegistry } from "./hexEditorRegistry";
 const addressRe = /^0x[a-f0-9]+$/i;
 const decimalRe = /^[0-9]+$/i;
 
-export const showSelectBetweenOffsets = async (messaging: ExtensionHostMessageHandler, registry: HexEditorRegistry): Promise<void> => {
+export const showSelectBetweenOffsets = async (
+	messaging: ExtensionHostMessageHandler,
+	registry: HexEditorRegistry,
+): Promise<void> => {
 	messaging.sendEvent({ type: MessageType.StashDisplayedOffset });
 
 	let focusedOffset: string | undefined = undefined;
@@ -15,7 +18,11 @@ export const showSelectBetweenOffsets = async (messaging: ExtensionHostMessageHa
 	const selectionState: ISelectionState | undefined = registry.activeDocument?.selectionState;
 
 	// if there is a selection, use the focused offset as the starting offset
-	if (selectionState !== undefined && selectionState.selected > 0 && selectionState.focused !== undefined) {
+	if (
+		selectionState !== undefined &&
+		selectionState.selected > 0 &&
+		selectionState.focused !== undefined
+	) {
 		// converting to hex to increase readability
 		focusedOffset = `0x${selectionState.focused.toString(16)}`;
 	}
@@ -24,7 +31,11 @@ export const showSelectBetweenOffsets = async (messaging: ExtensionHostMessageHa
 	if (offset1 !== undefined) {
 		const offset2 = await getOffset(vscode.l10n.t("Enter offset to select until"));
 		if (offset2 !== undefined) {
-			messaging.sendEvent({ type: MessageType.SetFocusedByteRange, startingOffset: offset1, endingOffset: offset2 });
+			messaging.sendEvent({
+				type: MessageType.SetFocusedByteRange,
+				startingOffset: offset1,
+				endingOffset: offset2,
+			});
 		}
 	}
 
@@ -54,9 +65,9 @@ export const showSelectBetweenOffsets = async (messaging: ExtensionHostMessageHa
 						const offset = validate(text);
 
 						if (offset === undefined) {
-							input.validationMessage = "Offset must be provided as a decimal (12345) or hex (0x12345) address";
-						}
-						else {
+							input.validationMessage =
+								"Offset must be provided as a decimal (12345) or hex (0x12345) address";
+						} else {
 							input.validationMessage = "";
 							messaging.sendEvent({ type: MessageType.GoToOffset, offset: offset });
 						}
@@ -65,7 +76,7 @@ export const showSelectBetweenOffsets = async (messaging: ExtensionHostMessageHa
 						messaging.sendEvent({ type: MessageType.PopDisplayedOffset });
 						resolve(undefined);
 					}),
-					input
+					input,
 				);
 				input.show();
 			});

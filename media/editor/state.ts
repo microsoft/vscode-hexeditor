@@ -4,16 +4,25 @@
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
-import { FromWebviewMessage, InspectorLocation, MessageHandler, MessageType, ReadRangeResponseMessage, ReadyResponseMessage, SearchResultsWithProgress, ToWebviewMessage } from "../../shared/protocol";
+import {
+	FromWebviewMessage,
+	InspectorLocation,
+	MessageHandler,
+	MessageType,
+	ReadRangeResponseMessage,
+	ReadyResponseMessage,
+	SearchResultsWithProgress,
+	ToWebviewMessage,
+} from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { Range } from "../../shared/util/range";
 import { clamp } from "./util";
 
-const acquireVsCodeApi: () => ({
+const acquireVsCodeApi: () => {
 	postMessage(msg: unknown): void;
 	getState(): any;
 	setState(value: any): void;
-}) = (globalThis as any).acquireVsCodeApi;
+} = (globalThis as any).acquireVsCodeApi;
 
 export const vscode = acquireVsCodeApi?.();
 
@@ -21,7 +30,10 @@ type HandlerFn = (message: ToWebviewMessage) => Promise<FromWebviewMessage> | un
 
 const handles: { [T in ToWebviewMessage["type"]]?: HandlerFn | HandlerFn[] } = {};
 
-export const registerHandler = <T extends ToWebviewMessage["type"]>(typ: T, handler: (msg: ToWebviewMessage & { type: T }) => Promise<FromWebviewMessage> | void): void => {
+export const registerHandler = <T extends ToWebviewMessage["type"]>(
+	typ: T,
+	handler: (msg: ToWebviewMessage & { type: T }) => Promise<FromWebviewMessage> | void,
+): void => {
 	const cast = handler as HandlerFn;
 	const prev = handles[typ];
 	if (!prev) {
@@ -46,7 +58,7 @@ export const messageHandler = new MessageHandler<FromWebviewMessage, ToWebviewMe
 			}
 		}
 	},
-	msg => vscode.postMessage(msg)
+	msg => vscode.postMessage(msg),
 );
 
 window.addEventListener("message", ev => messageHandler.handleMessage(ev.data));
@@ -78,7 +90,7 @@ export const dataInspectorLocation = selector({
 		}
 
 		return settings.inspectorType;
-	}
+	},
 });
 
 export const isReadonly = selector({
@@ -135,10 +147,13 @@ export const editorSettings = atom({
 		get: ({ get }) => get(readyQuery).editorSettings,
 	}),
 	effects_UNSTABLE: [
-		fx => fx.onSet(value => messageHandler.sendEvent({
-			type: MessageType.UpdateEditorSettings,
-			editorSettings: value,
-		})),
+		fx =>
+			fx.onSet(value =>
+				messageHandler.sendEvent({
+					type: MessageType.UpdateEditorSettings,
+					editorSettings: value,
+				}),
+			),
 	],
 });
 
@@ -192,8 +207,12 @@ export const getDisplayedBytes = (d: IDimensions, columnWidth: number): number =
 	columnWidth * (Math.floor(d.height / d.rowPxHeight) - 1);
 
 /** Gets whether the byte is visible in the current window. */
-export const isByteVisible = (d: IDimensions, columnWidth: number, offset: number, byte: number): boolean =>
-	byte >= offset && byte - offset < getDisplayedBytes(d, columnWidth);
+export const isByteVisible = (
+	d: IDimensions,
+	columnWidth: number,
+	offset: number,
+	byte: number,
+): boolean => byte >= offset && byte - offset < getDisplayedBytes(d, columnWidth);
 
 /** Returns the byte at the start of the row containing the given byte. */
 export const startOfRowContainingByte = (byte: number, columnWidth: number): number =>
@@ -227,7 +246,7 @@ export const offset = atom({
 				const s = fx.getLoadable(columnWidth).getValue();
 				fx.setSelf(startOfRowContainingByte(msg.offset, s));
 			});
-		}
+		},
 	],
 });
 
@@ -240,7 +259,7 @@ export const dataPageSize = selector({
 		// Make sure the page size is a multiple of column width, since rendering
 		// happens in page chunks.
 		return Math.round(pageSize / colWidth) * colWidth;
-	}
+	},
 });
 
 /**
@@ -256,10 +275,7 @@ export const scrollBounds = atom<Range>({
 			const offset = get(initialOffset);
 			const scrollEnd = get(fileSize) ?? offset + windowSize * 2;
 
-			return new Range(
-				clamp(0, offset - windowSize, scrollEnd - windowSize),
-				scrollEnd,
-			);
+			return new Range(clamp(0, offset - windowSize, scrollEnd - windowSize), scrollEnd);
 		},
 	}),
 });
@@ -278,9 +294,10 @@ export const edits = atom<readonly HexDocumentEdit[]>({
 	effects_UNSTABLE: [
 		fx => {
 			fx.onSet((newEdits, oldEditsOrDefault) => {
-				const oldEdits = oldEditsOrDefault instanceof DefaultValue
-					? fx.getLoadable(initialEdits).getValue()
-					: oldEditsOrDefault;
+				const oldEdits =
+					oldEditsOrDefault instanceof DefaultValue
+						? fx.getLoadable(initialEdits).getValue()
+						: oldEditsOrDefault;
 
 				if (newEdits.length > oldEdits.length) {
 					messageHandler.sendEvent({
@@ -292,10 +309,12 @@ export const edits = atom<readonly HexDocumentEdit[]>({
 
 			registerHandler(MessageType.SetEdits, msg => {
 				const edits = deserializeEdits(msg.edits);
-				fx.setSelf(prev => msg.appendOnly ? [...(prev instanceof DefaultValue ? [] : prev), ...edits] : edits);
+				fx.setSelf(prev =>
+					msg.appendOnly ? [...(prev instanceof DefaultValue ? [] : prev), ...edits] : edits,
+				);
 			});
-		}
-	]
+		},
+	],
 });
 
 export const unsavedEditIndex = atom({
@@ -311,7 +330,7 @@ export const unsavedEditIndex = atom({
 				fx.setSelf(msg.unsavedEditIndex);
 			});
 		},
-	]
+	],
 });
 
 export const editTimeline = selector({
@@ -321,34 +340,41 @@ export const editTimeline = selector({
 
 export const editedDataPages = selectorFamily({
 	key: "editedDataPages",
-	get: (pageNumber: number) => async ({ get }) => {
-		const pageSize = get(dataPageSize);
-		const { ranges } = get(editTimeline);
-		const target = new Uint8Array(pageSize);
+	get:
+		(pageNumber: number) =>
+		async ({ get }) => {
+			const pageSize = get(dataPageSize);
+			const { ranges } = get(editTimeline);
+			const target = new Uint8Array(pageSize);
 
-		const it = readUsingRanges({
-			read: (offset, target) => {
-				const pageNo = Math.floor(offset / pageSize);
-				const page = get(rawDataPages(pageNo));
-				const start = offset - pageNo * pageSize;
-				const len = Math.min(page.byteLength - start, target.byteLength);
-				target.set(page.subarray(start, start + len), 0);
-				return Promise.resolve(len);
+			const it = readUsingRanges(
+				{
+					read: (offset, target) => {
+						const pageNo = Math.floor(offset / pageSize);
+						const page = get(rawDataPages(pageNo));
+						const start = offset - pageNo * pageSize;
+						const len = Math.min(page.byteLength - start, target.byteLength);
+						target.set(page.subarray(start, start + len), 0);
+						return Promise.resolve(len);
+					},
+				},
+				ranges,
+				pageSize * pageNumber,
+				pageSize,
+			);
+
+			let soFar = 0;
+			for await (const chunk of it) {
+				const read = Math.min(chunk.length, target.length - soFar);
+				target.set(chunk.subarray(0, read), soFar);
+				soFar += read;
+				if (soFar === pageSize) {
+					return target;
+				}
 			}
-		}, ranges, pageSize * pageNumber, pageSize);
 
-		let soFar = 0;
-		for await (const chunk of it) {
-			const read = Math.min(chunk.length, target.length - soFar);
-			target.set(chunk.subarray(0, read), soFar);
-			soFar += read;
-			if (soFar === pageSize) {
-				return target;
-			}
-		}
-
-		return target.subarray(0, soFar);
-	},
+			return target.subarray(0, soFar);
+		},
 	cachePolicy_UNSTABLE: {
 		eviction: "lru",
 		maxSize: 1024,
@@ -357,18 +383,20 @@ export const editedDataPages = selectorFamily({
 
 const rawDataPages = selectorFamily({
 	key: "rawDataPages",
-	get: (pageNumber: number) => async ({ get }) => {
-		get(reloadGeneration); // used to trigger invalidation
+	get:
+		(pageNumber: number) =>
+		async ({ get }) => {
+			get(reloadGeneration); // used to trigger invalidation
 
-		const pageSize = get(dataPageSize);
-		const response = await messageHandler.sendRequest<ReadRangeResponseMessage>({
-			type: MessageType.ReadRangeRequest,
-			offset: pageSize * pageNumber,
-			bytes: pageSize,
-		});
+			const pageSize = get(dataPageSize);
+			const response = await messageHandler.sendRequest<ReadRangeResponseMessage>({
+				type: MessageType.ReadRangeRequest,
+				offset: pageSize * pageNumber,
+				bytes: pageSize,
+			});
 
-		return new Uint8Array(response.data);
-	},
+			return new Uint8Array(response.data);
+		},
 	cachePolicy_UNSTABLE: {
 		eviction: "lru",
 		maxSize: 1024,
@@ -384,16 +412,20 @@ export const searchResults = atom<SearchResultsWithProgress>({
 	effects_UNSTABLE: [
 		fx => {
 			registerHandler(MessageType.SearchProgress, msg => {
-				fx.setSelf(prev => prev instanceof DefaultValue
-					? msg.data
-					: { progress: msg.data.progress, capped: msg.data.capped, results: prev.results.concat(msg.data.results) }
+				fx.setSelf(prev =>
+					prev instanceof DefaultValue
+						? msg.data
+						: {
+								progress: msg.data.progress,
+								capped: msg.data.capped,
+								results: prev.results.concat(msg.data.results),
+							},
 				);
 			});
 
 			registerHandler(MessageType.ReloadFromDisk, () => {
-				fx.setSelf(prev => prev instanceof DefaultValue ? prev : ({ ...prev, outdated: true }));
+				fx.setSelf(prev => (prev instanceof DefaultValue ? prev : { ...prev, outdated: true }));
 			});
-		}
+		},
 	],
 });
-

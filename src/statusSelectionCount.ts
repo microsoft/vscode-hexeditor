@@ -20,7 +20,9 @@ export default class StatusSelectionCount extends Disposable {
 	constructor(registry: HexEditorRegistry) {
 		super();
 
-		this.item = this._register(vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100));
+		this.item = this._register(
+			vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100),
+		);
 
 		const trackDocument = (doc: HexDocument | undefined) => {
 			if (doc) {

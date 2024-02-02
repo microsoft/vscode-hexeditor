@@ -2,7 +2,9 @@ import { expect } from "chai";
 import { LiteralSearch, Wildcard } from "../literalSearch";
 
 describe("literal search", () => {
-	const haystack = new TextEncoder().encode("Excepteur aliquip sit commodo eiusmod nulla ullamco amet reprehenderit incididunt labore ipsum pariatur non. Laborum labore deserunt incididunt mollit do ex ullamco labore quis occaecat amet. Elit amet laborum et ullamco est labore ea. Ipsum ex laborum officia sit Lorem sint enim fugiat in eu. Exercitation laborum est enim cupidatat irure reprehenderit ea duis elit aliquip anim. Sunt reprehenderit consequat consectetur velit proident cupidatat amet.");
+	const haystack = new TextEncoder().encode(
+		"Excepteur aliquip sit commodo eiusmod nulla ullamco amet reprehenderit incididunt labore ipsum pariatur non. Laborum labore deserunt incididunt mollit do ex ullamco labore quis occaecat amet. Elit amet laborum et ullamco est labore ea. Ipsum ex laborum officia sit Lorem sint enim fugiat in eu. Exercitation laborum est enim cupidatat irure reprehenderit ea duis elit aliquip anim. Sunt reprehenderit consequat consectetur velit proident cupidatat amet.",
+	);
 
 	const testNeedle = new TextEncoder().encode("laborum");
 	const testMatches = [
@@ -27,25 +29,18 @@ describe("literal search", () => {
 	});
 
 	it("is sane for wildcards", () => {
-		const searcher = new LiteralSearch([
-			new TextEncoder().encode("lab"),
-			Wildcard,
-			new TextEncoder().encode("rum"),
-		], addMatch);
+		const searcher = new LiteralSearch(
+			[new TextEncoder().encode("lab"), Wildcard, new TextEncoder().encode("rum")],
+			addMatch,
+		);
 		searcher.push(haystack);
 		expect(matches).to.deep.equal(testMatches);
 	});
 
 	it("is sane for leading wildcards", () => {
-		const searcher = new LiteralSearch([
-			Wildcard,
-			new TextEncoder().encode("aborum"),
-		], addMatch);
+		const searcher = new LiteralSearch([Wildcard, new TextEncoder().encode("aborum")], addMatch);
 		searcher.push(haystack);
-		expect(matches).to.deep.equal([
-			{ index: 109, bytes: "Laborum" },
-			...testMatches,
-		]);
+		expect(matches).to.deep.equal([{ index: 109, bytes: "Laborum" }, ...testMatches]);
 	});
 
 	it("works with random wildcards", () => {

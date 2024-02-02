@@ -26,18 +26,23 @@ const Root: React.FC = () => {
 	const theme = useTheme();
 
 	useLayoutEffect(() => {
-		const applyDimensions = () => setDimensions({
-			width: window.innerWidth,
-			height: window.innerHeight,
-			rowPxHeight: parseInt(theme["font-size"]) + 8,
-		});
+		const applyDimensions = () =>
+			setDimensions({
+				width: window.innerWidth,
+				height: window.innerHeight,
+				rowPxHeight: parseInt(theme["font-size"]) + 8,
+			});
 
 		window.addEventListener("resize", applyDimensions);
 		applyDimensions();
 		return () => window.removeEventListener("resize", applyDimensions);
 	}, [theme]);
 
-	return <Suspense fallback={<VsProgressIndicator />}><Editor /></Suspense>;
+	return (
+		<Suspense fallback={<VsProgressIndicator />}>
+			<Editor />
+		</Suspense>
+	);
 };
 
 const Editor: React.FC = () => {
@@ -51,24 +56,38 @@ const Editor: React.FC = () => {
 	const [bypassLargeFilePrompt, setBypassLargeFile] = useRecoilState(select.bypassLargeFilePrompt);
 
 	if (isLargeFile && !bypassLargeFilePrompt) {
-		return <div>
-			<p>{strings.openLargeFileWarning} <a id="open-anyway" role="button" onClick={() => setBypassLargeFile(true)}>{strings.openAnyways}</a></p>
-		</div>;
+		return (
+			<div>
+				<p>
+					{strings.openLargeFileWarning}{" "}
+					<a id="open-anyway" role="button" onClick={() => setBypassLargeFile(true)}>
+						{strings.openAnyways}
+					</a>
+				</p>
+			</div>
+		);
 	}
 
-	return <DataDisplayContext.Provider value={ctx}>
-		<div className={style.container} style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}>
-			<FindWidget />
-			<SettingsGear />
-			<DataHeader />
-			<ScrollContainer />
-			<ReadonlyWarning />
-			{inspectorLocation === InspectorLocation.Hover && <DataInspectorHover />}
-		</div>
-	</DataDisplayContext.Provider>;
+	return (
+		<DataDisplayContext.Provider value={ctx}>
+			<div
+				className={style.container}
+				style={{ "--cell-size": `${dimensions.rowPxHeight}px` } as React.CSSProperties}
+			>
+				<FindWidget />
+				<SettingsGear />
+				<DataHeader />
+				<ScrollContainer />
+				<ReadonlyWarning />
+				{inspectorLocation === InspectorLocation.Hover && <DataInspectorHover />}
+			</div>
+		</DataDisplayContext.Provider>
+	);
 };
 
-
-render(<RecoilRoot><Root /></RecoilRoot>, document.body);
-
-
+render(
+	<RecoilRoot>
+		<Root />
+	</RecoilRoot>,
+	document.body,
+);

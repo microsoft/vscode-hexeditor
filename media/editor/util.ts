@@ -21,7 +21,7 @@ export const throwOnUndefinedAccessInDev = <T extends object>(value: T): T => {
 			}
 
 			throw new Error(`Accessing undefined property ${String(prop)}`);
-		}
+		},
 	});
 };
 
@@ -86,7 +86,8 @@ export const getAsciiCharacter = (byte: number): string | undefined => {
 /**
  * Returns `x` clamped between the provided lower and upper bounds.
  */
-export const clamp = (lower: number, x: number, upper: number): number => Math.max(lower, Math.min(upper, x));
+export const clamp = (lower: number, x: number, upper: number): number =>
+	Math.max(lower, Math.min(upper, x));
 
 /**
  * Parses the string as hex. Non-hex characters will be treated as 0.
@@ -94,7 +95,7 @@ export const clamp = (lower: number, x: number, upper: number): number => Math.m
 export const hexDecode = (str: string): Uint8Array => {
 	const value = new Uint8Array(Math.ceil(str.length / 2));
 	for (let i = 0; i < str.length; i += 2) {
-		value[i >>> 1] = (parseHexDigit(str[i]) || 0) << 4 | (parseHexDigit(str[i + 1]) || 0);
+		value[i >>> 1] = ((parseHexDigit(str[i]) || 0) << 4) | (parseHexDigit(str[i + 1]) || 0);
 	}
 
 	return value;
@@ -112,32 +113,54 @@ export const isHexString = (s: string): boolean => {
 
 export const parseHexDigit = (s: string): number | undefined => {
 	switch (s) {
-		case "0": return 0;
-		case "1": return 1;
-		case "2": return 2;
-		case "3": return 3;
-		case "4": return 4;
-		case "5": return 5;
-		case "6": return 6;
-		case "7": return 7;
-		case "8": return 8;
-		case "9": return 9;
-		case "a": return 10;
-		case "A": return 10;
-		case "b": return 11;
-		case "B": return 11;
-		case "c": return 12;
-		case "C": return 12;
-		case "d": return 13;
-		case "D": return 13;
-		case "e": return 14;
-		case "E": return 14;
-		case "f": return 15;
-		case "F": return 15;
-		default: return undefined;
+		case "0":
+			return 0;
+		case "1":
+			return 1;
+		case "2":
+			return 2;
+		case "3":
+			return 3;
+		case "4":
+			return 4;
+		case "5":
+			return 5;
+		case "6":
+			return 6;
+		case "7":
+			return 7;
+		case "8":
+			return 8;
+		case "9":
+			return 9;
+		case "a":
+			return 10;
+		case "A":
+			return 10;
+		case "b":
+			return 11;
+		case "B":
+			return 11;
+		case "c":
+			return 12;
+		case "C":
+			return 12;
+		case "d":
+			return 13;
+		case "D":
+			return 13;
+		case "e":
+			return 14;
+		case "E":
+			return 14;
+		case "f":
+			return 15;
+		case "F":
+			return 15;
+		default:
+			return undefined;
 	}
 };
-
 
 /** Calculates the dimensions of the browser scrollbar */
 export const getScrollDimensions = (() => {
@@ -150,8 +173,8 @@ export const getScrollDimensions = (() => {
 		const el = document.createElement("div");
 		el.classList.add(style.scrollbar);
 		document.body.appendChild(el);
-		const width = (el.offsetWidth - el.clientWidth);
-		const height = (el.offsetHeight - el.clientHeight);
+		const width = el.offsetWidth - el.clientWidth;
+		const height = el.offsetHeight - el.clientHeight;
 		document.body.removeChild(el);
 		value = { width, height };
 		return value;

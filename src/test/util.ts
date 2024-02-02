@@ -31,8 +31,10 @@ afterEach(async () => {
 });
 
 /** Simple, slow, seedable pseudo-random number generator */
-export const pseudoRandom = (seed: string | Buffer): () => number => () => {
-	const digest = createHash("sha256").update(seed).digest();
-	seed = digest;
-	return digest.readUInt32BE() / 0xFF_FF_FF_FF;
-};
+export const pseudoRandom =
+	(seed: string | Buffer): (() => number) =>
+	() => {
+		const digest = createHash("sha256").update(seed).digest();
+		seed = digest;
+		return digest.readUInt32BE() / 0xff_ff_ff_ff;
+	};

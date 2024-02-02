@@ -1,6 +1,6 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-	"editor.defaultFormatter": "vscode.typescript-language-features",
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"files.exclude": {
 		"out": false // set this to true to hide the "out" folder with the compiled JS files
 	},
@@ -14,10 +14,10 @@
 	"typescript.preferences.quoteStyle": "double",
 	"editor.formatOnSave": true,
 	"[typescriptreact]": {
-	"editor.defaultFormatter": "vscode.typescript-language-features"
+	"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
 	"[typescript]": {
-		"editor.defaultFormatter": "vscode.typescript-language-features"
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
 	"[css]": {
 		"editor.defaultFormatter": "esbenp.prettier-vscode"

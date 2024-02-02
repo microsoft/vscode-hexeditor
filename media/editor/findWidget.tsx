@@ -12,7 +12,13 @@ import SearchStop from "@vscode/codicons/src/icons/search-stop.svg";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
-import { LiteralSearchQuery, MessageType, SearchRequestMessage, SearchResult, SearchResultsWithProgress } from "../../shared/protocol";
+import {
+	LiteralSearchQuery,
+	MessageType,
+	SearchRequestMessage,
+	SearchResult,
+	SearchResultsWithProgress,
+} from "../../shared/protocol";
 import { placeholder1 } from "../../shared/strings";
 import { Range } from "../../shared/util/range";
 import { FocusedElement, dataCellCls, useDisplayContext } from "./dataDisplayContext";
@@ -59,7 +65,7 @@ const parseHexStringWithPlaceholders = (str: string): LiteralSearchQuery | undef
 			return undefined;
 		}
 
-		value[valueEnd++] = a << 4 | b;
+		value[valueEnd++] = (a << 4) | b;
 	}
 
 	if (valueEnd > valueStart) {
@@ -71,15 +77,17 @@ const parseHexStringWithPlaceholders = (str: string): LiteralSearchQuery | undef
 
 const getReplaceOrError = (replace: string, isBinaryMode: boolean) => {
 	if (isBinaryMode) {
-		return isHexString(replace)
-			? hexDecode(replace)
-			: strings.onlyHexChars;
+		return isHexString(replace) ? hexDecode(replace) : strings.onlyHexChars;
 	}
 
 	return new TextEncoder().encode(replace);
 };
 
-const getSearchQueryOrError = (query: string, isBinaryMode: boolean, isRegexp: boolean): SearchRequestMessage["query"] | string => {
+const getSearchQueryOrError = (
+	query: string,
+	isBinaryMode: boolean,
+	isRegexp: boolean,
+): SearchRequestMessage["query"] | string => {
 	if (isBinaryMode) {
 		return parseHexStringWithPlaceholders(query) || strings.onlyHexCharsAndPlaceholders;
 	}
@@ -97,12 +105,14 @@ const getSearchQueryOrError = (query: string, isBinaryMode: boolean, isRegexp: b
 	return { literal: [new TextEncoder().encode(query)] };
 };
 
-const searchResultToEdit = (value: Uint8Array) => (r: SearchResult): HexDocumentReplaceEdit => ({
-	op: HexDocumentEditOp.Replace,
-	offset: r.from,
-	value,
-	previous: r.previous,
-});
+const searchResultToEdit =
+	(value: Uint8Array) =>
+	(r: SearchResult): HexDocumentReplaceEdit => ({
+		op: HexDocumentEditOp.Replace,
+		offset: r.from,
+		value,
+		previous: r.previous,
+	});
 
 export const FindWidget: React.FC = () => {
 	const [visible, setVisible] = usePersistedState("find.visible", false);
@@ -194,7 +204,15 @@ export const FindWidget: React.FC = () => {
 				clearTimeout(timeout);
 			}
 		};
-	}, [query, JSON.stringify(queryOrError), isUncapped, isCaseSensitive, isBinaryMode, edits.length - safeReplacedEditsLen.current, results.outdated]);
+	}, [
+		query,
+		JSON.stringify(queryOrError),
+		isUncapped,
+		isCaseSensitive,
+		isBinaryMode,
+		edits.length - safeReplacedEditsLen.current,
+		results.outdated,
+	]);
 
 	const closeWidget = () => {
 		const prev = previouslyFocusedElement.current;
@@ -264,7 +282,15 @@ export const FindWidget: React.FC = () => {
 	const revealResult = (r: SearchResult) => {
 		ctx.setSelectionRanges([new Range(r.from, r.to)]);
 		if (!select.isByteVisible(dimensions, columnWidth, offset, r.from)) {
-			setOffset(Math.max(0, select.startOfRowContainingByte(r.to - select.getDisplayedBytes(dimensions, columnWidth) / 3, columnWidth)));
+			setOffset(
+				Math.max(
+					0,
+					select.startOfRowContainingByte(
+						r.to - select.getDisplayedBytes(dimensions, columnWidth) / 3,
+						columnWidth,
+					),
+				),
+			);
 		}
 	};
 
@@ -284,7 +310,7 @@ export const FindWidget: React.FC = () => {
 		if (delta !== 0) {
 			nextResults = nextResults.map(r =>
 				r.from > selected.from
-					? ({ from: r.from + delta, to: r.to + delta, previous: r.previous })
+					? { from: r.from + delta, to: r.to + delta, previous: r.previous }
 					: r,
 			);
 		}
@@ -300,9 +326,9 @@ export const FindWidget: React.FC = () => {
 
 	const replaceAll = () => {
 		if (typeof replaceOrError !== "string") {
-			ctx.edit(results.results
-				.map(searchResultToEdit(replaceOrError))
-				.sort((a, b) => b.offset - a.offset));
+			ctx.edit(
+				results.results.map(searchResultToEdit(replaceOrError)).sort((a, b) => b.offset - a.offset),
+			);
 			safeReplacedEditsLen.current = edits.length + results.results.length;
 			setResults({ progress: 1, results: [] });
 			setSelectedResult(undefined);
@@ -311,70 +337,118 @@ export const FindWidget: React.FC = () => {
 
 	const toggleFindReplace = useCallback(() => setReplaceVisible(v => !v), []);
 
-	return <div tabIndex={visible ? undefined : -1} className={clsx(style.wrapper, visible && style.visible)}>
-		{results.progress < 1 && <VsProgressIndicator />}
-		{!ctx.isReadonly && (
-			<VsIconButton title="Toggle Replace" onClick={toggleFindReplace} className={style.replaceToggle}>
-				{replaceVisible ? <ChevronDown /> : <ChevronRight />}
-			</VsIconButton>
-		)}
-		<div className={style.controlsContainer}>
-			<div className={style.inputRow}>
-				<VsTextFieldGroup
-					buttons={3}
-					ref={textFieldRef}
-					outerClassName={style.textField}
-					placeholder={isBinaryMode ? strings.findBytes : strings.findText}
-					value={query}
-					onChange={onQueryChange}
-					onKeyDown={onFindKeyDown}
-					error={typeof queryOrError === "string" ? queryOrError : undefined}
+	return (
+		<div
+			tabIndex={visible ? undefined : -1}
+			className={clsx(style.wrapper, visible && style.visible)}
+		>
+			{results.progress < 1 && <VsProgressIndicator />}
+			{!ctx.isReadonly && (
+				<VsIconButton
+					title="Toggle Replace"
+					onClick={toggleFindReplace}
+					className={style.replaceToggle}
 				>
-					{!isBinaryMode && <VsIconCheckbox checked={isRegexp} onToggle={setIsRegexp} title={strings.regexSearch}>
-						<RegexIcon />
-					</VsIconCheckbox>}
-					<VsIconCheckbox checked={isBinaryMode} onToggle={setIsBinaryMode} title={strings.searchInBinaryMode}>
-						<BinaryFile />
-					</VsIconCheckbox>
-					<VsIconCheckbox checked={isCaseSensitive} onToggle={setIsCaseSensitive} title={strings.caseSensitive}>
-						<CaseSensitive />
-					</VsIconCheckbox>
-				</VsTextFieldGroup>
-				<ResultBadge onUncap={() => setUncapped(true)} results={results} selectedResult={selectedResult} />
-				<VsIconButton title={strings.cancelSearch} disabled={results.progress === 1} onClick={stopSearch}>
-					<SearchStop />
+					{replaceVisible ? <ChevronDown /> : <ChevronRight />}
 				</VsIconButton>
-				<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(-1)} title={strings.previousMatch}>
-					<ArrowUp />
-				</VsIconButton>
-				<VsIconButton disabled={results.results.length === 0} onClick={() => navigateResults(1)} title={strings.nextMatch}>
-					<ArrowDown />
-				</VsIconButton>
-				<VsIconButton title={strings.closeWidget} onClick={closeWidget}>
-					<Close />
-				</VsIconButton>
+			)}
+			<div className={style.controlsContainer}>
+				<div className={style.inputRow}>
+					<VsTextFieldGroup
+						buttons={3}
+						ref={textFieldRef}
+						outerClassName={style.textField}
+						placeholder={isBinaryMode ? strings.findBytes : strings.findText}
+						value={query}
+						onChange={onQueryChange}
+						onKeyDown={onFindKeyDown}
+						error={typeof queryOrError === "string" ? queryOrError : undefined}
+					>
+						{!isBinaryMode && (
+							<VsIconCheckbox checked={isRegexp} onToggle={setIsRegexp} title={strings.regexSearch}>
+								<RegexIcon />
+							</VsIconCheckbox>
+						)}
+						<VsIconCheckbox
+							checked={isBinaryMode}
+							onToggle={setIsBinaryMode}
+							title={strings.searchInBinaryMode}
+						>
+							<BinaryFile />
+						</VsIconCheckbox>
+						<VsIconCheckbox
+							checked={isCaseSensitive}
+							onToggle={setIsCaseSensitive}
+							title={strings.caseSensitive}
+						>
+							<CaseSensitive />
+						</VsIconCheckbox>
+					</VsTextFieldGroup>
+					<ResultBadge
+						onUncap={() => setUncapped(true)}
+						results={results}
+						selectedResult={selectedResult}
+					/>
+					<VsIconButton
+						title={strings.cancelSearch}
+						disabled={results.progress === 1}
+						onClick={stopSearch}
+					>
+						<SearchStop />
+					</VsIconButton>
+					<VsIconButton
+						disabled={results.results.length === 0}
+						onClick={() => navigateResults(-1)}
+						title={strings.previousMatch}
+					>
+						<ArrowUp />
+					</VsIconButton>
+					<VsIconButton
+						disabled={results.results.length === 0}
+						onClick={() => navigateResults(1)}
+						title={strings.nextMatch}
+					>
+						<ArrowDown />
+					</VsIconButton>
+					<VsIconButton title={strings.closeWidget} onClick={closeWidget}>
+						<Close />
+					</VsIconButton>
+				</div>
+				{replaceVisible && (
+					<div className={style.inputRow}>
+						<VsTextFieldGroup
+							outerClassName={style.textField}
+							buttons={0}
+							value={replace}
+							onChange={onReplaceChange}
+							onKeyDown={onReplaceKeyDown}
+							placeholder={strings.replace}
+							error={typeof replaceOrError === "string" ? replaceOrError : undefined}
+						/>
+						<VsIconButton
+							disabled={typeof replaceOrError === "string" || selectedResult === undefined}
+							onClick={replaceSelected}
+							title={strings.replaceSelectedMatch}
+						>
+							<Replace />
+						</VsIconButton>
+						<VsIconButton
+							disabled={
+								typeof replaceOrError === "string" ||
+								results.progress < 1 ||
+								!results.results.length
+							}
+							onClick={replaceAll}
+							title={strings.replaceAllMatches}
+						>
+							<ReplaceAll />
+						</VsIconButton>
+					</div>
+				)}
 			</div>
-			{replaceVisible && <div className={style.inputRow}>
-				<VsTextFieldGroup
-					outerClassName={style.textField}
-					buttons={0}
-					value={replace}
-					onChange={onReplaceChange}
-					onKeyDown={onReplaceKeyDown}
-					placeholder={strings.replace}
-					error={typeof replaceOrError === "string" ? replaceOrError : undefined}
-				/>
-				<VsIconButton disabled={typeof replaceOrError === "string" || selectedResult === undefined} onClick={replaceSelected} title={strings.replaceSelectedMatch}>
-					<Replace />
-				</VsIconButton>
-				<VsIconButton disabled={typeof replaceOrError === "string" || results.progress < 1 || !results.results.length} onClick={replaceAll} title={strings.replaceAllMatches}>
-					<ReplaceAll />
-				</VsIconButton>
-			</div>}
 		</div>
-	</div>;
+	);
 };
-
 
 const ResultBadge: React.FC<{
 	results: SearchResultsWithProgress;
@@ -382,17 +456,33 @@ const ResultBadge: React.FC<{
 	onUncap(): void;
 }> = ({ results, selectedResult, onUncap }) => {
 	const resultCountStr = resultCountFormat.format(results.results.length);
-	const resultCountComponent = results.capped
-		? <a role="button" title={strings.resultOverflow.replace(placeholder1, results.results.length.toString())} onClick={onUncap}>{resultCountStr}+</a>
-		: <span title={strings.resultCount.replace(placeholder1, results.results.length.toString())}>{resultCountStr}</span>;
+	const resultCountComponent = results.capped ? (
+		<a
+			role="button"
+			title={strings.resultOverflow.replace(placeholder1, results.results.length.toString())}
+			onClick={onUncap}
+		>
+			{resultCountStr}+
+		</a>
+	) : (
+		<span title={strings.resultCount.replace(placeholder1, results.results.length.toString())}>
+			{resultCountStr}
+		</span>
+	);
 
-	return <div className={style.resultBadge}>
-		{results.progress < 1
-			? strings.foundNResults.replace(placeholder1, resultCountStr)
-			: !results.results.length
-				? strings.noResults
-				: selectedResult !== undefined
-					? <>{selectedFormat.format(selectedResult + 1)} of {resultCountComponent}</>
-					: <>{resultCountComponent} results</>}
-	</div>;
+	return (
+		<div className={style.resultBadge}>
+			{results.progress < 1 ? (
+				strings.foundNResults.replace(placeholder1, resultCountStr)
+			) : !results.results.length ? (
+				strings.noResults
+			) : selectedResult !== undefined ? (
+				<>
+					{selectedFormat.format(selectedResult + 1)} of {resultCountComponent}
+				</>
+			) : (
+				<>{resultCountComponent} results</>
+			)}
+		</div>
+	);
 };

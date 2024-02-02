@@ -17,7 +17,9 @@ export const ReadonlyWarning: React.FC = () => {
 		return () => clearTimeout(timeout);
 	});
 
-	return <VsTooltipPopover anchor={anchor} hide={hide} visible={!!anchor}>
-		{strings.readonlyWarning}
-	</VsTooltipPopover>;
+	return (
+		<VsTooltipPopover anchor={anchor} hide={hide} visible={!!anchor}>
+			{strings.readonlyWarning}
+		</VsTooltipPopover>
+	);
 };

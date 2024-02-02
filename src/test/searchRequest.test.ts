@@ -26,9 +26,10 @@ Lorem ad ullamco ad deserunt voluptate ullamco et in commodo et exercitation dui
 			throw new Error("no result");
 		}
 
-		const process = (results: SearchResult[]) => results
-			.sort((a, b) => a.from - b.from)
-			.map(r => ({ ...r, previous: new TextDecoder().decode(r.previous) }));
+		const process = (results: SearchResult[]) =>
+			results
+				.sort((a, b) => a.from - b.from)
+				.map(r => ({ ...r, previous: new TextDecoder().decode(r.previous) }));
 
 		expect(process(last)).to.deep.equal(process(expected));
 	};
@@ -42,32 +43,42 @@ Lorem ad ullamco ad deserunt voluptate ullamco et in commodo et exercitation dui
 		{ from: 915, previous: testNeedleBytes, to: 922 },
 	];
 
-	const makeDocument = async (content = testContent) => new HexDocument(
-		new HexDocumentModel({
-			accessor: await getTestFileAccessor(new TextEncoder().encode(content)),
-			supportsLengthChanges: false,
-			isFiniteSize: true,
-		}),
-		false,
-		0
-	);
+	const makeDocument = async (content = testContent) =>
+		new HexDocument(
+			new HexDocumentModel({
+				accessor: await getTestFileAccessor(new TextEncoder().encode(content)),
+				supportsLengthChanges: false,
+				isFiniteSize: true,
+			}),
+			false,
+			0,
+		);
 
 	it("searches for literal", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, true, undefined), expectedForTestNeedle);
+		await expectMatches(
+			new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, true, undefined),
+			expectedForTestNeedle,
+		);
 	});
 
 	it("searches for literal case insensitive", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, false, undefined), [
-			...expectedForTestNeedle,
-			{ from: 1026, previous: new TextEncoder().encode("Laboris"), to: 1033 },
-		]);
+		await expectMatches(
+			new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, false, undefined),
+			[
+				...expectedForTestNeedle,
+				{ from: 1026, previous: new TextEncoder().encode("Laboris"), to: 1033 },
+			],
+		);
 	});
 
 	it("searches for regex", async () => {
 		const doc = await makeDocument();
-		await expectMatches(new RegexSearchRequest(doc, { re: testNeedle }, true, undefined), expectedForTestNeedle);
+		await expectMatches(
+			new RegexSearchRequest(doc, { re: testNeedle }, true, undefined),
+			expectedForTestNeedle,
+		);
 	});
 
 	it("searches for regex case insensitive", async () => {

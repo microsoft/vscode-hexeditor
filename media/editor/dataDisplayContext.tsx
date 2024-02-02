@@ -12,14 +12,14 @@ const style = throwOnUndefinedAccessInDev(_style);
 
 export class FocusedElement {
 	public static readonly zero = new FocusedElement(false, 0);
-	public readonly key = BigInt(this.byte) << 1n | (this.char ? 1n : 0n);
+	public readonly key = (BigInt(this.byte) << 1n) | (this.char ? 1n : 0n);
 
 	constructor(
 		/** If true, the character rather than data is focused */
 		public readonly char: boolean,
 		/** Focused byte index */
 		public readonly byte: number,
-	) { }
+	) {}
 
 	/** Gets the other element at this byte (the character or non-character) */
 	public other(): FocusedElement {
@@ -44,7 +44,10 @@ export class DisplayContext {
 	private _focusedByte?: FocusedElement;
 	private _unsavedRanges: readonly Range[] = [];
 	private readonly unsavedRangesEmitter = new EventEmitter<readonly Range[]>();
-	private readonly selectionChangeEmitter = new EventEmitter<{ range: Range; isSingleSwap: boolean }>();
+	private readonly selectionChangeEmitter = new EventEmitter<{
+		range: Range;
+		isSingleSwap: boolean;
+	}>();
 	private readonly hoverChangeEmitter = new EventEmitter<FocusedElement | undefined>();
 	private readonly hoverChangeHandlers = new Map<bigint, (isSelected: boolean) => void>();
 	private readonly focusChangeEmitter = new EventEmitter<FocusedElement | undefined>();
@@ -69,8 +72,11 @@ export class DisplayContext {
 	/**
 	 * Emitter that fires when a selection for a single byte changes.
 	 */
-	public onDidChangeSelection(forByte: number, listener: (isSingleSwap: boolean) => void): IDisposable {
-		return this.selectionChangeEmitter.addListener((evt) => {
+	public onDidChangeSelection(
+		forByte: number,
+		listener: (isSingleSwap: boolean) => void,
+	): IDisposable {
+		return this.selectionChangeEmitter.addListener(evt => {
 			if (evt.range.includes(forByte)) {
 				listener(evt.isSingleSwap);
 			}
@@ -80,7 +86,10 @@ export class DisplayContext {
 	/**
 	 * Emitter that fires when the unsaved state for a single byte changes.
 	 */
-	public onDidChangeUnsavedState(forByte: number, listener: (isEdited: boolean) => void): IDisposable {
+	public onDidChangeUnsavedState(
+		forByte: number,
+		listener: (isEdited: boolean) => void,
+	): IDisposable {
 		let wasEdited = this._unsavedRanges.some(e => e.includes(forByte));
 
 		return this.unsavedRangesEmitter.addListener(ranges => {
@@ -93,9 +102,12 @@ export class DisplayContext {
 	}
 
 	/**
-		 * Emitter that fires when the given byte is focused or unfocused.
+	 * Emitter that fires when the given byte is focused or unfocused.
 	 */
-	public onDidChangeFocus(element: FocusedElement, listener: (isFocused: boolean) => void): IDisposable {
+	public onDidChangeFocus(
+		element: FocusedElement,
+		listener: (isFocused: boolean) => void,
+	): IDisposable {
 		if (this.focusChangeHandlers.has(element.key)) {
 			throw new Error(`Duplicate focus change handler for byte ${element.byte}`);
 		}
@@ -112,7 +124,10 @@ export class DisplayContext {
 	/**
 	 * Emitter that fires when the given byte is hovered or unhovered.
 	 */
-	public onDidChangeHovered(element: FocusedElement, listener: (isHovered: boolean) => void): IDisposable {
+	public onDidChangeHovered(
+		element: FocusedElement,
+		listener: (isHovered: boolean) => void,
+	): IDisposable {
 		if (this.hoverChangeHandlers.has(element.key)) {
 			throw new Error(`Duplicate hover change handler for byte ${element.byte}`);
 		}
@@ -250,7 +265,6 @@ export class DisplayContext {
 		}
 
 		return selected;
-
 	}
 
 	private publishSelections() {
@@ -262,7 +276,7 @@ export class DisplayContext {
 		messageHandler.sendEvent({
 			type: MessageType.SetSelectedCount,
 			selected: selected,
-			focused: this._focusedByte?.byte
+			focused: this._focusedByte?.byte,
 		});
 	}
 

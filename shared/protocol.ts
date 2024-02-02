@@ -268,12 +268,15 @@ export type WebviewMessageHandler = MessageHandler<FromWebviewMessage, ToWebview
  */
 export class MessageHandler<TTo, TFrom> {
 	private messageIdCounter = 0;
-	private readonly pendingMessages = new Map<number, { resolve: (msg: TFrom) => void, reject: (err: Error) => void }>();
+	private readonly pendingMessages = new Map<
+		number,
+		{ resolve: (msg: TFrom) => void; reject: (err: Error) => void }
+	>();
 
 	constructor(
 		public messageHandler: (msg: TFrom) => Promise<TTo | undefined>,
 		private readonly postMessage: (msg: WebviewMessage<TTo>) => void,
-	) { }
+	) {}
 
 	/** Sends a request without waiting for a response */
 	public sendEvent(body: TTo): void {
@@ -291,7 +294,11 @@ export class MessageHandler<TTo, TFrom> {
 
 	/** Sends a reply in response to a previous request */
 	private sendReply(inReplyTo: WebviewMessage<TFrom>, reply: TTo): void {
-		this.postMessage({ body: reply, messageId: this.messageIdCounter++, inReplyTo: inReplyTo.messageId });
+		this.postMessage({
+			body: reply,
+			messageId: this.messageIdCounter++,
+			inReplyTo: inReplyTo.messageId,
+		});
 	}
 
 	/** Should be called when a postMessage is received */
@@ -300,7 +307,9 @@ export class MessageHandler<TTo, TFrom> {
 			this.pendingMessages.get(message.inReplyTo)?.resolve(message.body);
 			this.pendingMessages.delete(message.inReplyTo);
 		} else {
-			Promise.resolve(this.messageHandler(message.body)).then(reply => reply && this.sendReply(message, reply));
+			Promise.resolve(this.messageHandler(message.body)).then(
+				reply => reply && this.sendReply(message, reply),
+			);
 		}
 	}
 }

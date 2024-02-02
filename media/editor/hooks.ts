@@ -2,7 +2,14 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import React, { DependencyList, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, {
+	DependencyList,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { RecoilValue, useRecoilValue, useRecoilValueLoadable } from "recoil";
 import { ColorMap, observeColors, parseColors } from "vscode-webview-tools";
 import * as select from "./state";
@@ -16,7 +23,10 @@ export const useTheme = (): ColorMap => {
 /**
  * Like useEffect, but only runs when its inputs change, not on the first render.
  */
-export const useLazyEffect = (fn: () => void | (() => void), inputs: React.DependencyList): void => {
+export const useLazyEffect = (
+	fn: () => void | (() => void),
+	inputs: React.DependencyList,
+): void => {
 	const isFirst = useRef(true);
 	useEffect(() => {
 		if (!isFirst.current) {
@@ -30,7 +40,10 @@ export const useLazyEffect = (fn: () => void | (() => void), inputs: React.Depen
 /**
  * Like useState, but also persists changes to the VS Code webview API.
  */
-export const usePersistedState = <T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] => {
+export const usePersistedState = <T>(
+	key: string,
+	defaultValue: T,
+): [T, React.Dispatch<React.SetStateAction<T>>] => {
 	const [value, setValue] = useState<T>(select.vscode.getState()?.[key] ?? defaultValue);
 
 	useLazyEffect(() => {
@@ -65,11 +78,15 @@ const zeroRect: DOMRectReadOnly = new DOMRect();
 export const useSize = (target: React.RefObject<HTMLElement>): DOMRectReadOnly => {
 	const [size, setSize] = useState<DOMRectReadOnly>(zeroRect);
 
-	const observer = useMemo(() => new ResizeObserver(entry => {
-		if (entry.length) {
-			setSize(entry[0].target.getBoundingClientRect());
-		}
-	}), []);
+	const observer = useMemo(
+		() =>
+			new ResizeObserver(entry => {
+				if (entry.length) {
+					setSize(entry[0].target.getBoundingClientRect());
+				}
+			}),
+		[],
+	);
 
 	useLayoutEffect(() => {
 		if (!target.current) {
@@ -87,7 +104,7 @@ export const useSize = (target: React.RefObject<HTMLElement>): DOMRectReadOnly =
 
 export const useLastAsyncRecoilValue = <T>(value: RecoilValue<T>): [value: T, isStale: boolean] => {
 	const loadable = useRecoilValueLoadable(value);
-	const lastValue = useRef<{ value: T, key: string, isStale: boolean }>();
+	const lastValue = useRef<{ value: T; key: string; isStale: boolean }>();
 	switch (loadable.state) {
 		case "hasValue":
 			lastValue.current = { value: loadable.contents, isStale: false, key: value.key };
@@ -108,14 +125,17 @@ export const useLastAsyncRecoilValue = <T>(value: RecoilValue<T>): [value: T, is
 	return [lastValue.current.value, lastValue.current.isStale];
 };
 
-export const useGlobalHandler = <T = Event>(name: string, handler: (evt: T) => void, deps: DependencyList = []) => {
+export const useGlobalHandler = <T = Event>(
+	name: string,
+	handler: (evt: T) => void,
+	deps: DependencyList = [],
+) => {
 	useEffect(() => {
 		const l = (evt: Event) => handler(evt as unknown as T);
 		window.addEventListener(name, l);
 		return () => window.removeEventListener(name, l);
 	}, deps);
 };
-
 
 /**
  * Hook that returns up to "count" bytes at the offset in the file.
@@ -141,14 +161,19 @@ export const useFileBytes = (offset: number, count: number, useLastAsync = false
 	const startPageSelector = select.editedDataPages(startPageNo);
 	const endPageSelector = select.editedDataPages(endPageNo);
 
-	const startPage = useLastAsync ? useLastAsyncRecoilValue(startPageSelector)[0] : useRecoilValue(startPageSelector);
-	const endPage = useLastAsync ? useLastAsyncRecoilValue(endPageSelector)[0] : useRecoilValue(endPageSelector);
+	const startPage = useLastAsync
+		? useLastAsyncRecoilValue(startPageSelector)[0]
+		: useRecoilValue(startPageSelector);
+	const endPage = useLastAsync
+		? useLastAsyncRecoilValue(endPageSelector)[0]
+		: useRecoilValue(endPageSelector);
 	const target = useMemo(() => new Uint8Array(count), [count]);
 
 	for (let i = 0; i < count; i++) {
-		const value = offset + i >= endPageStartsAt
-			? endPage[offset + i - endPageStartsAt]
-			: startPage[offset + i - startPageStartsAt];
+		const value =
+			offset + i >= endPageStartsAt
+				? endPage[offset + i - endPageStartsAt]
+				: startPage[offset + i - startPageStartsAt];
 		if (value === undefined) {
 			return target.subarray(0, i);
 		}

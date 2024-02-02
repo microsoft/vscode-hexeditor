@@ -14,9 +14,8 @@ export class Backup {
 
 	/** Writes the edits to the backup file. */
 	public async write(edits: readonly HexDocumentEdit[]): Promise<void> {
-		const serialized = JSON.stringify(
-			edits,
-			(_key, value) => value instanceof Uint8Array ? { $u8: base64.fromUint8Array(value) } : value,
+		const serialized = JSON.stringify(edits, (_key, value) =>
+			value instanceof Uint8Array ? { $u8: base64.fromUint8Array(value) } : value,
 		);
 
 		await vscode.workspace.fs.writeFile(this.uri, encoder.encode(serialized));

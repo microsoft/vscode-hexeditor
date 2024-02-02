@@ -4,8 +4,23 @@
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as base64 from "js-base64";
 import * as vscode from "vscode";
-import { HexDocumentEdit, HexDocumentEditOp, HexDocumentEditReference } from "../shared/hexDocumentModel";
-import { Endianness, ExtensionHostMessageHandler, FromWebviewMessage, ICodeSettings, IEditorSettings, InspectorLocation, MessageHandler, MessageType, PasteMode, ToWebviewMessage } from "../shared/protocol";
+import {
+	HexDocumentEdit,
+	HexDocumentEditOp,
+	HexDocumentEditReference,
+} from "../shared/hexDocumentModel";
+import {
+	Endianness,
+	ExtensionHostMessageHandler,
+	FromWebviewMessage,
+	ICodeSettings,
+	IEditorSettings,
+	InspectorLocation,
+	MessageHandler,
+	MessageType,
+	PasteMode,
+	ToWebviewMessage,
+} from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { ILocalizedStrings, placeholder1 } from "../shared/strings";
 import { DataInspectorView } from "./dataInspectorView";
@@ -25,13 +40,18 @@ const defaultEditorSettings: Readonly<IEditorSettings> = {
 const editorSettingsKeys = Object.keys(defaultEditorSettings) as readonly (keyof IEditorSettings)[];
 
 export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocument> {
-	public static register(context: vscode.ExtensionContext, telemetryReporter: TelemetryReporter, dataInspectorView: DataInspectorView, registry: HexEditorRegistry): vscode.Disposable {
+	public static register(
+		context: vscode.ExtensionContext,
+		telemetryReporter: TelemetryReporter,
+		dataInspectorView: DataInspectorView,
+		registry: HexEditorRegistry,
+	): vscode.Disposable {
 		return vscode.window.registerCustomEditorProvider(
 			HexEditorProvider.viewType,
 			new HexEditorProvider(context, telemetryReporter, dataInspectorView, registry),
 			{
-				supportsMultipleEditorsPerDocument: false
-			}
+				supportsMultipleEditorsPerDocument: false,
+			},
 		);
 	}
 
@@ -42,23 +62,33 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		private readonly _telemetryReporter: TelemetryReporter,
 		private readonly _dataInspectorView: DataInspectorView,
 		private readonly _registry: HexEditorRegistry,
-	) { }
+	) {}
 
 	async openCustomDocument(
 		uri: vscode.Uri,
 		openContext: vscode.CustomDocumentOpenContext,
-		_token: vscode.CancellationToken
+		_token: vscode.CancellationToken,
 	): Promise<HexDocument> {
-		const { document, accessor } = await HexDocument.create(uri, openContext, this._telemetryReporter);
+		const { document, accessor } = await HexDocument.create(
+			uri,
+			openContext,
+			this._telemetryReporter,
+		);
 		const disposables: vscode.Disposable[] = [];
 
-		disposables.push(document.onDidRevert(async () => {
-			const replaceFileSize = await document.size() ?? null;
-			for (const messaging of this._registry.getMessaging(document)) {
-				messaging.sendEvent({ type: MessageType.SetEdits, edits: { edits: [], data: new Uint8Array() }, replaceFileSize });
-				messaging.sendEvent({ type: MessageType.ReloadFromDisk });
-			}
-		}));
+		disposables.push(
+			document.onDidRevert(async () => {
+				const replaceFileSize = (await document.size()) ?? null;
+				for (const messaging of this._registry.getMessaging(document)) {
+					messaging.sendEvent({
+						type: MessageType.SetEdits,
+						edits: { edits: [], data: new Uint8Array() },
+						replaceFileSize,
+					});
+					messaging.sendEvent({ type: MessageType.ReloadFromDisk });
+				}
+			}),
+		);
 
 		const overwrite = vscode.l10n.t("Overwrite");
 		const onDidChange = async () => {
@@ -72,7 +102,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				return;
 			}
 
-			const message = vscode.l10n.t("This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.");
+			const message = vscode.l10n.t(
+				"This file has changed on disk, but you have unsaved changes. Saving now will overwrite the file on disk with your changes.",
+			);
 			const revert = vscode.l10n.t("Revert");
 			const selected = await vscode.window.showWarningMessage(message, overwrite, revert);
 			if (selected === overwrite) {
@@ -102,7 +134,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	async resolveCustomEditor(
 		document: HexDocument,
 		webviewPanel: vscode.WebviewPanel,
-		_token: vscode.CancellationToken
+		_token: vscode.CancellationToken,
 	): Promise<void> {
 		const messageHandler: ExtensionHostMessageHandler = new MessageHandler(
 			message => this.onMessage(messageHandler, document, message),
@@ -121,10 +153,15 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		webviewPanel.webview.onDidReceiveMessage(e => messageHandler.handleMessage(e));
 	}
 
-	private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<vscode.CustomDocumentEditEvent<HexDocument>>();
+	private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
+		vscode.CustomDocumentEditEvent<HexDocument>
+	>();
 	public readonly onDidChangeCustomDocument = this._onDidChangeCustomDocument.event;
 
-	public async saveCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Promise<void> {
+	public async saveCustomDocument(
+		document: HexDocument,
+		cancellation: vscode.CancellationToken,
+	): Promise<void> {
 		await document.save(cancellation);
 
 		// Update all webviews that a save has just occured
@@ -133,25 +170,40 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		}
 	}
 
-	public saveCustomDocumentAs(document: HexDocument, destination: vscode.Uri, cancellation: vscode.CancellationToken): Thenable<void> {
+	public saveCustomDocumentAs(
+		document: HexDocument,
+		destination: vscode.Uri,
+		cancellation: vscode.CancellationToken,
+	): Thenable<void> {
 		return document.saveAs(destination, cancellation);
 	}
 
-	public revertCustomDocument(document: HexDocument, cancellation: vscode.CancellationToken): Thenable<void> {
+	public revertCustomDocument(
+		document: HexDocument,
+		cancellation: vscode.CancellationToken,
+	): Thenable<void> {
 		return document.revert(cancellation);
 	}
 
-	public backupCustomDocument(document: HexDocument, context: vscode.CustomDocumentBackupContext, _cancellation: vscode.CancellationToken): Thenable<vscode.CustomDocumentBackup> {
+	public backupCustomDocument(
+		document: HexDocument,
+		context: vscode.CustomDocumentBackupContext,
+		_cancellation: vscode.CancellationToken,
+	): Thenable<vscode.CustomDocumentBackup> {
 		return document.backup(context.destination);
 	}
 
 	/**
-		 * Get the static HTML used for in our editor's webviews.
-		*/
+	 * Get the static HTML used for in our editor's webviews.
+	 */
 	private getHtmlForWebview(webview: vscode.Webview): string {
 		// Convert the styles and scripts for the webview into webview URIs
-		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.js"));
-		const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.css"));
+		const scriptUri = webview.asWebviewUri(
+			vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.js"),
+		);
+		const styleUri = webview.asWebviewUri(
+			vscode.Uri.joinPath(this._context.extensionUri, "dist", "editor.css"),
+		);
 
 		// Use a nonce to allow certain scripts to be run
 		const nonce = randomString();
@@ -167,7 +219,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			loadingDotDotDot: vscode.l10n.t("Loading..."),
 			littleEndian: vscode.l10n.t("Little Endian"),
 			onlyHexChars: vscode.l10n.t("Only hexadecimal characters (0-9 and a-f) are allowed"),
-			onlyHexCharsAndPlaceholders: vscode.l10n.t("Only hexadecimal characters (0-9, a-f, and ?? placeholders) are allowed"),
+			onlyHexCharsAndPlaceholders: vscode.l10n.t(
+				"Only hexadecimal characters (0-9, a-f, and ?? placeholders) are allowed",
+			),
 			toggleReplace: vscode.l10n.t("Toggle Replace"),
 			findBytes: vscode.l10n.t("Find Bytes (hex)"),
 			findText: vscode.l10n.t("Find Text"),
@@ -193,7 +247,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			close: vscode.l10n.t("Close"),
 		};
 
-		return /* html */`
+		return /* html */ `
 			<!DOCTYPE html>
 			<html lang="en">
 			<head>
@@ -221,7 +275,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 	private readCodeSettings(): ICodeSettings {
 		const editorConfig = vscode.workspace.getConfiguration("editor");
 		return {
-			scrollBeyondLastLine: editorConfig.get("scrollBeyondLastLine", true)
+			scrollBeyondLastLine: editorConfig.get("scrollBeyondLastLine", true),
 		};
 	}
 
@@ -287,25 +341,39 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					document,
 					message.mode === PasteMode.Insert
 						? document.insert(message.offset, message.data)
-						: await document.replace(message.offset, message.data)
+						: await document.replace(message.offset, message.data),
 				);
 				messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(document.edits) });
 				return;
 			case MessageType.DoCopy: {
-				const parts = await Promise.all(message.selections.sort((a, b) => a[0] - b[0]).map(s => document.readBuffer(s[0], s[1] - s[0])));
+				const parts = await Promise.all(
+					message.selections
+						.sort((a, b) => a[0] - b[0])
+						.map(s => document.readBuffer(s[0], s[1] - s[0])),
+				);
 				const flatParts = flattenBuffers(parts);
-				const encoded = message.asText ? new TextDecoder().decode(flatParts) : base64.fromUint8Array(flatParts);
+				const encoded = message.asText
+					? new TextDecoder().decode(flatParts)
+					: base64.fromUint8Array(flatParts);
 				vscode.env.clipboard.writeText(encoded);
 				return;
 			}
 			case MessageType.RequestDeletes: {
-				const bytes = await Promise.all(message.deletes.map(d => document.readBufferWithEdits(d.start, d.end - d.start)));
-				const edits = bytes.map((e, i): HexDocumentEdit => ({
-					op: HexDocumentEditOp.Delete,
-					previous: e,
-					offset: message.deletes[i].start,
-				}));
-				messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(edits), appendOnly: true });
+				const bytes = await Promise.all(
+					message.deletes.map(d => document.readBufferWithEdits(d.start, d.end - d.start)),
+				);
+				const edits = bytes.map(
+					(e, i): HexDocumentEdit => ({
+						op: HexDocumentEditOp.Delete,
+						previous: e,
+						offset: message.deletes[i].start,
+					}),
+				);
+				messaging.sendEvent({
+					type: MessageType.SetEdits,
+					edits: serializeEdits(edits),
+					appendOnly: true,
+				});
 				this.publishEdit(messaging, document, document.makeEdits(edits));
 				return { type: MessageType.DeleteAccepted };
 			}
@@ -315,9 +383,19 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.SearchRequest:
 				let request: ISearchRequest;
 				if ("re" in message.query) {
-					request = new RegexSearchRequest(document, message.query, message.caseSensitive, message.cap);
+					request = new RegexSearchRequest(
+						document,
+						message.query,
+						message.caseSensitive,
+						message.cap,
+					);
 				} else {
-					request = new LiteralSearchRequest(document, message.query, message.caseSensitive, message.cap);
+					request = new LiteralSearchRequest(
+						document,
+						message.query,
+						message.caseSensitive,
+						message.cap,
+					);
 				}
 				document.searchProvider.start(messaging, request);
 				return;
@@ -327,7 +405,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.SetInspectByte:
 				this._dataInspectorView.handleEditorMessage({
 					method: "update",
-					data: getCorrectArrayBuffer(await document.readBufferWithEdits(message.offset, 8))
+					data: getCorrectArrayBuffer(await document.readBufferWithEdits(message.offset, 8)),
 				});
 				break;
 			case MessageType.UpdateEditorSettings:
@@ -336,12 +414,17 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		}
 	}
 
-	private publishEdit(messaging: ExtensionHostMessageHandler, document: HexDocument, ref: HexDocumentEditReference) {
+	private publishEdit(
+		messaging: ExtensionHostMessageHandler,
+		document: HexDocument,
+		ref: HexDocumentEditReference,
+	) {
 		this._onDidChangeCustomDocument.fire({
 			document,
-			undo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.undo()) }),
-			redo: () => messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.redo()) }),
+			undo: () =>
+				messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.undo()) }),
+			redo: () =>
+				messaging.sendEvent({ type: MessageType.SetEdits, edits: serializeEdits(ref.redo()) }),
 		});
 	}
 }
-
