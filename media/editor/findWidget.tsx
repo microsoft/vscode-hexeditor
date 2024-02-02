@@ -194,7 +194,7 @@ export const FindWidget: React.FC = () => {
 				clearTimeout(timeout);
 			}
 		};
-	}, [query, JSON.stringify(queryOrError), isUncapped, isCaseSensitive, isBinaryMode, edits.length - safeReplacedEditsLen.current]);
+	}, [query, JSON.stringify(queryOrError), isUncapped, isCaseSensitive, isBinaryMode, edits.length - safeReplacedEditsLen.current, results.outdated]);
 
 	const closeWidget = () => {
 		const prev = previouslyFocusedElement.current;
