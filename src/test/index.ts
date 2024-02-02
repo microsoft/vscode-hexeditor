@@ -22,7 +22,6 @@ export async function run(): Promise<void> {
 	}
 
 	return new Promise((c, e) => {
-
 		mocha.run(failures => {
 			if (failures > 0) {
 				e(new Error(`${failures} tests failed.`));

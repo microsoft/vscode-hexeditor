@@ -35,22 +35,23 @@ export const DataInspectorHover: React.FC = () => {
 		return () => disposable.dispose();
 	}, []);
 
-
 	if (!inspected || !anchor) {
 		return null;
 	}
 
-	return <VsTooltipPopover
-		anchor={anchor}
-		hide={() => setInspected(undefined)} visible={true}>
-		<Suspense fallback={strings.loadingDotDotDot}>
-			<InspectorContents columns={4} offset={inspected.byte} />
-		</Suspense>
-	</VsTooltipPopover>;
+	return (
+		<VsTooltipPopover anchor={anchor} hide={() => setInspected(undefined)} visible={true}>
+			<Suspense fallback={strings.loadingDotDotDot}>
+				<InspectorContents columns={4} offset={inspected.byte} />
+			</Suspense>
+		</VsTooltipPopover>
+	);
 };
 
 /** Data inspector view shown to the right hand side of the hex editor. */
-export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean): void }> = ({ onInspecting }) => {
+export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean): void }> = ({
+	onInspecting,
+}) => {
 	const ctx = useDisplayContext();
 	const [inspected, setInspected] = useState<FocusedElement | undefined>(ctx.focusedElement);
 
@@ -70,9 +71,11 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
 		return null;
 	}
 
-	return <Suspense fallback={null}>
-		<InspectorContents columns={2} offset={inspected.byte} />
-	</Suspense>;
+	return (
+		<Suspense fallback={null}>
+			<InspectorContents columns={2} offset={inspected.byte} />
+		</Suspense>
+	);
 };
 
 const lookahead = 8;
@@ -88,19 +91,26 @@ const InspectorContents: React.FC<{
 	const dv = new DataView(target.buffer);
 	const le = endianness === Endianness.Little;
 
-	return <>
-		<dl className={style.types} style={{ gridTemplateColumns: "max-content ".repeat(columns) }}>
-			{inspectableTypes.map(({ label, convert, minBytes }) =>
-				<React.Fragment key={label}>
-					<dt>{label}</dt>
-					<dd>{target.length < minBytes ? <span style={{ opacity: 0.8 }}>End of File</span> : convert(dv, le)}</dd>
-				</React.Fragment>
-			)}
-		</dl>
-		<EndiannessToggle endianness={endianness} setEndianness={setEndianness} />
-	</>;
+	return (
+		<>
+			<dl className={style.types} style={{ gridTemplateColumns: "max-content ".repeat(columns) }}>
+				{inspectableTypes.map(({ label, convert, minBytes }) => (
+					<React.Fragment key={label}>
+						<dt>{label}</dt>
+						<dd>
+							{target.length < minBytes ? (
+								<span style={{ opacity: 0.8 }}>End of File</span>
+							) : (
+								convert(dv, le)
+							)}
+						</dd>
+					</React.Fragment>
+				))}
+			</dl>
+			<EndiannessToggle endianness={endianness} setEndianness={setEndianness} />
+		</>
+	);
 };
-
 
 /** Controlled checkbox that toggles between little and big endian. */
 const EndiannessToggle: React.FC<{

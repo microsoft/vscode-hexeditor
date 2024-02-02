@@ -12,30 +12,33 @@ export class DataInspectorView extends Disposable implements vscode.WebviewViewP
 	private _view?: vscode.WebviewView;
 	private _lastMessage: unknown;
 
-	constructor(private readonly _extensionURI: vscode.Uri, registry: HexEditorRegistry) {
+	constructor(
+		private readonly _extensionURI: vscode.Uri,
+		registry: HexEditorRegistry,
+	) {
 		super();
-		this._register(registry.onDidChangeActiveDocument(doc => {
-			const inspectorType = vscode.workspace.getConfiguration("hexeditor").get("inspectorType");
-			const shouldShow = inspectorType === InspectorLocation.Sidebar && !!doc;
+		this._register(
+			registry.onDidChangeActiveDocument(doc => {
+				const inspectorType = vscode.workspace.getConfiguration("hexeditor").get("inspectorType");
+				const shouldShow = inspectorType === InspectorLocation.Sidebar && !!doc;
 
-			vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", shouldShow);
-			if (shouldShow) {
-				this.show({ autoReveal: true });
-			}
-		}));
+				vscode.commands.executeCommand("setContext", "hexEditor:showSidebarInspector", shouldShow);
+				if (shouldShow) {
+					this.show({ autoReveal: true });
+				}
+			}),
+		);
 	}
 
 	public resolveWebviewView(
 		webviewView: vscode.WebviewView,
 		_context: vscode.WebviewViewResolveContext,
-		_token: vscode.CancellationToken
+		_token: vscode.CancellationToken,
 	): void {
 		this._view = webviewView;
 		webviewView.webview.options = {
 			enableScripts: true,
-			localResourceRoots: [
-				this._extensionURI
-			]
+			localResourceRoots: [this._extensionURI],
 		};
 		webviewView.webview.html = this._getWebviewHTML(webviewView.webview);
 
@@ -45,7 +48,7 @@ export class DataInspectorView extends Disposable implements vscode.WebviewViewP
 		});
 
 		// Once the view is disposed of we don't want to keep a reference to it anymore
-		this._view.onDidDispose(() => this._view = undefined);
+		this._view.onDidDispose(() => (this._view = undefined));
 
 		// If the webview just became visible we send it the last message so that it stays in sync
 		webviewView.onDidChangeVisibility(() => {
@@ -76,7 +79,10 @@ export class DataInspectorView extends Disposable implements vscode.WebviewViewP
 	 */
 	public show(options?: { forceFocus?: boolean; autoReveal?: boolean }): void {
 		// Don't reveal the panel if configured not to
-		if (options?.autoReveal && !vscode.workspace.getConfiguration("hexeditor.dataInspector").get("autoReveal", false)) {
+		if (
+			options?.autoReveal &&
+			!vscode.workspace.getConfiguration("hexeditor.dataInspector").get("autoReveal", false)
+		) {
 			return;
 		}
 
@@ -93,9 +99,15 @@ export class DataInspectorView extends Disposable implements vscode.WebviewViewP
 	}
 
 	private _getWebviewHTML(webview: vscode.Webview): string {
-		const scriptURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.js"));
-		const styleURI = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.css"));
-		const endianness = vscode.workspace.getConfiguration().get("hexeditor.defaultEndianness") as string;
+		const scriptURI = webview.asWebviewUri(
+			vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.js"),
+		);
+		const styleURI = webview.asWebviewUri(
+			vscode.Uri.joinPath(this._extensionURI, "dist", "inspector.css"),
+		);
+		const endianness = vscode.workspace
+			.getConfiguration()
+			.get("hexeditor.defaultEndianness") as string;
 		const nonce = randomString();
 		return `<!DOCTYPE html>
             <html lang="en">

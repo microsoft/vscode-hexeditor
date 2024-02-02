@@ -19,8 +19,10 @@ export async function openOffsetInput(): Promise<string | undefined> {
 	return window.showInputBox({
 		placeHolder: "Enter offset to go to",
 		validateInput: text => {
-			return text.length > 8 || new RegExp("^[a-fA-F0-9]+$").test(text) ? null : l10n.t("Invalid offset string");
-		}
+			return text.length > 8 || new RegExp("^[a-fA-F0-9]+$").test(text)
+				? null
+				: l10n.t("Invalid offset string");
+		},
 	});
 }
 
@@ -30,7 +32,6 @@ export async function openOffsetInput(): Promise<string | undefined> {
  */
 export const getCorrectArrayBuffer = (u8: Uint8Array): ArrayBuffer =>
 	u8.byteLength === u8.buffer.byteLength ? u8.buffer : u8.buffer.slice(0, u8.byteLength);
-
 
 /** Returns the number of bytes in the str when interpreted as utf-8 */
 export const utf8Length = (str: string): number => {

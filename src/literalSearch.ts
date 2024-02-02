@@ -1,12 +1,12 @@
 export const Wildcard = Symbol("Wildcard");
 
-export const identityEquivalency = new Uint8Array(0xFF);
-for (let i = 0; i < 0xFF; i++) {
+export const identityEquivalency = new Uint8Array(0xff);
+for (let i = 0; i < 0xff; i++) {
 	identityEquivalency[i] = i;
 }
 
-export const caseInsensitiveEquivalency = new Uint8Array(0xFF);
-for (let i = 0; i < 0xFF; i++) {
+export const caseInsensitiveEquivalency = new Uint8Array(0xff);
+for (let i = 0; i < 0xff; i++) {
 	caseInsensitiveEquivalency[i] = String.fromCharCode(i).toUpperCase().charCodeAt(0);
 }
 

@@ -27,21 +27,24 @@ export const ScrollContainer: React.FC = () => {
 
 	const [scrollTop, setScrollTop] = useState(0);
 
-	const expandBoundsToContain = useCallback((newOffset: number) => {
-		const windowSize = select.getDisplayedBytes(dimension, columnWidth);
+	const expandBoundsToContain = useCallback(
+		(newOffset: number) => {
+			const windowSize = select.getDisplayedBytes(dimension, columnWidth);
 
-		// Expand the scroll bounds if the new position is too close to the
-		// start or end of the selection, based on the loadThreshold.
-		setBounds(old => {
-			if (newOffset - old.start < windowSize * loadThreshold && old.start > 0) {
-				return new Range(Math.max(0, old.start - windowSize), old.end);
-			} else if (old.end - newOffset < windowSize * (1 + loadThreshold)) {
-				return new Range(old.start, Math.min(fileSize ?? Infinity, old.end + windowSize));
-			} else {
-				return old;
-			}
-		});
-	}, [dimension, columnWidth, fileSize]);
+			// Expand the scroll bounds if the new position is too close to the
+			// start or end of the selection, based on the loadThreshold.
+			setBounds(old => {
+				if (newOffset - old.start < windowSize * loadThreshold && old.start > 0) {
+					return new Range(Math.max(0, old.start - windowSize), old.end);
+				} else if (old.end - newOffset < windowSize * (1 + loadThreshold)) {
+					return new Range(old.start, Math.min(fileSize ?? Infinity, old.end + windowSize));
+				} else {
+					return old;
+				}
+			});
+		},
+		[dimension, columnWidth, fileSize],
+	);
 
 	useEffect(() => {
 		if (previousOffset.current === offset) {
@@ -56,18 +59,21 @@ export const ScrollContainer: React.FC = () => {
 	// to a new offset. This stores the "unused" scroll amount.
 	const accumulatedScroll = useRef(0);
 
-	const onScroll = useCallback((scrollTop: number) => {
-		// On scroll, figure out the offset displayed at the new position.
-		scrollTop += accumulatedScroll.current;
-		const rowNumber = Math.floor(scrollTop / dimension.rowPxHeight);
-		accumulatedScroll.current = scrollTop - (rowNumber * dimension.rowPxHeight);
-		const newOffset = rowNumber * columnWidth;
-		const newScrollTop = rowNumber * dimension.rowPxHeight;
-		previousOffset.current = newOffset;
-		setOffset(newOffset);
-		expandBoundsToContain(newOffset);
-		setScrollTop(newScrollTop);
-	}, [dimension, columnWidth, expandBoundsToContain]);
+	const onScroll = useCallback(
+		(scrollTop: number) => {
+			// On scroll, figure out the offset displayed at the new position.
+			scrollTop += accumulatedScroll.current;
+			const rowNumber = Math.floor(scrollTop / dimension.rowPxHeight);
+			accumulatedScroll.current = scrollTop - rowNumber * dimension.rowPxHeight;
+			const newOffset = rowNumber * columnWidth;
+			const newScrollTop = rowNumber * dimension.rowPxHeight;
+			previousOffset.current = newOffset;
+			setOffset(newOffset);
+			expandBoundsToContain(newOffset);
+			setScrollTop(newScrollTop);
+		},
+		[dimension, columnWidth, expandBoundsToContain],
+	);
 
 	const extraScroll = scrollBeyondLastLine ? dimension.height / 2 : 0;
 

@@ -1,7 +1,7 @@
 /** Reads a uint24 at offset 0 from the buffer. */
 const getUint24 = (arrayBuffer: ArrayBuffer, le: boolean) => {
 	const buf = new Uint8Array(arrayBuffer);
-	return le ? buf[0] | buf[1] << 8 | buf[2] << 16 : buf[0] << 16 | buf[1] << 8 | buf[2];
+	return le ? buf[0] | (buf[1] << 8) | (buf[2] << 16) : (buf[0] << 16) | (buf[1] << 8) | buf[2];
 };
 
 const getFloat16 = (exponentWidth: number, significandPrecision: number) => {
@@ -13,19 +13,19 @@ const getFloat16 = (exponentWidth: number, significandPrecision: number) => {
 
 	return (arrayBuffer: ArrayBuffer, le: boolean) => {
 		const buf = new Uint8Array(arrayBuffer);
-		const uint16 = le ? buf[0] | buf[1] << 8 : buf[0] << 8 | buf[1];
+		const uint16 = le ? buf[0] | (buf[1] << 8) : (buf[0] << 8) | buf[1];
 
 		const e = (uint16 & exponentMask) >> significandPrecision;
 		const f = uint16 & fractionMask;
 		const sign = uint16 >> 15 ? -1 : 1;
 
 		if (e === 0) {
-			return sign * (2 ** exponentMin) * (f / (2 ** significandPrecision));
-		} else if (e === (2 ** exponentWidth - 1)) {
+			return sign * 2 ** exponentMin * (f / 2 ** significandPrecision);
+		} else if (e === 2 ** exponentWidth - 1) {
 			return f ? NaN : sign * Infinity;
 		}
 
-		return sign * (2 ** (e - exponentBias)) * (1 + (f / (2 ** significandPrecision)));
+		return sign * 2 ** (e - exponentBias) * (1 + f / 2 ** significandPrecision);
 	};
 };
 
@@ -38,7 +38,7 @@ export interface IInspectableType {
 	convert(dv: DataView, littleEndian: boolean): string;
 }
 
-export const inspectableTypes: readonly IInspectableType[] = [
+const inspectTypesBuilder: IInspectableType[] = [
 	{ label: "binary", minBytes: 1, convert: dv => dv.getUint8(0).toString(2).padStart(8, "0") },
 
 	{ label: "octal", minBytes: 1, convert: dv => dv.getUint8(0).toString(8).padStart(3, "0") },
@@ -57,7 +57,7 @@ export const inspectableTypes: readonly IInspectableType[] = [
 			const uint = getUint24(dv.buffer, le);
 			const isNegative = !!(uint & 0x800000);
 			return String(isNegative ? -(0xffffff - uint + 1) : uint);
-		}
+		},
 	},
 
 	{ label: "uint32", minBytes: 4, convert: (dv, le) => dv.getUint32(0, le).toString() },
@@ -66,70 +66,44 @@ export const inspectableTypes: readonly IInspectableType[] = [
 	{ label: "int64", minBytes: 8, convert: (dv, le) => dv.getBigInt64(0, le).toString() },
 	{ label: "uint64", minBytes: 8, convert: (dv, le) => dv.getBigUint64(0, le).toString() },
 
-	{ label: "float16", minBytes: 2, convert: (dv, le) => getFloat16(5, 10)(dv.buffer, le).toString() },
-	{ label: "bfloat16", minBytes: 2, convert: (dv, le) => getFloat16(8, 7)(dv.buffer, le).toString() },
+	{
+		label: "float16",
+		minBytes: 2,
+		convert: (dv, le) => getFloat16(5, 10)(dv.buffer, le).toString(),
+	},
+	{
+		label: "bfloat16",
+		minBytes: 2,
+		convert: (dv, le) => getFloat16(8, 7)(dv.buffer, le).toString(),
+	},
 
 	{ label: "float32", minBytes: 4, convert: (dv, le) => dv.getFloat32(0, le).toString() },
 	{ label: "float64", minBytes: 8, convert: (dv, le) => dv.getFloat64(0, le).toString() },
-
-	{
-		label: "UTF-8",
-		minBytes: 1,
-		convert: dv => {
-			const utf8 = new TextDecoder("utf-8").decode(dv.buffer);
-			for (const char of utf8) return char;
-			return utf8;
-		},
-	},
-	{
-		label: "UTF-16",
-		minBytes: 2,
-		convert: (dv, le) => {
-			const utf16 = new TextDecoder(le ? "utf-16le" : "utf-16be").decode(dv.buffer);
-			for (const char of utf16) return char;
-			return utf16;
-		},
-	},
-	{
-		label: "GB18030",
-		minBytes: 2,
-		convert: dv => {
-			// the valid encoding for TextDecoder is list on
-			// https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings
-			// GBK Character Set is an extension of GB2312. GB18030 is an extension of GBK.
-			// So choose GB18030 as the encoding here.
-			// see also http://herongyang.com/GB2312/Introduction-GB2312-GBK-GB18030.html
-			// and https://www.ibm.com/docs/en/aix/7.1?topic=sets-gb18030
-			const utf8 = new TextDecoder("gb18030").decode(dv.buffer);
-			for (const char of utf8) return char;
-			return utf8;
-		},
-	},
-	{
-		label: "BIG5",
-		minBytes: 2,
-		convert: dv => {
-			const utf8 = new TextDecoder("big5").decode(dv.buffer);
-			for (const char of utf8) return char;
-			return utf8;
-		},
-	},
-	{
-		label: "ISO-2022-KR",
-		minBytes: 2,
-		convert: dv => {
-			const utf8 = new TextDecoder("iso-2022-kr").decode(dv.buffer);
-			for (const char of utf8) return char;
-			return utf8;
-		},
-	},
-	{
-		label: "SHIFT-JIS",
-		minBytes: 2,
-		convert: dv => {
-			const utf8 = new TextDecoder("shift-jis").decode(dv.buffer);
-			for (const char of utf8) return char;
-			return utf8;
-		},
-	},
 ];
+
+const addTextDecoder = (encoding: string, minBytes: number) => {
+	try {
+		new TextDecoder(encoding); // throws if encoding is now supported
+	} catch {
+		return;
+	}
+
+	inspectTypesBuilder.push({
+		label: encoding.toUpperCase(),
+		minBytes,
+		convert: dv => {
+			const utf8 = new TextDecoder(encoding).decode(dv.buffer);
+			for (const char of utf8) return char;
+			return utf8;
+		},
+	});
+};
+
+addTextDecoder("utf-8", 1);
+addTextDecoder("utf-16", 2);
+addTextDecoder("gb18030", 2);
+addTextDecoder("big5", 2);
+addTextDecoder("iso-2022-kr", 2);
+addTextDecoder("shift-jis", 2);
+
+export const inspectableTypes: readonly IInspectableType[] = inspectTypesBuilder;

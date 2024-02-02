@@ -15,7 +15,12 @@ export const SettingsGear: React.FC = () => {
 
 	return (
 		<>
-			<VsIconButton title={strings.openSettings} className={style.gear} onClick={() => setIsOpen(!isOpen)} ref={setAnchor}>
+			<VsIconButton
+				title={strings.openSettings}
+				className={style.gear}
+				onClick={() => setIsOpen(!isOpen)}
+				ref={setAnchor}
+			>
 				<SettingsGearIcon />
 			</VsIconButton>
 			<VsWidgetPopover anchor={anchor} hide={() => setIsOpen(false)} visible={isOpen}>
@@ -25,10 +30,12 @@ export const SettingsGear: React.FC = () => {
 	);
 };
 
-const SettingsContent: React.FC = () => <div className={style.content}>
-	<TextCheckbox />
-	<ColumnWidth />
-</div>;
+const SettingsContent: React.FC = () => (
+	<div className={style.content}>
+		<TextCheckbox />
+		<ColumnWidth />
+	</div>
+);
 
 const TextCheckbox: React.FC = () => {
 	const [settings, updateSettings] = useRecoilState(select.editorSettings);
@@ -72,4 +79,3 @@ const ColumnWidth: React.FC = () => {
 		</>
 	);
 };
-

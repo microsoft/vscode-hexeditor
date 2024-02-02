@@ -2,14 +2,19 @@
 // Licensed under the MIT license.
 
 import { Disposable } from "vscode";
-import { LiteralSearchQuery, RegExpSearchQuery, SearchResult, SearchResultsWithProgress } from "../shared/protocol";
+import {
+	LiteralSearchQuery,
+	RegExpSearchQuery,
+	SearchResult,
+	SearchResultsWithProgress,
+} from "../shared/protocol";
 import { Uint8ArrayMap } from "../shared/util/uint8ArrayMap";
 import { HexDocument } from "./hexDocument";
 import { LiteralSearch, Wildcard, caseInsensitiveEquivalency } from "./literalSearch";
 
 /** Type that defines a search request created from the {@link SearchProvider} */
 export interface ISearchRequest extends Disposable {
-	search(): AsyncIterable<SearchResultsWithProgress>
+	search(): AsyncIterable<SearchResultsWithProgress>;
 }
 
 class ResultsCollector {
@@ -23,7 +28,7 @@ class ResultsCollector {
 	constructor(
 		private readonly filesize: number | undefined,
 		private cap: number | undefined,
-	) { }
+	) {}
 
 	public fileOffset = 0;
 
@@ -71,8 +76,7 @@ export class LiteralSearchRequest implements ISearchRequest {
 		private readonly query: LiteralSearchQuery,
 		private readonly isCaseSensitive: boolean,
 		private readonly cap: number | undefined,
-	) {
-	}
+	) {}
 
 	/** @inheritdoc */
 	public dispose(): void {
@@ -85,7 +89,7 @@ export class LiteralSearchRequest implements ISearchRequest {
 		const collector = new ResultsCollector(await document.size(), cap);
 
 		const streamSearch = new LiteralSearch(
-			query.literal.map(c => c === "*" ? Wildcard : c),
+			query.literal.map(c => (c === "*" ? Wildcard : c)),
 			(index, data) => collector.push(data, index, index + data.length),
 			isCaseSensitive ? undefined : caseInsensitiveEquivalency,
 		);

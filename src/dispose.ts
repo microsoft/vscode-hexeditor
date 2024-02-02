@@ -39,7 +39,9 @@ export abstract class Disposable {
 	}
 }
 
-export interface IDisposable { dispose(): void }
+export interface IDisposable {
+	dispose(): void;
+}
 
 export class DisposableValue<T extends IDisposable> {
 	private _value: T | undefined;

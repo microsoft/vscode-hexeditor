@@ -4,7 +4,12 @@
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
 import { FileAccessor } from "../shared/fileAccessor";
-import { HexDocumentEdit, HexDocumentEditOp, HexDocumentEditReference, HexDocumentModel } from "../shared/hexDocumentModel";
+import {
+	HexDocumentEdit,
+	HexDocumentEditOp,
+	HexDocumentEditReference,
+	HexDocumentModel,
+} from "../shared/hexDocumentModel";
 import { Backup } from "./backup";
 import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
@@ -22,7 +27,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		uri: vscode.Uri,
 		{ backupId, untitledDocumentData }: vscode.CustomDocumentOpenContext,
 		telemetryReporter: TelemetryReporter,
-	): Promise<{ document: HexDocument, accessor: FileAccessor }> {
+	): Promise<{ document: HexDocument; accessor: FileAccessor }> {
 		const accessor = await accessFile(uri, untitledDocumentData);
 		const model = new HexDocumentModel({
 			accessor,
@@ -34,7 +39,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		});
 
 		const queries = HexDocument.parseQuery(uri.query);
-		const baseAddress: number = queries["baseAddress"] ? HexDocument.parseHexOrDecInt(queries["baseAddress"]) : 0;
+		const baseAddress: number = queries["baseAddress"]
+			? HexDocument.parseHexOrDecInt(queries["baseAddress"])
+			: 0;
 
 		const fileSize = await accessor.getSize();
 		/* __GDPR__
@@ -42,10 +49,12 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				"fileSize" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true }
 			}
 		*/
-		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { "fileSize": fileSize ?? 0 });
+		telemetryReporter.sendTelemetryEvent("fileOpen", {}, { fileSize: fileSize ?? 0 });
 
-		const maxFileSize = (vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
-		const isLargeFile = !backupId && !accessor.supportsIncremetalAccess && ((fileSize ?? 0) > maxFileSize);
+		const maxFileSize =
+			(vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
+		const isLargeFile =
+			!backupId && !accessor.supportsIncremetalAccess && (fileSize ?? 0) > maxFileSize;
 		return { document: new HexDocument(model, isLargeFile, baseAddress), accessor };
 	}
 
@@ -134,7 +143,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		super.dispose();
 	}
 
-	private readonly _onDidChangeSelectionState = this._register(new vscode.EventEmitter<ISelectionState>());
+	private readonly _onDidChangeSelectionState = this._register(
+		new vscode.EventEmitter<ISelectionState>(),
+	);
 
 	/**
 	 * Fired when the document selection or focus changes.
@@ -202,8 +213,17 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			return this.makeEdits([{ op: HexDocumentEditOp.Replace, offset, value: data, previous }]);
 		} else {
 			return this.makeEdits([
-				{ op: HexDocumentEditOp.Replace, offset: offset, value: data.subarray(0, previous.length), previous },
-				{ op: HexDocumentEditOp.Insert, offset: offset + previous.length, value: data.subarray(previous.length) },
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: offset,
+					value: data.subarray(0, previous.length),
+					previous,
+				},
+				{
+					op: HexDocumentEditOp.Insert,
+					offset: offset + previous.length,
+					value: data.subarray(previous.length),
+				},
 			]);
 		}
 	}
@@ -227,7 +247,10 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	/**
 	 * Called by VS Code when the user saves the document to a new location.
 	 */
-	public async saveAs(targetResource: vscode.Uri, cancellation?: vscode.CancellationToken): Promise<void> {
+	public async saveAs(
+		targetResource: vscode.Uri,
+		cancellation?: vscode.CancellationToken,
+	): Promise<void> {
 		if (cancellation && cancellation.isCancellationRequested) {
 			return;
 		}
@@ -273,7 +296,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				} catch {
 					// noop
 				}
-			}
+			},
 		};
 	}
 

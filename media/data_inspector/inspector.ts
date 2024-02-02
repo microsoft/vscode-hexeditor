@@ -1,18 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import { buildDataInspectorUi, changeEndianness, clearDataInspector, populateDataInspector } from "./dataInspector";
+import {
+	buildDataInspectorUi,
+	changeEndianness,
+	clearDataInspector,
+	populateDataInspector,
+} from "./dataInspector";
 
 declare const acquireVsCodeApi: any;
 export const vscode = acquireVsCodeApi();
 let currentByteData: ArrayBuffer;
 
-
-
 // Self executing anonymous function
 // This is the main entry point
 ((): void => {
-
 	buildDataInspectorUi();
 
 	// Handle messages which are sent to the inspector
@@ -20,7 +22,10 @@ let currentByteData: ArrayBuffer;
 		switch (e.data.method) {
 			case "update":
 				currentByteData = e.data.data;
-				populateDataInspector(currentByteData, (document.getElementById("endianness") as HTMLSelectElement).value === "little");
+				populateDataInspector(
+					currentByteData,
+					(document.getElementById("endianness") as HTMLSelectElement).value === "little",
+				);
 				return;
 			case "clear":
 				clearDataInspector();
@@ -34,5 +39,6 @@ let currentByteData: ArrayBuffer;
 })();
 
 // Bind an event listener to detect when the user changes the endinaness
-document.getElementById("endianness")?.addEventListener("change", () => changeEndianness(currentByteData));
-
+document
+	.getElementById("endianness")
+	?.addEventListener("change", () => changeEndianness(currentByteData));

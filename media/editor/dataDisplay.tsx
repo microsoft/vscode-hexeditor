@@ -8,74 +8,100 @@ import { DeleteAcceptedMessage, InspectorLocation, MessageType } from "../../sha
 import { Range } from "../../shared/util/range";
 import { PastePopup } from "./copyPaste";
 import _style from "./dataDisplay.css";
-import { FocusedElement, dataCellCls, useDisplayContext, useIsFocused, useIsHovered, useIsSelected, useIsUnsaved } from "./dataDisplayContext";
+import {
+	FocusedElement,
+	dataCellCls,
+	useDisplayContext,
+	useIsFocused,
+	useIsHovered,
+	useIsSelected,
+	useIsUnsaved,
+} from "./dataDisplayContext";
 import { DataInspectorAside } from "./dataInspector";
 import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
 import * as select from "./state";
 import { strings } from "./strings";
-import { clamp, clsx, getAsciiCharacter, getScrollDimensions, throwOnUndefinedAccessInDev } from "./util";
+import {
+	clamp,
+	clsx,
+	getAsciiCharacter,
+	getScrollDimensions,
+	throwOnUndefinedAccessInDev,
+} from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
 const EmptyDataCell = () => (
-	<span
-		className={dataCellCls}
-		aria-hidden
-		style={{ visibility: "hidden" }}
-	>00</span>
+	<span className={dataCellCls} aria-hidden style={{ visibility: "hidden" }}>
+		00
+	</span>
 );
 
 const Byte: React.FC<{ value: number }> = ({ value }) => (
 	<span className={dataCellCls}>{value.toString(16).padStart(2, "0").toUpperCase()}</span>
 );
 
-
 // Byte cells are square, and show two (hex) characters, but text cells show a
 // single character so can be narrower--by this constant multiplier.
 const textCellWidth = 0.7;
 
-
 const DataCellGroup: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, ...props }) => (
-	<div className={style.dataCellGroup} {...props}>{children}</div>
+	<div className={style.dataCellGroup} {...props}>
+		{children}
+	</div>
 );
 
 const Address: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, ...props }) => (
-	<div className={style.address} {...props}>{children}</div>
+	<div className={style.address} {...props}>
+		{children}
+	</div>
 );
 
 export const DataHeader: React.FC = () => {
 	const editorSettings = useRecoilValue(select.editorSettings);
 	const inspectorLocation = useRecoilValue(select.dataInspectorLocation);
 
-	return <div className={style.header}>
-		<DataCellGroup style={{ visibility: "hidden" }} aria-hidden="true">
-			<Address>00000000</Address>
-		</DataCellGroup>
-		<DataCellGroup>
-			{new Array(editorSettings.columnWidth).fill(0).map((_v, i) =>
-				<Byte key={i} value={i & 0xFF} />
-			)}
-		</DataCellGroup>
-		{editorSettings.showDecodedText && (
-			// Calculated decoded width so that the Data Inspector is displayed at the right position
-			// Flex-shrink prevents the data inspector overlapping on narrow screens
-			<DataCellGroup style={{ width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})`, flexShrink: 0 }}>
-				{strings.decodedText}
+	return (
+		<div className={style.header}>
+			<DataCellGroup style={{ visibility: "hidden" }} aria-hidden="true">
+				<Address>00000000</Address>
 			</DataCellGroup>
-		)}
-		{inspectorLocation === InspectorLocation.Aside && <DataInspector />}
-	</div>;
+			<DataCellGroup>
+				{new Array(editorSettings.columnWidth).fill(0).map((_v, i) => (
+					<Byte key={i} value={i & 0xff} />
+				))}
+			</DataCellGroup>
+			{editorSettings.showDecodedText && (
+				// Calculated decoded width so that the Data Inspector is displayed at the right position
+				// Flex-shrink prevents the data inspector overlapping on narrow screens
+				<DataCellGroup
+					style={{
+						width: `calc(var(--cell-size) * ${editorSettings.columnWidth * textCellWidth})`,
+						flexShrink: 0,
+					}}
+				>
+					{strings.decodedText}
+				</DataCellGroup>
+			)}
+			{inspectorLocation === InspectorLocation.Aside && <DataInspector />}
+		</div>
+	);
 };
 
 /** Component that shows a Data Inspector header, and the inspector itself directly below when appropriate. */
 const DataInspector: React.FC = () => {
 	const [isInspecting, setIsInspecting] = useState(false);
-	return <DataCellGroup style={{ position: "relative", flexGrow: 1 }}>
-		{isInspecting ? "Data Inspector" : null}
-		<div className={style.dataInspectorWrap} style={{ "--scrollbar-width": `${getScrollDimensions().width}px` } as React.CSSProperties}>
-			<DataInspectorAside onInspecting={setIsInspecting} />
-		</div>
-	</DataCellGroup>;
+	return (
+		<DataCellGroup style={{ position: "relative", flexGrow: 1 }}>
+			{isInspecting ? "Data Inspector" : null}
+			<div
+				className={style.dataInspectorWrap}
+				style={{ "--scrollbar-width": `${getScrollDimensions().width}px` } as React.CSSProperties}
+			>
+				<DataInspectorAside onInspecting={setIsInspecting} />
+			</div>
+		</DataCellGroup>
+	);
 };
 
 export const DataDisplay: React.FC = () => {
@@ -88,10 +114,14 @@ export const DataDisplay: React.FC = () => {
 	const editTimeline = useRecoilValue(select.editTimeline);
 	const unsavedEditIndex = useRecoilValue(select.unsavedEditIndex);
 	const ctx = useDisplayContext();
-	const [pasting, setPasting] = useState<{ target: HTMLElement; offset: number; data: string } | undefined>();
+	const [pasting, setPasting] = useState<
+		{ target: HTMLElement; offset: number; data: string } | undefined
+	>();
 
 	useEffect(() => {
-		const l = () => { ctx.isSelecting = undefined; };
+		const l = () => {
+			ctx.isSelecting = undefined;
+		};
 		window.addEventListener("mouseup", l, { passive: true });
 		return () => window.removeEventListener("mouseup", l);
 	}, []);
@@ -111,9 +141,9 @@ export const DataDisplay: React.FC = () => {
 				// If the focused byte is before the selected byte, adjust upwards.
 				// If the focused byte is off the window, adjust the offset so it's displayed
 				if (byte < offset) {
-					return newOffset = byteRowStart;
+					return (newOffset = byteRowStart);
 				} else if (byte - offset >= displayedBytes) {
-					return newOffset = byteRowStart - displayedBytes + columnWidth;
+					return (newOffset = byteRowStart - displayedBytes + columnWidth);
 				} else {
 					return offset;
 				}
@@ -152,80 +182,92 @@ export const DataDisplay: React.FC = () => {
 		ctx.unsavedRanges = unsavedRanges;
 	}, [editTimeline, unsavedEditIndex]);
 
-
-	useGlobalHandler("keydown", (e: KeyboardEvent) => {
-		// handle keydown events not sent to a more specific element. The user can
-		// scroll to a point where the 'focused' element is no longer rendered,
-		// but we still want to allow use of arrow keys.
-		if (document.activeElement !== document.body && !containerRef.current?.contains(document.activeElement)) {
-			return;
-		}
-
-		const current = ctx.focusedElement || FocusedElement.zero;
-		const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
-
-		let delta = 0;
-		switch (e.key) {
-			case "ArrowLeft":
-				delta = -1;
-				break;
-			case "ArrowRight":
-				delta = 1;
-				break;
-			case "ArrowDown":
-				delta = columnWidth;
-				break;
-			case "ArrowUp":
-				delta = -columnWidth;
-				break;
-			case "Home":
-				delta = -current.byte;
-				break;
-			case "End":
-				delta = fileSize === undefined ? displayedBytes : fileSize - current.byte - 1;
-				break;
-			case "PageUp":
-				delta = -displayedBytes;
-				break;
-			case "PageDown":
-			case "Space":
-				delta = displayedBytes;
-				break;
-		}
-
-		if (e.altKey) {
-			delta *= 8;
-		}
-
-		const next = new FocusedElement(current.char, clamp(0, current.byte + delta, fileSize !== undefined ? fileSize - 1 : Infinity));
-		if (next.key === current.key) {
-			return;
-		}
-
-		e.preventDefault();
-		e.stopPropagation();
-		ctx.focusedElement = next;
-
-		if (e.shiftKey) {
-			const srange = ctx.selection[0];
-			// On a shift key, expand the selection to include the byte. If there
-			// was no previous selection, create one. If the old selection didn't
-			// include the newly focused byte, expand it. Otherwise, adjust the
-			// closer of the start or end of the selection to the focused byte
-			// (allows shrinking the selection.)
-			if (!srange) {
-				ctx.setSelectionRanges([Range.inclusive(current.byte, next.byte)]);
-			} else if (!srange.includes(next.byte)) {
-				ctx.replaceLastSelectionRange(srange.expandToContain(next.byte));
-			} else {
-				const closerToEnd = Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
-				const nextRange = closerToEnd ? new Range(srange.start, next.byte + 1) : new Range(next.byte, srange.end);
-				ctx.replaceLastSelectionRange(nextRange);
+	useGlobalHandler(
+		"keydown",
+		(e: KeyboardEvent) => {
+			// handle keydown events not sent to a more specific element. The user can
+			// scroll to a point where the 'focused' element is no longer rendered,
+			// but we still want to allow use of arrow keys.
+			if (
+				document.activeElement !== document.body &&
+				!containerRef.current?.contains(document.activeElement)
+			) {
+				return;
 			}
-		} else {
-			ctx.setSelectionRanges([Range.single(next.byte)]);
-		}
-	}, [dimensions, columnWidth, fileSize]);
+
+			const current = ctx.focusedElement || FocusedElement.zero;
+			const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
+
+			let delta = 0;
+			switch (e.key) {
+				case "ArrowLeft":
+					delta = -1;
+					break;
+				case "ArrowRight":
+					delta = 1;
+					break;
+				case "ArrowDown":
+					delta = columnWidth;
+					break;
+				case "ArrowUp":
+					delta = -columnWidth;
+					break;
+				case "Home":
+					delta = -current.byte;
+					break;
+				case "End":
+					delta = fileSize === undefined ? displayedBytes : fileSize - current.byte - 1;
+					break;
+				case "PageUp":
+					delta = -displayedBytes;
+					break;
+				case "PageDown":
+				case "Space":
+					delta = displayedBytes;
+					break;
+			}
+
+			if (e.altKey) {
+				delta *= 8;
+			}
+
+			const next = new FocusedElement(
+				current.char,
+				clamp(0, current.byte + delta, fileSize !== undefined ? fileSize - 1 : Infinity),
+			);
+			if (next.key === current.key) {
+				return;
+			}
+
+			e.preventDefault();
+			e.stopPropagation();
+			ctx.focusedElement = next;
+
+			if (e.shiftKey) {
+				const srange = ctx.selection[0];
+				// On a shift key, expand the selection to include the byte. If there
+				// was no previous selection, create one. If the old selection didn't
+				// include the newly focused byte, expand it. Otherwise, adjust the
+				// closer of the start or end of the selection to the focused byte
+				// (allows shrinking the selection.)
+				if (!srange) {
+					ctx.setSelectionRanges([Range.inclusive(current.byte, next.byte)]);
+				} else if (!srange.includes(next.byte)) {
+					ctx.replaceLastSelectionRange(srange.expandToContain(next.byte));
+				} else {
+					const closerToEnd =
+						Math.abs(srange.end - current.byte) < Math.abs(srange.start - current.byte);
+					const nextRange = closerToEnd
+						? new Range(srange.start, next.byte + 1)
+						: new Range(next.byte, srange.end);
+					ctx.replaceLastSelectionRange(nextRange);
+				}
+			} else {
+				ctx.setSelectionRanges([Range.single(next.byte)]);
+			}
+		},
+		[dimensions, columnWidth, fileSize],
+	);
 
 	useGlobalHandler<ClipboardEvent>("paste", evt => {
 		const target = document.activeElement;
@@ -244,17 +286,19 @@ export const DataDisplay: React.FC = () => {
 			select.messageHandler.sendEvent({
 				type: MessageType.DoCopy,
 				selections: ctx.selection.map(r => [r.start, r.end]),
-				asText: ctx.focusedElement.char
+				asText: ctx.focusedElement.char,
 			});
 		}
 	});
 
 	const clearPasting = useCallback(() => setPasting(undefined), []);
 
-	return <div ref={containerRef} className={style.dataDisplay}>
-		<DataRows />
-		<PastePopup context={pasting} hide={clearPasting} />
-	</div>;
+	return (
+		<div ref={containerRef} className={style.dataDisplay}>
+			<DataRows />
+			<PastePopup context={pasting} hide={clearPasting} />
+		</div>
+	);
 };
 
 const DataRows: React.FC = () => {
@@ -281,7 +325,7 @@ const DataRows: React.FC = () => {
 				pageStart={i}
 				rowsStart={Math.max(i, offset)}
 				rowsEnd={Math.min(i + dataPageSize, offset + displayedBytes)}
-				top={(i - offset) / columnWidth * dimensions.rowPxHeight}
+				top={((i - offset) / columnWidth) * dimensions.rowPxHeight}
 				columnWidth={columnWidth}
 				showDecodedText={showDecodedText}
 				fileSize={fileSize}
@@ -293,42 +337,46 @@ const DataRows: React.FC = () => {
 	return <>{rows}</>;
 };
 
-const LoadingDataRow: React.FC<{ width: number; showDecodedText: boolean }> = ({ width, showDecodedText }) => {
+const LoadingDataRow: React.FC<{ width: number; showDecodedText: boolean }> = ({
+	width,
+	showDecodedText,
+}) => {
 	const cells: React.ReactNode[] = [];
 	const text = strings.loadingUpper;
 	for (let i = 0; i < width; i++) {
 		const str = (text[i * 2] || ".") + (text[i * 2 + 1] || ".");
-		cells.push(<span
-			className={dataCellCls}
-			aria-hidden
-			style={{ opacity: 0.5 }}
-			key={i}
-		>{str}</span>);
+		cells.push(
+			<span className={dataCellCls} aria-hidden style={{ opacity: 0.5 }} key={i}>
+				{str}
+			</span>,
+		);
 	}
 
-	return <>
-		<DataCellGroup>{cells}</DataCellGroup>
-		{showDecodedText && <DataCellGroup>{cells}</DataCellGroup>}
-	</>;
+	return (
+		<>
+			<DataCellGroup>{cells}</DataCellGroup>
+			{showDecodedText && <DataCellGroup>{cells}</DataCellGroup>}
+		</>
+	);
 };
 
 interface IDataPageProps {
 	// Page number
-	pageNo: number,
+	pageNo: number;
 	// Start of the page
-	pageStart: number,
+	pageStart: number;
 	// the offset rows should start displaying at
-	rowsStart: number,
+	rowsStart: number;
 	// the offset rows should finish displaying at
-	rowsEnd: number,
+	rowsEnd: number;
 	// count of many rows are displayed before this data page
-	top: number,
+	top: number;
 
 	// common properties:
-	columnWidth: number,
-	fileSize: number,
-	showDecodedText: boolean,
-	dimensions: select.IDimensions,
+	columnWidth: number;
+	fileSize: number;
+	showDecodedText: boolean;
+	dimensions: select.IDimensions;
 }
 
 const DataPage: React.FC<IDataPageProps> = props => (
@@ -343,41 +391,69 @@ const generateRows = (props: IDataPageProps, fn: (offset: number) => React.React
 	const rows: React.ReactNode[] = [];
 	let row = (props.rowsStart - props.pageStart) / props.columnWidth;
 	for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
-		rows.push(<div
-			key={i}
-			className={style.dataRow}
-			style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
-		>
-			<DataCellGroup>
-				<Address>{i.toString(16).padStart(8, "0")}</Address>
-			</DataCellGroup>
-			{fn(i)}
-		</div>);
+		rows.push(
+			<div
+				key={i}
+				className={style.dataRow}
+				style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
+			>
+				<DataCellGroup>
+					<Address>{i.toString(16).padStart(8, "0")}</Address>
+				</DataCellGroup>
+				{fn(i)}
+			</div>,
+		);
 	}
 
 	return rows;
 };
 
-const LoadingDataRows: React.FC<IDataPageProps> = (props) => (
-	<>{generateRows(props, () => <LoadingDataRow width={props.columnWidth} showDecodedText={props.showDecodedText} />)}</>
+const LoadingDataRows: React.FC<IDataPageProps> = props => (
+	<>
+		{generateRows(props, () => (
+			<LoadingDataRow width={props.columnWidth} showDecodedText={props.showDecodedText} />
+		))}
+	</>
 );
 
-const DataPageContents: React.FC<IDataPageProps> = (props) => {
+const DataPageContents: React.FC<IDataPageProps> = props => {
 	const pageSelector = select.editedDataPages(props.pageNo);
 	const [data] = useLastAsyncRecoilValue(pageSelector);
 
-	return <>{generateRows(props, offset => <DataRowContents
-		offset={offset}
-		rawBytes={data.subarray(offset - props.pageStart, offset - props.pageStart + props.columnWidth)}
-		width={props.columnWidth}
-		showDecodedText={props.showDecodedText}
-	/>)}</>;
+	return (
+		<>
+			{generateRows(props, offset => (
+				<DataRowContents
+					offset={offset}
+					rawBytes={data.subarray(
+						offset - props.pageStart,
+						offset - props.pageStart + props.columnWidth,
+					)}
+					width={props.columnWidth}
+					showDecodedText={props.showDecodedText}
+				/>
+			))}
+		</>
+	);
 };
 
 const keysToOctets = new Map([
-	["0", 0x0], ["1", 0x1], ["2", 0x2], ["3", 0x3], ["4", 0x4], ["5", 0x5],
-	["6", 0x6], ["7", 0x7], ["8", 0x8], ["9", 0x9], ["a", 0xa], ["b", 0xb],
-	["c", 0xc], ["d", 0xd], ["e", 0xe], ["f", 0xf],
+	["0", 0x0],
+	["1", 0x1],
+	["2", 0x2],
+	["3", 0x3],
+	["4", 0x4],
+	["5", 0x5],
+	["6", 0x6],
+	["7", 0x7],
+	["8", 0x8],
+	["9", 0x9],
+	["a", 0xa],
+	["b", 0xb],
+	["c", 0xc],
+	["d", 0xd],
+	["e", 0xe],
+	["f", 0xf],
 ]);
 
 for (const [key, value] of keysToOctets) {
@@ -402,43 +478,49 @@ const DataCell: React.FC<{
 		}
 	}, [byte, focusedElement]);
 
-	const onMouseLeave = useCallback((e: React.MouseEvent) => {
-		ctx.hoveredByte = undefined;
-		if ((e.buttons & 1) && ctx.isSelecting === undefined) {
-			ctx.isSelecting = byte;
-			if (e.ctrlKey || e.metaKey) {
+	const onMouseLeave = useCallback(
+		(e: React.MouseEvent) => {
+			ctx.hoveredByte = undefined;
+			if (e.buttons & 1 && ctx.isSelecting === undefined) {
+				ctx.isSelecting = byte;
+				if (e.ctrlKey || e.metaKey) {
+					ctx.addSelectionRange(Range.single(byte));
+				} else {
+					ctx.setSelectionRanges([Range.single(byte)]);
+				}
+			}
+		},
+		[byte],
+	);
+
+	const onMouseDown = useCallback(
+		(e: React.MouseEvent) => {
+			if (!(e.buttons & 1)) {
+				return;
+			}
+
+			const prevFocused = ctx.focusedElement;
+			ctx.focusedElement = focusedElement;
+
+			if (ctx.isSelecting !== undefined) {
+				ctx.isSelecting = undefined;
+			} else if (e.shiftKey && prevFocused) {
+				// on a shift key, the user is expanding the selection (or deselection)
+				// of an existing byte. We *don't* include that byte since we don't want
+				// to swap the byte.
+				if (e.ctrlKey || e.metaKey) {
+					ctx.addSelectionRange(Range.inclusive(prevFocused.byte, byte));
+				} else {
+					ctx.setSelectionRanges([Range.inclusive(prevFocused.byte, byte)]);
+				}
+			} else if (e.ctrlKey || e.metaKey) {
 				ctx.addSelectionRange(Range.single(byte));
 			} else {
 				ctx.setSelectionRanges([Range.single(byte)]);
 			}
-		}
-	}, [byte]);
-
-	const onMouseDown = useCallback((e: React.MouseEvent) => {
-		if (!(e.buttons & 1)) {
-			return;
-		}
-
-		const prevFocused = ctx.focusedElement;
-		ctx.focusedElement = focusedElement;
-
-		if (ctx.isSelecting !== undefined) {
-			ctx.isSelecting = undefined;
-		} else if (e.shiftKey && prevFocused) {
-			// on a shift key, the user is expanding the selection (or deselection)
-			// of an existing byte. We *don't* include that byte since we don't want
-			// to swap the byte.
-			if (e.ctrlKey || e.metaKey) {
-				ctx.addSelectionRange(Range.inclusive(prevFocused.byte, byte));
-			} else {
-				ctx.setSelectionRanges([Range.inclusive(prevFocused.byte, byte)]);
-			}
-		} else if (e.ctrlKey || e.metaKey) {
-			ctx.addSelectionRange(Range.single(byte));
-		} else {
-			ctx.setSelectionRanges([Range.single(byte)]);
-		}
-	}, [focusedElement.key, byte]);
+		},
+		[focusedElement.key, byte],
+	);
 
 	const isFocused = useIsFocused(focusedElement);
 	useEffect(() => {
@@ -454,55 +536,60 @@ const DataCell: React.FC<{
 	// Filling in a byte cell requires two octets to be entered. This stores
 	// the first octet, and is reset if the user stops editing.
 	const [firstOctetOfEdit, setFirstOctetOfEdit] = useState<number>();
-	const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-		if (e.metaKey || e.ctrlKey || e.altKey) {
-			return;
-		}
+	const onKeyDown = useCallback(
+		(e: React.KeyboardEvent) => {
+			if (e.metaKey || e.ctrlKey || e.altKey) {
+				return;
+			}
 
-		if (e.key === "Delete") {
-			// this is a bit of a hack, but this is kind of tricky: we got a delete
-			// for a range, and the edit must be undoable, but we aren't ensured to
-			// have the data paged in for the range. So make a separate request
-			// that will result in the extension host sending the edit to us.
-			select.messageHandler.sendRequest<DeleteAcceptedMessage>({
-				type: MessageType.RequestDeletes,
-				deletes: ctx.getSelectionRanges().map(r => ({ start: r.start, end: r.end })),
-			}).then(() => ctx.setSelectionRanges([]));
-		}
+			if (e.key === "Delete") {
+				// this is a bit of a hack, but this is kind of tricky: we got a delete
+				// for a range, and the edit must be undoable, but we aren't ensured to
+				// have the data paged in for the range. So make a separate request
+				// that will result in the extension host sending the edit to us.
+				select.messageHandler
+					.sendRequest<DeleteAcceptedMessage>({
+						type: MessageType.RequestDeletes,
+						deletes: ctx.getSelectionRanges().map(r => ({ start: r.start, end: r.end })),
+					})
+					.then(() => ctx.setSelectionRanges([]));
+			}
 
-		let newValue: number;
-		if (isChar && e.key.length === 1) {
-			newValue = e.key.charCodeAt(0);
-		} else if (keysToOctets.has(e.key)) {
-			newValue = keysToOctets.get(e.key)!;
-		} else {
-			return;
-		}
+			let newValue: number;
+			if (isChar && e.key.length === 1) {
+				newValue = e.key.charCodeAt(0);
+			} else if (keysToOctets.has(e.key)) {
+				newValue = keysToOctets.get(e.key)!;
+			} else {
+				return;
+			}
 
-		e.stopPropagation();
+			e.stopPropagation();
 
-		if (ctx.isReadonly) {
-			setReadonlyWarning(elRef.current);
-			return;
-		}
+			if (ctx.isReadonly) {
+				setReadonlyWarning(elRef.current);
+				return;
+			}
 
-		if (isChar) {
-			// b is final
-		} else if (firstOctetOfEdit !== undefined) {
-			newValue = firstOctetOfEdit << 4 | newValue;
-		} else {
-			return setFirstOctetOfEdit(newValue);
-		}
+			if (isChar) {
+				// b is final
+			} else if (firstOctetOfEdit !== undefined) {
+				newValue = (firstOctetOfEdit << 4) | newValue;
+			} else {
+				return setFirstOctetOfEdit(newValue);
+			}
 
-		ctx.focusedElement = ctx.focusedElement?.shift(1);
-		setFirstOctetOfEdit(undefined);
-		ctx.edit({
-			op: HexDocumentEditOp.Replace,
-			previous: new Uint8Array([value]),
-			value: new Uint8Array([newValue]),
-			offset: byte,
-		});
-	}, [byte, isChar, firstOctetOfEdit]);
+			ctx.focusedElement = ctx.focusedElement?.shift(1);
+			setFirstOctetOfEdit(undefined);
+			ctx.edit({
+				op: HexDocumentEditOp.Replace,
+				previous: new Uint8Array([value]),
+				value: new Uint8Array([newValue]),
+				offset: byte,
+			});
+		},
+		[byte, isChar, firstOctetOfEdit],
+	);
 
 	const onFocus = useCallback(() => {
 		ctx.focusedElement = focusedElement;
@@ -531,7 +618,7 @@ const DataCell: React.FC<{
 				className,
 				isHovered && style.dataCellHovered,
 				isSelected && style.dataCellSelected,
-				(isHovered && isSelected) && style.dataCellSelectedHovered,
+				isHovered && isSelected && style.dataCellSelectedHovered,
 				useIsUnsaved(byte) && style.dataCellUnsaved,
 			)}
 			onMouseEnter={onMouseEnter}
@@ -539,18 +626,17 @@ const DataCell: React.FC<{
 			onMouseLeave={onMouseLeave}
 			onKeyDown={onKeyDown}
 			data-key={focusedElement.key}
-		>{firstOctetOfEdit !== undefined
-			? firstOctetOfEdit.toString(16).toUpperCase()
-			: children}</span>
+		>
+			{firstOctetOfEdit !== undefined ? firstOctetOfEdit.toString(16).toUpperCase() : children}
+		</span>
 	);
 };
-
 
 const DataRowContents: React.FC<{
 	offset: number;
 	width: number;
 	showDecodedText: boolean;
-	rawBytes: Uint8Array,
+	rawBytes: Uint8Array;
 }> = ({ offset, width, showDecodedText, rawBytes }) => {
 	let memoValue = "";
 	for (const byte of rawBytes) {
@@ -570,22 +656,25 @@ const DataRowContents: React.FC<{
 				continue;
 			}
 
-			bytes.push(<DataCell
-				key={i}
-				byte={boffset}
-				isChar={false}
-				value={value}
-			>{value.toString(16).padStart(2, "0").toUpperCase()}</DataCell>);
+			bytes.push(
+				<DataCell key={i} byte={boffset} isChar={false} value={value}>
+					{value.toString(16).padStart(2, "0").toUpperCase()}
+				</DataCell>,
+			);
 
 			if (showDecodedText) {
 				const char = getAsciiCharacter(value);
-				chars.push(<DataCell
-					key={i}
-					byte={boffset}
-					isChar={true}
-					className={char === undefined ? style.nonGraphicChar : undefined}
-					value={value}
-				>{char === undefined ? "." : char}</DataCell>);
+				chars.push(
+					<DataCell
+						key={i}
+						byte={boffset}
+						isChar={true}
+						className={char === undefined ? style.nonGraphicChar : undefined}
+						value={value}
+					>
+						{char === undefined ? "." : char}
+					</DataCell>,
+				);
 			}
 		}
 		return { bytes, chars };

@@ -6,7 +6,6 @@ export interface ISerializedEdits {
 	data: Uint8Array;
 }
 
-
 /**
  * Serializes edits for transfer, see vscode#137757.
  *
@@ -34,7 +33,11 @@ export const serializeEdits = (edits: readonly HexDocumentEdit[]): ISerializedEd
 		} else if (edit.op === HexDocumentEditOp.Delete) {
 			newEdits.push({ ...edit, previous: allocOrReuse(edit.previous) });
 		} else {
-			newEdits.push({ ...edit, previous: allocOrReuse(edit.previous), value: allocOrReuse(edit.value) });
+			newEdits.push({
+				...edit,
+				previous: allocOrReuse(edit.previous),
+				value: allocOrReuse(edit.value),
+			});
 		}
 	}
 
@@ -48,7 +51,8 @@ export const serializeEdits = (edits: readonly HexDocumentEdit[]): ISerializedEd
 
 /** Reverses {@link serializeEdits} */
 export const deserializeEdits = ({ edits, data }: ISerializedEdits): HexDocumentEdit[] => {
-	const unref = ({ offset, len }: { offset: number, len: number }) => data.slice(offset, offset + len);
+	const unref = ({ offset, len }: { offset: number; len: number }) =>
+		data.slice(offset, offset + len);
 
 	return edits.map((edit: any) => {
 		if (edit.op === HexDocumentEditOp.Insert) {

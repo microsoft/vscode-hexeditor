@@ -21,11 +21,19 @@ export const VirtualScrollContainer: React.FC<{
 	scrollTop: number;
 	minHandleHeight?: number;
 	onScroll(top: number): void;
-}> = ({ className, children, scrollStart, scrollEnd, minHandleHeight = 20, scrollTop, onScroll }) => {
+}> = ({
+	className,
+	children,
+	scrollStart,
+	scrollEnd,
+	minHandleHeight = 20,
+	scrollTop,
+	onScroll,
+}) => {
 	const wrapperRef = useRef<HTMLDivElement | null>(null);
 	// Set when the scroll handle is being dragged. startY is the original pageY
 	// positon of the cursor. offset how far down the scroll handle the cursor was.
-	const [drag, setDrag] = useState<{ startY: number; offset: number; }>();
+	const [drag, setDrag] = useState<{ startY: number; offset: number }>();
 	const size = useSize(wrapperRef);
 
 	const scrollHeight = scrollEnd - scrollStart;
@@ -38,25 +46,30 @@ export const VirtualScrollContainer: React.FC<{
 		// We use transform rather than top/height here since it's cheaper to
 		// rerender. The height is the greatest of either the min handle height or
 		// the proportion of the total data that the current window is displaying.
-		handleHeight = Math.max(minHandleHeight, size.height * size.height / scrollHeight);
+		handleHeight = Math.max(minHandleHeight, (size.height * size.height) / scrollHeight);
 		// Likewise, the distance from the top is how far through the scrollHeight
 		// the current scrollTop is--adjusting for the handle height to keep it on screen.
-		handleTop = Math.min(1, (scrollTop - scrollStart) / (scrollHeight - size.height)) * (size.height - handleHeight);
+		handleTop =
+			Math.min(1, (scrollTop - scrollStart) / (scrollHeight - size.height)) *
+			(size.height - handleHeight);
 		scrollStyle = {
 			opacity: 1,
 			pointerEvents: "auto",
-			transform: `translateY(${handleTop}px) scaleY(${handleHeight / size.height})`
+			transform: `translateY(${handleTop}px) scaleY(${handleHeight / size.height})`,
 		};
 	}
 
 	/** Clamps the `newScrollTop` witihn the valid scrollable region. */
-	const clampScroll = (newScrollTop: number) => clamp(scrollStart, newScrollTop, scrollEnd - size.height);
+	const clampScroll = (newScrollTop: number) =>
+		clamp(scrollStart, newScrollTop, scrollEnd - size.height);
 
 	/** Handler for a mouse move to position "pageY" with the given scrubber offset. */
 	const onScrollWithOffset = (pageY: number, offset: number) => {
 		// This is just the `handleTop` assignment from above solved for the
 		// scrollTop where handleTop = `pageY - offset - size.top`.
-		const newScrollTop = scrollStart + (pageY - offset - size.top) / (size.height - handleHeight) * (scrollHeight - size.height);
+		const newScrollTop =
+			scrollStart +
+			((pageY - offset - size.top) / (size.height - handleHeight)) * (scrollHeight - size.height);
 		onScroll(clampScroll(newScrollTop));
 	};
 
@@ -74,7 +87,7 @@ export const VirtualScrollContainer: React.FC<{
 		setDrag({
 			startY: evt.pageY,
 			// offset is how far down the scroll handle the cursor is
-			offset: clamp(0, evt.pageY - handleTop - size.top, handleHeight)
+			offset: clamp(0, evt.pageY - handleTop - size.top, handleHeight),
 		});
 		evt.preventDefault();
 	};
@@ -120,14 +133,26 @@ export const VirtualScrollContainer: React.FC<{
 		};
 	}, [drag, scrollHeight, size.height]);
 
-	return <div className={clsx(style.container, className)} onWheel={onWheel}>
-		{children}
-		<div style={{
-			opacity: visible ? 1 : 0,
-			pointerEvents: visible ? "auto" : "none",
-			width: getScrollDimensions().width,
-		}} className={clsx(style.scrollbarContainer, drag && style.dragging)} ref={wrapperRef} onMouseDown={onBarMouseDown}>
-			<div className={style.handle} role="scrollbar" style={scrollStyle} onMouseDown={onHandleMouseDown} />
+	return (
+		<div className={clsx(style.container, className)} onWheel={onWheel}>
+			{children}
+			<div
+				style={{
+					opacity: visible ? 1 : 0,
+					pointerEvents: visible ? "auto" : "none",
+					width: getScrollDimensions().width,
+				}}
+				className={clsx(style.scrollbarContainer, drag && style.dragging)}
+				ref={wrapperRef}
+				onMouseDown={onBarMouseDown}
+			>
+				<div
+					className={style.handle}
+					role="scrollbar"
+					style={scrollStyle}
+					onMouseDown={onHandleMouseDown}
+				/>
+			</div>
 		</div>
-	</div>;
+	);
 };

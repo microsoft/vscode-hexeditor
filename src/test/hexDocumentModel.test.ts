@@ -3,7 +3,13 @@
  *--------------------------------------------------------*/
 
 import { expect } from "chai";
-import { EditRangeOp, HexDocumentEdit, HexDocumentEditOp, HexDocumentModel, IEditTimeline } from "../../shared/hexDocumentModel";
+import {
+	EditRangeOp,
+	HexDocumentEdit,
+	HexDocumentEditOp,
+	HexDocumentModel,
+	IEditTimeline,
+} from "../../shared/hexDocumentModel";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { getTestFileAccessor, pseudoRandom } from "./util";
 
@@ -22,8 +28,18 @@ describe("HexDocumentModel", () => {
 	describe("edit timeline", () => {
 		it("keeps offsets in replacements", () => {
 			model.makeEdits([
-				{ op: HexDocumentEditOp.Replace, offset: 6, value: new Uint8Array([16]), previous: new Uint8Array([6, 7, 8]) },
-				{ op: HexDocumentEditOp.Replace, offset: 1, value: new Uint8Array([11]), previous: new Uint8Array([1, 2, 3]) },
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 6,
+					value: new Uint8Array([16]),
+					previous: new Uint8Array([6, 7, 8]),
+				},
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 1,
+					value: new Uint8Array([11]),
+					previous: new Uint8Array([1, 2, 3]),
+				},
 			]);
 
 			const timeline: IEditTimeline = (model as any).getEditTimeline();
@@ -45,7 +61,12 @@ describe("HexDocumentModel", () => {
 		it("round trips", () => {
 			const edits: HexDocumentEdit[] = [
 				{ op: HexDocumentEditOp.Insert, offset: 2, value: new Uint8Array([10, 11, 12]) },
-				{ op: HexDocumentEditOp.Replace, offset: 2, value: new Uint8Array([10, 11, 12]), previous: new Uint8Array([1, 2, 3]) },
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 2,
+					value: new Uint8Array([10, 11, 12]),
+					previous: new Uint8Array([1, 2, 3]),
+				},
 				{ op: HexDocumentEditOp.Delete, offset: 3, previous: new Uint8Array([3, 4, 5]) },
 			];
 
@@ -63,7 +84,10 @@ describe("HexDocumentModel", () => {
 					built = Buffer.concat([built, buf]);
 				}
 
-				expect(built).to.deep.equal(Buffer.from(value.subarray(offset)), `expected to be equal at offset ${offset}`);
+				expect(built).to.deep.equal(
+					Buffer.from(value.subarray(offset)),
+					`expected to be equal at offset ${offset}`,
+				);
 			}
 
 			expect(await model.size()).to.equal(value.length);
@@ -75,33 +99,43 @@ describe("HexDocumentModel", () => {
 
 		it("reads with a simple insert", async () => {
 			model.makeEdits([
-				{ op: HexDocumentEditOp.Insert, offset: 2, value: new Uint8Array([10, 11, 12]) }
+				{ op: HexDocumentEditOp.Insert, offset: 2, value: new Uint8Array([10, 11, 12]) },
 			]);
 			await assertContents(new Uint8Array([0, 1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9]));
 		});
 
 		it("reads with a simple delete", async () => {
 			model.makeEdits([
-				{ op: HexDocumentEditOp.Delete, offset: 2, previous: new Uint8Array([2, 3, 4]) }
+				{ op: HexDocumentEditOp.Delete, offset: 2, previous: new Uint8Array([2, 3, 4]) },
 			]);
 			await assertContents(new Uint8Array([0, 1, 5, 6, 7, 8, 9]));
 		});
 
 		it("reads with a simple replace", async () => {
 			model.makeEdits([
-				{ op: HexDocumentEditOp.Replace, offset: 2, value: new Uint8Array([10, 11, 12]), previous: new Uint8Array([1, 2, 3]) }
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 2,
+					value: new Uint8Array([10, 11, 12]),
+					previous: new Uint8Array([1, 2, 3]),
+				},
 			]);
 			await assertContents(new Uint8Array([0, 1, 10, 11, 12, 5, 6, 7, 8, 9]));
 		});
 
 		it("replaces at beginning", async () => {
 			model.makeEdits([
-				{ op: HexDocumentEditOp.Replace, offset: 0, value: new Uint8Array([10, 11, 12]), previous: new Uint8Array([0, 1, 2]) }
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 0,
+					value: new Uint8Array([10, 11, 12]),
+					previous: new Uint8Array([0, 1, 2]),
+				},
 			]);
 			await assertContents(new Uint8Array([10, 11, 12, 3, 4, 5, 6, 7, 8, 9]));
 		});
 
-		it("makes random replacements", async function() {
+		it("makes random replacements", async function () {
 			this.timeout(10_000);
 
 			const expected = new Uint8Array(original);
@@ -116,13 +150,11 @@ describe("HexDocumentModel", () => {
 				const previous = new Uint8Array(len);
 				for (let k = 0; k < len; k++) {
 					previous[k] = expected[start + k];
-					value[k] = expected[start + k] = vc++ & 0xFF;
+					value[k] = expected[start + k] = vc++ & 0xff;
 				}
 
 				str += `- arr.set(${start}, [${value.join(", ")}]) -> [${expected.join(", ")}]\n`;
-				model.makeEdits([
-					{ op: HexDocumentEditOp.Replace, offset: start, value, previous }
-				]);
+				model.makeEdits([{ op: HexDocumentEditOp.Replace, offset: start, value, previous }]);
 
 				try {
 					await assertContents(expected);
@@ -136,8 +168,18 @@ describe("HexDocumentModel", () => {
 
 		it("works with multiple replacements", async () => {
 			model.makeEdits([
-				{ op: HexDocumentEditOp.Replace, offset: 6, value: new Uint8Array([16]), previous: new Uint8Array([6, 7, 8]) },
-				{ op: HexDocumentEditOp.Replace, offset: 1, value: new Uint8Array([11]), previous: new Uint8Array([1, 2, 3]) },
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 6,
+					value: new Uint8Array([16]),
+					previous: new Uint8Array([6, 7, 8]),
+				},
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 1,
+					value: new Uint8Array([11]),
+					previous: new Uint8Array([1, 2, 3]),
+				},
 			]);
 			await assertContents(new Uint8Array([0, 11, 4, 5, 16, 9]));
 		});
@@ -145,7 +187,12 @@ describe("HexDocumentModel", () => {
 		it("overlaps replace on delete", async () => {
 			model.makeEdits([
 				{ op: HexDocumentEditOp.Delete, offset: 3, previous: new Uint8Array([3, 4, 5]) },
-				{ op: HexDocumentEditOp.Replace, offset: 1, value: new Uint8Array([10, 11, 12]), previous: new Uint8Array([1, 2, 6]) },
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 1,
+					value: new Uint8Array([10, 11, 12]),
+					previous: new Uint8Array([1, 2, 6]),
+				},
 			]);
 			await assertContents(new Uint8Array([0, 10, 11, 12, 7, 8, 9]));
 		});
@@ -153,7 +200,12 @@ describe("HexDocumentModel", () => {
 		it("overlaps replace on insert", async () => {
 			model.makeEdits([
 				{ op: HexDocumentEditOp.Insert, offset: 2, value: new Uint8Array([10, 11, 12]) },
-				{ op: HexDocumentEditOp.Replace, offset: 1, value: new Uint8Array([20, 21, 22]), previous: new Uint8Array([1, 10, 11]) },
+				{
+					op: HexDocumentEditOp.Replace,
+					offset: 1,
+					value: new Uint8Array([20, 21, 22]),
+					previous: new Uint8Array([1, 10, 11]),
+				},
 			]);
 			await assertContents(new Uint8Array([0, 20, 21, 22, 12, 2, 3, 4, 5, 6, 7, 8, 9]));
 		});
@@ -161,7 +213,11 @@ describe("HexDocumentModel", () => {
 		it("delete overlaps multiple", async () => {
 			model.makeEdits([
 				{ op: HexDocumentEditOp.Insert, offset: 2, value: new Uint8Array([10, 11, 12]) },
-				{ op: HexDocumentEditOp.Delete, offset: 1, previous: new Uint8Array([1, 10, 11, 12, 2, 3]) },
+				{
+					op: HexDocumentEditOp.Delete,
+					offset: 1,
+					previous: new Uint8Array([1, 10, 11, 12, 2, 3]),
+				},
 			]);
 			await assertContents(new Uint8Array([0, 4, 5, 6, 7, 8, 9]));
 		});

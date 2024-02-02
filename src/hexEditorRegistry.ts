@@ -29,7 +29,7 @@ export class HexEditorRegistry extends Disposable {
 	 * Messaging for the active hex editor.
 	 */
 	public get activeMessaging(): Iterable<ExtensionHostMessageHandler> {
-		return this._activeDocument && this.docs.get(this._activeDocument) || EMPTY;
+		return (this._activeDocument && this.docs.get(this._activeDocument)) || EMPTY;
 	}
 
 	constructor() {

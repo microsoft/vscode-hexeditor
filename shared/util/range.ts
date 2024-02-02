@@ -49,7 +49,7 @@ export class Range {
 	constructor(
 		public readonly start: number,
 		public readonly end: number = Number.MAX_SAFE_INTEGER,
-		direction?: RangeDirection
+		direction?: RangeDirection,
 	) {
 		if (start < 0) {
 			throw new Error("Cannot construct a range with a negative start");

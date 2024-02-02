@@ -89,6 +89,7 @@ export function populateDataInspector(arrayBuffer: ArrayBuffer, littleEndian: bo
  * @param {ByteData} arrayBuffer The ArrayBuffer object to represent on the data inspector
  */
 export function changeEndianness(arrayBuffer: ArrayBuffer): void {
-	const littleEndian = (document.getElementById("endianness") as HTMLInputElement).value === "little";
+	const littleEndian =
+		(document.getElementById("endianness") as HTMLInputElement).value === "little";
 	populateDataInspector(arrayBuffer, littleEndian);
 }

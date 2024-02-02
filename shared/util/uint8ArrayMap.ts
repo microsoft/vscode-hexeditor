@@ -1,5 +1,4 @@
-
-const unwrap = <T>(fn: (() => T) | T) => typeof fn === "function" ? (fn as () => T)() : fn;
+const unwrap = <T>(fn: (() => T) | T) => (typeof fn === "function" ? (fn as () => T)() : fn);
 
 /** Map of unique values keyed by uint8 array contents */
 export class Uint8ArrayMap<T> {
@@ -72,7 +71,6 @@ function doHash(b: Uint8Array, hashVal = 0) {
 	return hashVal;
 }
 
-
 function numberHash(val: number, initialHashVal: number): number {
-	return (((initialHashVal << 5) - initialHashVal) + val) | 0;  // hashVal * 31 + ch, keep as int32
+	return ((initialHashVal << 5) - initialHashVal + val) | 0; // hashVal * 31 + ch, keep as int32
 }
