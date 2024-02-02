@@ -389,6 +389,10 @@ export const searchResults = atom<SearchResultsWithProgress>({
 					: { progress: msg.data.progress, capped: msg.data.capped, results: prev.results.concat(msg.data.results) }
 				);
 			});
+
+			registerHandler(MessageType.ReloadFromDisk, () => {
+				fx.setSelf(prev => prev instanceof DefaultValue ? prev : ({ ...prev, outdated: true }));
+			});
 		}
 	],
 });

@@ -92,6 +92,7 @@ export interface SearchResultsWithProgress {
 	results: SearchResult[];
 	progress: number;
 	capped?: boolean;
+	outdated?: boolean;
 }
 
 export interface SearchProgressMessage {
