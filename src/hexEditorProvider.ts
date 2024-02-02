@@ -83,13 +83,13 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		};
 
 		const onDidDelete = () => {
-			vscode.window.showWarningMessage(vscode.l10n.t("This file has been deleted! Saving now will create a new file on disk.", overwrite, vscode.l10n.t("Close Editor"))).then((response) => {
-				if (response === overwrite) {
-					vscode.commands.executeCommand("workbench.action.files.save");
-				} else if (response === "Close Editor") {
-					vscode.commands.executeCommand("workbench.action.closeActiveEditor");
+			for (const group of vscode.window.tabGroups.all) {
+				for (const editor of group.tabs) {
+					if (editor.input === document) {
+						vscode.window.tabGroups.close(editor, true);
+					}
 				}
-			});
+			}
 		};
 
 		disposables.push(accessor.watch(onDidChange, onDidDelete));

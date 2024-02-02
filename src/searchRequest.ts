@@ -24,7 +24,7 @@ class ResultsCollector {
 	constructor(
 		private readonly filesize: number | undefined,
 		private cap: number | undefined,
-	) {}
+	) { }
 
 	public fileOffset = 0;
 
@@ -88,7 +88,7 @@ export class LiteralSearchRequest implements ISearchRequest {
 		const streamSearch = new LiteralSearch(
 			query.literal.map(c => c === "*" ? Wildcard : c),
 			(index, data) => collector.push(data, index, index + data.length),
-			isCaseSensitive ? undefined: caseInsensitiveEquivalency,
+			isCaseSensitive ? undefined : caseInsensitiveEquivalency,
 		);
 
 		for await (const chunk of document.readWithEdits(0)) {
