@@ -90,4 +90,46 @@ export const inspectableTypes: readonly IInspectableType[] = [
 			return utf16;
 		},
 	},
+	{
+		label: "GB18030",
+		minBytes: 2,
+		convert: dv => {
+			// the valid encoding for TextDecoder is list on
+			// https://developer.mozilla.org/en-US/docs/Web/API/Encoding_API/Encodings
+			// GBK Character Set is an extension of GB2312. GB18030 is an extension of GBK.
+			// So choose GB18030 as the encoding here.
+			// see also http://herongyang.com/GB2312/Introduction-GB2312-GBK-GB18030.html
+			// and https://www.ibm.com/docs/en/aix/7.1?topic=sets-gb18030
+			const utf8 = new TextDecoder("gb18030").decode(dv.buffer);
+			for (const char of utf8) return char;
+			return utf8;
+		},
+	},
+	{
+		label: "BIG5",
+		minBytes: 2,
+		convert: dv => {
+			const utf8 = new TextDecoder("big5").decode(dv.buffer);
+			for (const char of utf8) return char;
+			return utf8;
+		},
+	},
+	{
+		label: "ISO-2022-KR",
+		minBytes: 2,
+		convert: dv => {
+			const utf8 = new TextDecoder("iso-2022-kr").decode(dv.buffer);
+			for (const char of utf8) return char;
+			return utf8;
+		},
+	},
+	{
+		label: "SHIFT-JIS",
+		minBytes: 2,
+		convert: dv => {
+			const utf8 = new TextDecoder("shift-jis").decode(dv.buffer);
+			for (const char of utf8) return char;
+			return utf8;
+		},
+	},
 ];
