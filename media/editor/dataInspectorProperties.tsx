@@ -63,8 +63,8 @@ const inspectTypesBuilder: IInspectableType[] = [
 	{ label: "uint32", minBytes: 4, convert: (dv, le) => dv.getUint32(0, le).toString() },
 	{ label: "int32", minBytes: 4, convert: (dv, le) => dv.getInt32(0, le).toString() },
 
-	{ label: "int64", minBytes: 8, convert: (dv, le) => dv.getBigInt64(0, le).toString() },
 	{ label: "uint64", minBytes: 8, convert: (dv, le) => dv.getBigUint64(0, le).toString() },
+	{ label: "int64", minBytes: 8, convert: (dv, le) => dv.getBigInt64(0, le).toString() },
 
 	{
 		label: "float16",
