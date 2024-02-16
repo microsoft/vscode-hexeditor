@@ -2,6 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
+import { EventEmitter } from "cockatiel";
 import React, {
 	DependencyList,
 	useEffect,
@@ -14,9 +15,19 @@ import { RecoilValue, useRecoilValue, useRecoilValueLoadable } from "recoil";
 import { ColorMap, observeColors, parseColors } from "vscode-webview-tools";
 import * as select from "./state";
 
+let lastTheme = parseColors();
+const themeChange = new EventEmitter<ColorMap>();
+observeColors(colors => {
+	themeChange.emit((lastTheme = colors));
+});
+
 export const useTheme = (): ColorMap => {
-	const [colors, setColors] = useState(parseColors());
-	useEffect(() => observeColors(setColors), []);
+	const [colors, setColors] = useState(lastTheme);
+	useEffect(() => {
+		const l = themeChange.addListener(setColors);
+		return () => l.dispose();
+	}, []);
+
 	return colors;
 };
 

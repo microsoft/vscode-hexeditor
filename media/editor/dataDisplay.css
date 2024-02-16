@@ -43,9 +43,8 @@
 }
 
 .data-display {
-	position: sticky;
+	position: absolute;
 	inset: 0;
-	height: 0px;
 }
 
 .data-inspector-wrap {
@@ -78,4 +77,9 @@
 
 .data-cell-char {
 	width: calc(var(--cell-size) * 0.7) !important;
+}
+
+.canvas {
+	width: 100%;
+	height: 100%;
 }

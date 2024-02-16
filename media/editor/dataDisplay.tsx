@@ -3,12 +3,14 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
+import { ColorMap } from "vscode-webview-tools";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import { DeleteAcceptedMessage, InspectorLocation, MessageType } from "../../shared/protocol";
 import { Range } from "../../shared/util/range";
 import { PastePopup } from "./copyPaste";
 import _style from "./dataDisplay.css";
 import {
+	DisplayContext,
 	FocusedElement,
 	dataCellCls,
 	useDisplayContext,
@@ -18,16 +20,10 @@ import {
 	useIsUnsaved,
 } from "./dataDisplayContext";
 import { DataInspectorAside } from "./dataInspector";
-import { useGlobalHandler, useLastAsyncRecoilValue } from "./hooks";
+import { useGlobalHandler, useLastAsyncRecoilValue, useSize, useTheme } from "./hooks";
 import * as select from "./state";
 import { strings } from "./strings";
-import {
-	clamp,
-	clsx,
-	getAsciiCharacter,
-	getScrollDimensions,
-	throwOnUndefinedAccessInDev,
-} from "./util";
+import { clamp, getAsciiCharacter, getScrollDimensions, throwOnUndefinedAccessInDev } from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
@@ -292,16 +288,17 @@ export const DataDisplay: React.FC = () => {
 	});
 
 	const clearPasting = useCallback(() => setPasting(undefined), []);
+	const size = useSize(containerRef);
 
 	return (
 		<div ref={containerRef} className={style.dataDisplay}>
-			<DataRows />
+			<DataRows width={size.width} height={size.height} />
 			<PastePopup context={pasting} hide={clearPasting} />
 		</div>
 	);
 };
 
-const DataRows: React.FC = () => {
+const DataRows: React.FC<{ width: number; height: number }> = ({ width, height }) => {
 	const offset = useRecoilValue(select.offset);
 	const columnWidth = useRecoilValue(select.columnWidth);
 	const showDecodedText = useRecoilValue(select.showDecodedText);
@@ -316,25 +313,45 @@ const DataRows: React.FC = () => {
 	const endPageNo = Math.floor((offset + displayedBytes) / dataPageSize);
 	const endPageStartsAt = endPageNo * dataPageSize;
 
+	const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
+	const context = useMemo(() => canvas?.getContext("2d"), [canvas]);
+
+	useEffect(() => {
+		if (context) {
+			const scale = window.devicePixelRatio;
+			context.canvas.width = Math.floor(width * scale);
+			context.canvas.height = Math.floor(height * scale);
+			context.scale(scale, scale);
+		}
+	}, [width, height, context]);
+
 	const rows: React.ReactChild[] = [];
-	for (let i = startPageStartsAt; i <= endPageStartsAt && i < fileSize; i += dataPageSize) {
-		rows.push(
-			<DataPage
-				key={i}
-				pageNo={i / dataPageSize}
-				pageStart={i}
-				rowsStart={Math.max(i, offset)}
-				rowsEnd={Math.min(i + dataPageSize, offset + displayedBytes)}
-				top={((i - offset) / columnWidth) * dimensions.rowPxHeight}
-				columnWidth={columnWidth}
-				showDecodedText={showDecodedText}
-				fileSize={fileSize}
-				dimensions={dimensions}
-			/>,
-		);
+	if (context) {
+		for (let i = startPageStartsAt; i <= endPageStartsAt && i < fileSize; i += dataPageSize) {
+			rows.push(
+				<DataPage
+					key={i}
+					pageNo={i / dataPageSize}
+					pageStart={i}
+					rowsStart={Math.max(i, offset)}
+					rowsEnd={Math.min(i + dataPageSize, offset + displayedBytes)}
+					top={((i - offset) / columnWidth) * dimensions.rowPxHeight}
+					columnWidth={columnWidth}
+					showDecodedText={showDecodedText}
+					fileSize={fileSize}
+					dimensions={dimensions}
+					context={context}
+				/>,
+			);
+		}
 	}
 
-	return <>{rows}</>;
+	return (
+		<>
+			<canvas ref={setCanvas} className={style.canvas} />
+			{rows}
+		</>
+	);
 };
 
 const LoadingDataRow: React.FC<{ width: number; showDecodedText: boolean }> = ({
@@ -377,14 +394,13 @@ interface IDataPageProps {
 	fileSize: number;
 	showDecodedText: boolean;
 	dimensions: select.IDimensions;
+	context: CanvasRenderingContext2D;
 }
 
 const DataPage: React.FC<IDataPageProps> = props => (
-	<div className={style.dataPage} style={{ transform: `translateY(${props.top}px)` }}>
-		<Suspense fallback={<LoadingDataRows {...props} />}>
-			<DataPageContents {...props} />
-		</Suspense>
-	</div>
+	<Suspense fallback={<LoadingDataRows {...props} />}>
+		<DataPageContents {...props} />
+	</Suspense>
 );
 
 const generateRows = (props: IDataPageProps, fn: (offset: number) => React.ReactChild) => {
@@ -408,33 +424,151 @@ const generateRows = (props: IDataPageProps, fn: (offset: number) => React.React
 	return rows;
 };
 
-const LoadingDataRows: React.FC<IDataPageProps> = props => (
-	<>
-		{generateRows(props, () => (
-			<LoadingDataRow width={props.columnWidth} showDecodedText={props.showDecodedText} />
-		))}
-	</>
-);
+/** Renders line numbers and returns layout info */
+const useLineNumbers = (
+	{ context, rowsEnd, rowsStart, columnWidth, fileSize, dimensions }: IDataPageProps,
+	theme: ColorMap,
+) => {
+	return useMemo(() => {
+		let k = 0;
+		context.textAlign = "left";
+		context.font = `${theme["editor-font-size"]} ${theme["editor-font-family"]}`;
+		context.fillStyle = theme["editorLineNumber-foreground"];
+		context.textAlign = "left";
+		context.textBaseline = "middle";
+
+		const width = context.measureText(rowsEnd.toString(16).toUpperCase().padStart(8, "0")).width;
+
+		context.clearRect(0, 0, width, context.canvas.height);
+		for (let i = rowsStart; i <= rowsEnd && i < fileSize; i += columnWidth) {
+			context.fillText(
+				i.toString(16).toUpperCase().padStart(8, "0"),
+				0,
+				(k++ + 0.5) * dimensions.rowPxHeight,
+			);
+		}
+
+		return { width };
+	}, [theme, rowsStart, rowsEnd, columnWidth, fileSize]);
+};
+
+const LoadingDataRows: React.FC<IDataPageProps> = props => {
+	const theme = useTheme();
+	const lineNos = useLineNumbers(props, theme);
+
+	return <></>;
+};
 
 const DataPageContents: React.FC<IDataPageProps> = props => {
+	const theme = useTheme();
+	const lineNos = useLineNumbers(props, theme);
 	const pageSelector = select.editedDataPages(props.pageNo);
 	const [data] = useLastAsyncRecoilValue(pageSelector);
+	const ctx = useDisplayContext();
 
-	return (
-		<>
-			{generateRows(props, offset => (
-				<DataRowContents
-					offset={offset}
-					rawBytes={data.subarray(
-						offset - props.pageStart,
-						offset - props.pageStart + props.columnWidth,
-					)}
-					width={props.columnWidth}
-					showDecodedText={props.showDecodedText}
-				/>
-			))}
-		</>
-	);
+	const bytesStart = lineNos.width;
+	const textStart = bytesStart + props.columnWidth * props.dimensions.rowPxHeight;
+	props.context.font = `${theme["font-size"]}px ${theme["font-family"]}`;
+	props.context.textAlign = "center";
+	props.context.textBaseline = "middle";
+
+	let rowNum = 0;
+	for (
+		let row = props.rowsStart;
+		row < props.rowsEnd && row < props.fileSize;
+		row += props.columnWidth, rowNum++
+	) {
+		for (let x = 0; x < props.columnWidth && row + x < props.fileSize; x++) {
+			const byteInPage = row + x - props.pageStart;
+			const byteOverall = row + x;
+			drawCell({
+				theme,
+				ctx,
+				left: bytesStart + x * props.dimensions.rowPxHeight,
+				top: rowNum * props.dimensions.rowPxHeight,
+				byte: byteOverall,
+				value: data[byteInPage],
+				isChar: false,
+				size: props.dimensions.rowPxHeight,
+				context: props.context,
+			});
+
+			if (props.showDecodedText) {
+				drawCell({
+					theme,
+					ctx,
+					left: textStart + x * props.dimensions.rowPxHeight * textCellWidth,
+					top: rowNum * props.dimensions.rowPxHeight,
+					byte: byteOverall,
+					value: data[byteInPage],
+					isChar: true,
+					size: props.dimensions.rowPxHeight,
+					context: props.context,
+				});
+			}
+		}
+	}
+
+	return <></>;
+};
+
+const drawCell = ({
+	ctx,
+	left,
+	top,
+	size,
+	byte,
+	value,
+	isChar,
+	theme,
+	context,
+}: {
+	theme: ColorMap;
+	ctx: DisplayContext;
+	left: number;
+	top: number;
+	size: number;
+	byte: number;
+	value: number;
+	isChar: boolean;
+	context: CanvasRenderingContext2D;
+}) => {
+	const drawRect = (color: string) => {
+		context.fillStyle = color;
+		context.fillRect(left, top, size, size);
+	};
+
+	const isHovered =
+		ctx.hoveredByte && ctx.hoveredByte.byte === byte && ctx.hoveredByte.char === isChar;
+	const isSelected = ctx.isSelected(byte);
+
+	if (isHovered && isSelected) {
+		drawRect(theme["editor-inactiveSelectionBackground"]);
+		context.fillStyle = theme["editor-foreground"];
+	} else if (isHovered) {
+		drawRect(theme["editor-hoverHighlightBackground"]);
+		context.fillStyle = theme["editor-foreground"];
+	} else if (isSelected) {
+		drawRect(theme["editor-selectionBackground"]);
+		context.fillStyle = theme["editor-selectionForeground"];
+	} else {
+		drawRect(theme["editor-background"]);
+		context.fillStyle = theme["editor-foreground"];
+	}
+
+	let char: string | undefined;
+	if (isChar) {
+		char = getAsciiCharacter(value);
+		if (!char) {
+			char = ".";
+			context.fillStyle = theme["tab-unfocusedInactiveForeground"];
+		}
+	} else {
+		char = value.toString(16).toUpperCase().padStart(2, "0");
+	}
+
+	const w = isChar ? size * textCellWidth : size;
+	context.fillText(char, left + w / 2, top + size / 2);
 };
 
 const keysToOctets = new Map([
@@ -461,11 +595,14 @@ for (const [key, value] of keysToOctets) {
 }
 
 const DataCell: React.FC<{
+	left: number;
+	top: number;
+	size: number;
 	byte: number;
 	value: number;
 	isChar: boolean;
-	className?: string;
-}> = ({ byte, value, className, children, isChar }) => {
+	context: CanvasRenderingContext2D;
+}> = ({ byte, value, left, top, size, isChar, context }) => {
 	const elRef = useRef<HTMLSpanElement | null>(null);
 	const focusedElement = new FocusedElement(isChar, byte);
 	const ctx = useDisplayContext();
@@ -605,85 +742,71 @@ const DataCell: React.FC<{
 
 	const isHovered = useIsHovered(focusedElement);
 	const isSelected = useIsSelected(byte);
+	const isUnsaved = useIsUnsaved(byte);
+	const theme = useTheme();
 
-	return (
-		<span
-			ref={elRef}
-			tabIndex={0}
-			onFocus={onFocus}
-			onBlur={onBlur}
-			className={clsx(
-				isChar && style.dataCellChar,
-				dataCellCls,
-				className,
-				isHovered && style.dataCellHovered,
-				isSelected && style.dataCellSelected,
-				isHovered && isSelected && style.dataCellSelectedHovered,
-				useIsUnsaved(byte) && style.dataCellUnsaved,
-			)}
-			onMouseEnter={onMouseEnter}
-			onMouseDown={onMouseDown}
-			onMouseLeave={onMouseLeave}
-			onKeyDown={onKeyDown}
-			data-key={focusedElement.key}
-		>
-			{firstOctetOfEdit !== undefined ? firstOctetOfEdit.toString(16).toUpperCase() : children}
-		</span>
-	);
-};
+	useEffect(() => {
+		context.font = `${theme["font-size"]}px ${theme["font-family"]}`;
+		context.textAlign = "center";
+		context.textBaseline = "middle";
 
-const DataRowContents: React.FC<{
-	offset: number;
-	width: number;
-	showDecodedText: boolean;
-	rawBytes: Uint8Array;
-}> = ({ offset, width, showDecodedText, rawBytes }) => {
-	let memoValue = "";
-	for (const byte of rawBytes) {
-		memoValue += "," + byte;
-	}
+		const drawRect = (color: string) => {
+			context.fillStyle = color;
+			context.fillRect(left, top, size, size);
+		};
 
-	const { bytes, chars } = useMemo(() => {
-		const bytes: React.ReactChild[] = [];
-		const chars: React.ReactChild[] = [];
-		for (let i = 0; i < width; i++) {
-			const boffset = offset + i;
-			const value = rawBytes[i];
-
-			if (value === undefined) {
-				bytes.push(<EmptyDataCell key={i} />);
-				chars.push(<EmptyDataCell key={i} />);
-				continue;
-			}
-
-			bytes.push(
-				<DataCell key={i} byte={boffset} isChar={false} value={value}>
-					{value.toString(16).padStart(2, "0").toUpperCase()}
-				</DataCell>,
-			);
-
-			if (showDecodedText) {
-				const char = getAsciiCharacter(value);
-				chars.push(
-					<DataCell
-						key={i}
-						byte={boffset}
-						isChar={true}
-						className={char === undefined ? style.nonGraphicChar : undefined}
-						value={value}
-					>
-						{char === undefined ? "." : char}
-					</DataCell>,
-				);
-			}
+		if (isHovered && isSelected) {
+			drawRect(theme["editor-inactiveSelectionBackground"]);
+			context.fillStyle = theme["editor-foreground"];
+		} else if (isHovered) {
+			drawRect(theme["editor-hoverHighlightBackground"]);
+			context.fillStyle = theme["editor-foreground"];
+		} else if (isSelected) {
+			drawRect(theme["editor-selectionBackground"]);
+			context.fillStyle = theme["editor-selectionForeground"];
+		} else {
+			drawRect(theme["editor-background"]);
+			context.fillStyle = theme["editor-foreground"];
 		}
-		return { bytes, chars };
-	}, [memoValue, showDecodedText]);
 
-	return (
-		<>
-			<DataCellGroup>{bytes}</DataCellGroup>
-			<DataCellGroup>{chars}</DataCellGroup>
-		</>
-	);
+		let char: string | undefined;
+		if (isChar) {
+			char = getAsciiCharacter(value);
+			if (!char) {
+				char = ".";
+				context.fillStyle = theme["tab-unfocusedInactiveForeground"];
+			}
+		} else {
+			char = value.toString(16).toUpperCase().padStart(2, "0");
+		}
+		// console.log("draw", value, isHovered, isSelected, isUnsaved, left, top, size);
+		context.fillText(char, left + size / 2, top + size / 2);
+	}, [value, isHovered, isSelected, isUnsaved, theme, left, top, size]);
+
+	return <></>;
+
+	// return (
+	// 	<span
+	// 		ref={elRef}
+	// 		tabIndex={0}
+	// 		onFocus={onFocus}
+	// 		onBlur={onBlur}
+	// 		className={clsx(
+	// 			isChar && style.dataCellChar,
+	// 			dataCellCls,
+	// 			className,
+	// 			isHovered && style.dataCellHovered,
+	// 			isSelected && style.dataCellSelected,
+	// 			isHovered && isSelected && style.dataCellSelectedHovered,
+	// 			useIsUnsaved(byte) && style.dataCellUnsaved,
+	// 		)}
+	// 		onMouseEnter={onMouseEnter}
+	// 		onMouseDown={onMouseDown}
+	// 		onMouseLeave={onMouseLeave}
+	// 		onKeyDown={onKeyDown}
+	// 		data-key={focusedElement.key}
+	// 	>
+	// 		{firstOctetOfEdit !== undefined ? firstOctetOfEdit.toString(16).toUpperCase() : children}
+	// 	</span>
+	// );
 };
