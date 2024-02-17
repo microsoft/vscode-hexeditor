@@ -5,13 +5,17 @@ const getULEB128 = (arrayBuffer: ArrayBuffer) => {
 	let result = 0n;
 	let shift = 0n;
 	let index = 0;
-	while (true) {
-		const byte: bigint = BigInt(buf[index++]);
-		result |= (byte & 0x7Fn) << shift;
-		if ((0x80n & byte) === 0n) {
-			return result;
+	try {
+		while (true) {
+			const byte: bigint = BigInt(buf[index++]);
+			result |= (byte & 0x7Fn) << shift;
+			if ((0x80n & byte) === 0n) {
+				return result;
+			}
+			shift += 7n;
 		}
-		shift += 7n;
+	} catch {
+		return "";
 	}
 };
 
@@ -22,17 +26,21 @@ const getSLEB128 = (arrayBuffer: ArrayBuffer) => {
 	let result = 0n;
 	let shift = 0n;
 	let index = 0;
-	while (true) {
-		const byte: bigint = BigInt(buf[index++]);
-		result |= (byte & 0x7Fn) << shift;
-		shift += 7n; 
-		if ((0x80n & byte) === 0n) {
-			if (shift < 128n && (byte & 0x40n) !== 0n) {
-				result |= (~0n << shift);
+	try {
+		while (true) {
+			const byte: bigint = BigInt(buf[index++]);
+			result |= (byte & 0x7Fn) << shift;
+			shift += 7n; 
+			if ((0x80n & byte) === 0n) {
+				if (shift < 128n && (byte & 0x40n) !== 0n) {
+					result |= (~0n << shift);
+					return result;
+				}
 				return result;
 			}
-			return result;
 		}
+	} catch {
+		return "";
 	}
 };
 
