@@ -1,3 +1,41 @@
+/** Reads a ULEB128 at offset 0 from the buffer. */
+const getULEB128 = (arrayBuffer: ArrayBuffer) => {
+	const buf = new Uint8Array(arrayBuffer);
+
+	let result = 0n;
+	let shift = 0n;
+	let index = 0;
+	while (true) {
+		const byte: bigint = BigInt(buf[index++]);
+		result |= (byte & 0x7Fn) << shift;
+		if ((0x80n & byte) === 0n) {
+			return result;
+		}
+		shift += 7n;
+	}
+};
+
+/** Reads a SLEB128 at offset 0 from the buffer. */
+const getSLEB128 = (arrayBuffer: ArrayBuffer) => {
+	const buf = new Uint8Array(arrayBuffer);
+
+	let result = 0n;
+	let shift = 0n;
+	let index = 0;
+	while (true) {
+		const byte: bigint = BigInt(buf[index++]);
+		result |= (byte & 0x7Fn) << shift;
+		shift += 7n; 
+		if ((0x80n & byte) === 0n) {
+			if (shift < 128n && (byte & 0x40n) !== 0n) {
+				result |= (~0n << shift);
+				return result;
+			}
+			return result;
+		}
+	}
+};
+
 /** Reads a uint24 at offset 0 from the buffer. */
 const getUint24 = (arrayBuffer: ArrayBuffer, le: boolean) => {
 	const buf = new Uint8Array(arrayBuffer);
@@ -65,6 +103,9 @@ const inspectTypesBuilder: IInspectableType[] = [
 
 	{ label: "uint64", minBytes: 8, convert: (dv, le) => dv.getBigUint64(0, le).toString() },
 	{ label: "int64", minBytes: 8, convert: (dv, le) => dv.getBigInt64(0, le).toString() },
+
+	{ label: "ULEB128", minBytes: 1, convert: dv => getULEB128(dv.buffer).toString() },
+	{ label: "SLEB128", minBytes: 1, convert: dv => getSLEB128(dv.buffer).toString() },
 
 	{
 		label: "float16",
