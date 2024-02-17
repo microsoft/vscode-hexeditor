@@ -19,7 +19,7 @@
 
 ## 1.9.8 - July 28, 2022
 - Fixed bug causing binary search to be incorrect, thanks to [@varblane via #367](https://github.com/microsoft/vscode-hexeditor/pull/367)
-- Open active file in Hex Editor now works with non text editors
+- Open active file in Hex Editor now works with non-text editors
 
 ## 1.9.7 - June 15, 2022
 - Fixed bug causing bytes at page boundaries to be incorrect
@@ -30,7 +30,7 @@
 - Changed default decoding of decoded text to ASCII
 
 ## 1.9.5 - February 18, 2022
-- Data inspector location is now cofnigurable via the `hexeditor.inspectorType` setting.
+- Data inspector location is now configurable via the `hexeditor.inspectorType` setting.
 
 ## 1.9.4 - January 27, 2022
 - Fixed bug with copy and paste not working
@@ -53,7 +53,7 @@
 - Fix bug preventing opening of large files
 - Switch from webpack -> esbuild
 - Reduce bundle size
-- Fix file watcher on non file path files
+- Fix file watcher on non-file path files
 
 ## 1.7.1 - June 18, 2021
 - Fix bug preventing search from working
@@ -96,7 +96,7 @@
 ## 1.1.0 — June 30, 2020
 - Added simple editing support for hex and decoded text
 - Fixed a bug preventing files over 18MB from being opened
-- Added more keyboard navigation support via Pgup, Pgdown, Ctrl + End/Home, and End/Home.
+- Added more keyboard navigation support via PgUp, PgDown, Ctrl + End/Home, and End/Home.
 - Fixed a bug with empty files not rendering correctly
 - Scroll position is now retained upon switching tabs
 
