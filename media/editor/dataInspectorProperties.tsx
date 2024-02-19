@@ -7,6 +7,9 @@ const getULEB128 = (arrayBuffer: ArrayBuffer) => {
 	let index = 0;
 	try {
 		while (true) {
+			if (shift > 128n) {
+				return "";
+			}
 			const byte: bigint = BigInt(buf[index++]);
 			result |= (byte & 0x7Fn) << shift;
 			if ((0x80n & byte) === 0n) {
