@@ -5,20 +5,16 @@ const getULEB128 = (arrayBuffer: ArrayBuffer) => {
 	let result = 0n;
 	let shift = 0n;
 	let index = 0;
-	try {
-		while (true) {
-			if (shift > 128n) {
-				return "";
-			}
-			const byte: bigint = BigInt(buf[index++]);
-			result |= (byte & 0x7Fn) << shift;
-			if ((0x80n & byte) === 0n) {
-				return result;
-			}
-			shift += 7n;
+	while (true) {
+		if (shift > 128n || index >= buf.length) {
+			return "";
 		}
-	} catch {
-		return "";
+		const byte: bigint = BigInt(buf[index++]);
+		result |= (byte & 0x7Fn) << shift;
+		if ((0x80n & byte) === 0n) {
+			return result;
+		}
+		shift += 7n;
 	}
 };
 
@@ -29,24 +25,20 @@ const getSLEB128 = (arrayBuffer: ArrayBuffer) => {
 	let result = 0n;
 	let shift = 0n;
 	let index = 0;
-	try {
-		while (true) {
-			if (shift > 128n) {
-				return "";
-			}
-			const byte: bigint = BigInt(buf[index++]);
-			result |= (byte & 0x7Fn) << shift;
-			shift += 7n; 
-			if ((0x80n & byte) === 0n) {
-				if (shift < 128n && (byte & 0x40n) !== 0n) {
-					result |= (~0n << shift);
-					return result;
-				}
+	while (true) {
+		if (shift > 128n || index >= buf.length) {
+			return "";
+		}
+		const byte: bigint = BigInt(buf[index++]);
+		result |= (byte & 0x7Fn) << shift;
+		shift += 7n; 
+		if ((0x80n & byte) === 0n) {
+			if (shift < 128n && (byte & 0x40n) !== 0n) {
+				result |= (~0n << shift);
 				return result;
 			}
+			return result;
 		}
-	} catch {
-		return "";
 	}
 };
 
