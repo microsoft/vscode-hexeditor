@@ -1,11 +1,34 @@
 ## Release Notes
 
-## 1.9.11 - January 25, 2023
+## 1.9.14 - February 22, 2024
+- Add ULEB128 and SLEB128 support in data inspector, thanks to [@jogo- via #488](https://github.com/microsoft/vscode-hexeditor/pull/488)
+- Add display of status offset and selection count in hexadecimal, thanks to [@jogo- via #486](https://github.com/microsoft/vscode-hexeditor/pull/486)
+- Add ASCII character in data inspector, thanks to [@jogo- via #483](https://github.com/microsoft/vscode-hexeditor/pull/483)
+- Fix order of unsigned before signed int64 in data inspector, thanks to [@jogo- via #482](https://github.com/microsoft/vscode-hexeditor/pull/482)
 
+## 1.9.13 - February 2, 2024
+- Fix plugin description, thanks to [@deitry via #480](https://github.com/microsoft/vscode-hexeditor/pull/480)
+- Fix listener leak when closing files
+- Fix close hex editors when corresponding files are deleted
+- Fix regex in binary files by using ascii for regex matches
+- Fix re-run search if a file is reloaded from disk
+- Add Localization to this extension using the Localization pipeline
+- Fix slight selection bugs
+- Fix improve range selection logic, support delete
+- Add select between offsets feature, thanks to [@IngilizAdam via #470](https://github.com/microsoft/vscode-hexeditor/pull/470)
+- Add common cjk encoding support in data inspector, thanks to [@liudonghua123 via #465](https://github.com/microsoft/vscode-hexeditor/pull/465)
+- Fix dispose all disposables in openCustomDocument, thanks to [@lorsanta via #453](https://github.com/microsoft/vscode-hexeditor/pull/453)
+- Add float16 and bfloat16 support in data inspector, thanks to [@lorsanta via #451](https://github.com/microsoft/vscode-hexeditor/pull/451)
+
+## 1.9.12 - July 27, 2023
+- Fix the selection count now updated when switching between tab groups, thanks to [@lorsanta via #449](https://github.com/microsoft/vscode-hexeditor/pull/449)
+- Fix scrolling to the top when hit home key, thanks to [@lorsanta via #448](https://github.com/microsoft/vscode-hexeditor/pull/448)
+- Fix editor failing to open read-only files, thanks to [@tomilho via #437](https://github.com/microsoft/vscode-hexeditor/pull/437)
+
+## 1.9.11 - January 25, 2023
 - Octal representation of the selected byte in the data inspector, thanks to [@brabli via #410](https://github.com/microsoft/vscode-hexeditor/pull/410)
 
 ## 1.9.10 - January 4, 2023
-
 - Add a badge indicating offset and selection size, thanks to [@MoralCode via #401](https://github.com/microsoft/vscode-hexeditor/pull/401)
 - Used a smaller page size when requesting debug memory
 - Fixed many selection bugs
@@ -36,7 +59,6 @@
 - Fixed bug with copy and paste not working
 
 ## 1.9.3 - January 13, 2022
-
 - Files of any size can now be opened without issue (when operating locally)
 - Find menu has been improved and aligns better with the VS Code UI
 - Layout columns and decoded text views are now configurable
@@ -82,10 +104,10 @@
 - Add preliminary support for untitled files
 - Fixed a bug with selections not updating the data inspector
 
-## 1.3.0 — September 8, 2020
+## 1.3.0 - September 8, 2020
 - Allow extensions to configure the starting address for a file. See https://github.com/microsoft/vscode-hexeditor/pull/170 for details.
 
-## 1.2.0 — July 23, 2020
+## 1.2.0 - July 23, 2020
 - Simple File Watching implementation, editor will now respond to changes on disk outside of editor
 - Support for copy and paste
 - Support for Find with text regex, and hex wildcards (i.e FF ?? EE)
@@ -93,16 +115,16 @@
 - Fixed a bug with num pad not working inside the hex editor
 - Fixed a bug with incorrect UTF-8 decoding inside the data inspector
 
-## 1.1.0 — June 30, 2020
+## 1.1.0 - June 30, 2020
 - Added simple editing support for hex and decoded text
 - Fixed a bug preventing files over 18MB from being opened
 - Added more keyboard navigation support via PgUp, PgDown, Ctrl + End/Home, and End/Home.
 - Fixed a bug with empty files not rendering correctly
 - Scroll position is now retained upon switching tabs
 
-## 1.0.1 — June 11, 2020
+## 1.0.1 - June 11, 2020
 - Add instructions to the README on how to use the extension
 - Add an Open with HexEditor command
 
-## 1.0.0 — June 8, 2020
+## 1.0.0 - June 8, 2020
 - Hex Editor initial release
