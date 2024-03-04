@@ -1,0 +1,16 @@
+{
+    "name": "十六进制编辑器",
+    "description": "允许在十六进制编辑器中查看和编辑文件",
+
+    "hexeditor.inspectorType": "数据检查器应该在十六进制编辑器中的显示位置。",
+    "hexeditor.maxFileSize": "编辑器尝试打开的最大文件大小（以MB为单位），在警告你之前。",
+    "hexeditor.dataInspector.autoReveal": "是否在打开十六进制编辑器时自动显示数据检查器。",
+    "hexeditor.defaultEndianness": "加载编辑器时选择的字节序。",
+    "hexeditor.columnWidth": "编辑器中每行显示的字节数。",
+    "hexeditor.showDecodedText": "是否在编辑器中显示解码文本。",
+    "hexeditor.showOpenFileButton": "在编辑器菜单中显示十六进制编辑器按钮。",
+    "hexEditor.openFile": "在十六进制编辑器中打开活动文件",
+    "hexEditor.goToOffset": "转到偏移",
+    "hexEditor.selectBetweenOffsets": "选择偏移之间",
+    "dataInspectorView": "数据检查器视图"
+}
