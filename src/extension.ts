@@ -3,6 +3,7 @@
 
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
+import { copyAs } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
 import { showGoToOffset } from "./goToOffset";
 import { HexEditorProvider } from "./hexEditorProvider";
@@ -69,6 +70,14 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 		},
 	);
+
+    context.subscriptions.push(vscode.commands.registerCommand("hexEditor.copyAs", () => {
+        const first = registry.activeMessaging[Symbol.iterator]().next();
+        if (first.value) {
+            copyAs(first.value);
+        }
+    }));
+
 	context.subscriptions.push(new StatusSelectionCount(registry));
 	context.subscriptions.push(goToOffsetCommand);
 	context.subscriptions.push(selectBetweenOffsetsCommand);

@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 import TelemetryReporter from "@vscode/extension-telemetry";
-import * as base64 from "js-base64";
 import * as vscode from "vscode";
 import {
 	HexDocumentEdit,
@@ -10,6 +9,7 @@ import {
 	HexDocumentEditReference,
 } from "../shared/hexDocumentModel";
 import {
+	CopyFormat,
 	Endianness,
 	ExtensionHostMessageHandler,
 	FromWebviewMessage,
@@ -23,6 +23,16 @@ import {
 } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { ILocalizedStrings, placeholder1 } from "../shared/strings";
+import {
+	copyAsBase64,
+	copyAsC,
+	copyAsGolang,
+	copyAsHex,
+	copyAsJSON,
+	copyAsJava,
+	copyAsLiteral,
+	copyAsText,
+} from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
@@ -352,10 +362,40 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 						.map(s => document.readBuffer(s[0], s[1] - s[0])),
 				);
 				const flatParts = flattenBuffers(parts);
-				const encoded = message.asText
-					? new TextDecoder().decode(flatParts)
-					: base64.fromUint8Array(flatParts);
-				vscode.env.clipboard.writeText(encoded);
+				if (message.format !== undefined) {
+					switch (message.format) {
+						case CopyFormat.Hex:
+							copyAsHex(flatParts);
+							break;
+						case CopyFormat.Literal:
+							copyAsLiteral(flatParts);
+							break;
+						case CopyFormat.Text:
+							copyAsText(flatParts);
+							break;
+						case CopyFormat.C:
+							copyAsC(flatParts);
+							break;
+						case CopyFormat.Golang:
+							copyAsGolang(flatParts);
+							break;
+						case CopyFormat.Java:
+							copyAsJava(flatParts);
+							break;
+						case CopyFormat.JSON:
+							copyAsJSON(flatParts);
+							break;
+						case CopyFormat.Base64:
+							copyAsBase64(flatParts);
+							break;
+					}
+				} else {
+					if (message.asText) {
+						copyAsText(flatParts);
+					} else {
+						copyAsBase64(flatParts);
+					}
+				}
 				return;
 			}
 			case MessageType.RequestDeletes: {
