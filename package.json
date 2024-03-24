@@ -112,6 +112,11 @@
         "command": "hexEditor.selectBetweenOffsets",
         "category": "%name%",
         "title": "%hexEditor.selectBetweenOffsets%"
+      },
+      {
+        "command": "hexEditor.copyAs",
+        "category": "%name%",
+        "title": "%hexEditor.copyAs%"
       }
     ],
     "viewsContainers": {
@@ -147,12 +152,24 @@
           "command": "hexEditor.openFile",
           "group": "navigation@1"
         }
+      ],
+      "webview/context": [
+        {
+          "when": "webviewId == 'hexEditor.hexedit'",
+          "command": "hexEditor.copyAs",
+          "group": "9_cutcopypaste"
+        }
       ]
     },
     "keybindings": [
       {
         "command": "hexEditor.goToOffset",
         "key": "ctrl+g",
+        "when": "activeCustomEditorId == hexEditor.hexedit"
+      },
+      {
+        "command": "hexEditor.copyAs",
+        "key": "alt+ctrl+c",
         "when": "activeCustomEditorId == hexEditor.hexedit"
       }
     ]

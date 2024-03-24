@@ -16,23 +16,27 @@ const style = throwOnUndefinedAccessInDev(_style);
 const enum Encoding {
 	Base64 = "base64",
 	Utf8 = "utf-8",
+	Hex = "hex",
 }
 
-const encodings = [Encoding.Utf8, Encoding.Base64];
+const encodings = [Encoding.Utf8, Encoding.Base64, Encoding.Hex];
 
 const encodingLabel: { [key in Encoding]: string } = {
 	[Encoding.Base64]: "Base64",
 	[Encoding.Utf8]: "UTF-8",
+	[Encoding.Hex]: "Hex",
 };
 
 const isData: { [key in Encoding]: (data: string) => boolean } = {
 	[Encoding.Base64]: d => base64.isValid(d),
 	[Encoding.Utf8]: () => true,
+	[Encoding.Hex]: () => true,
 };
 
 const decode: { [key in Encoding]: (data: string) => Uint8Array } = {
 	[Encoding.Base64]: d => base64.toUint8Array(d),
 	[Encoding.Utf8]: d => new TextEncoder().encode(d),
+	[Encoding.Hex]: d => Uint8Array.from(d.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))),
 };
 
 const EncodingOption: React.FC<{
