@@ -21,7 +21,7 @@ export default class StatusHoverByte extends Disposable {
 		super();
 
 		this.item = this._register(
-      // Will appear to the left of selection count bar item 
+			// Will appear to the left of selection count bar item
 			vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 101),
 		);
 
@@ -43,10 +43,14 @@ export default class StatusHoverByte extends Disposable {
 		if (hovered === undefined) {
 			this.item.text = vscode.l10n.t("Hover: 0/0x00");
 		} else {
-      this.item.text = vscode.l10n.t("Hover: {0}/0x{1}", numberFormat.format(hovered), hovered!.toString(16).toUpperCase());
-    }
-    
-    this.item.show();
+			this.item.text = vscode.l10n.t(
+				"Hover: {0}/0x{1}",
+				numberFormat.format(hovered),
+				hovered!.toString(16).toUpperCase(),
+			);
+		}
+
+		this.item.show();
 	}
 
 	show() {
@@ -54,6 +58,6 @@ export default class StatusHoverByte extends Disposable {
 	}
 
 	hide() {
-    this.item.hide();
+		this.item.hide();
 	}
 }
