@@ -328,7 +328,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.SetSelectedCount:
 				document.selectionState = message;
 				break;
-
+			case MessageType.SetHoveredByte:
+				document.hoverByte = message.hovered;
+				break;
 			case MessageType.ReadRangeRequest:
 				const data = await document.readBuffer(message.offset, message.bytes);
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };

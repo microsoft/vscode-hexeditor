@@ -9,6 +9,7 @@ import { HexEditorProvider } from "./hexEditorProvider";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 import { showSelectBetweenOffsets } from "./selectBetweenOffsets";
 import StatusSelectionCount from "./statusSelectionCount";
+import StatusHoverByte from "./statusHoverByte";
 
 function readConfigFromPackageJson(extension: vscode.Extension<any>): {
 	extId: string;
@@ -70,6 +71,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	);
 	context.subscriptions.push(new StatusSelectionCount(registry));
+	context.subscriptions.push(new StatusHoverByte(registry));
 	context.subscriptions.push(goToOffsetCommand);
 	context.subscriptions.push(selectBetweenOffsetsCommand);
 	context.subscriptions.push(openWithCommand);

@@ -244,6 +244,13 @@ export class DisplayContext {
 		});
 
 		this.selectionChangeEmitter.addListener(() => this.publishSelections());
+		this.hoverChangeEmitter.addListener(() => {
+			// publishes the new hovered byte
+			messageHandler.sendEvent({
+				type: MessageType.SetHoveredByte,
+				hovered: this._hoveredByte?.byte,
+			})
+		});
 	}
 
 	/**
