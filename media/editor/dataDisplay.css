@@ -28,6 +28,44 @@
 	background: var(--vscode-editor-hoverHighlightBackground);
 }
 
+.data-cell-replace {
+	outline-offset: 1px;
+	outline: var(--vscode-focusBorder) 2px solid;
+}
+
+.data-cell-insert-before {
+	position: relative;
+	outline: rgba(0, 0, 0, 0) 2px solid;
+}
+
+@keyframes blink {
+	to {
+		visibility: hidden;
+	}
+}
+
+.data-cell-insert-before::before {
+	content: "";
+	position: absolute;
+	top: -2px;
+	bottom: -2px;
+	left: -1px;
+	width: 2px;
+	background-color: var(--vscode-focusBorder);
+	animation: blink 1s steps(5, start) infinite;
+}
+
+.data-cell-insert-after::after {
+	content: "";
+	position: absolute;
+	top: -2px;
+	bottom: -2px;
+	right: -2px;
+	width: 2px;
+	background-color: var(--vscode-focusBorder);
+	animation: blink 1s steps(5, start) infinite;
+}
+
 .data-cell-selected {
 	background: var(--vscode-editor-selectionBackground);
 	color: var(--vscode-editor-selectionForeground);

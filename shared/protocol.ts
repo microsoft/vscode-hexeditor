@@ -2,6 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
+import { HexDocumentEditOp } from "./hexDocumentModel";
 import { ISerializedEdits } from "./serialization";
 
 export const enum MessageType {
@@ -10,6 +11,7 @@ export const enum MessageType {
 	ReadRangeResponse,
 	SearchProgress,
 	SetEdits,
+	SetEditMode,
 	Saved,
 	ReloadFromDisk,
 	StashDisplayedOffset,
@@ -75,6 +77,11 @@ export interface ReadyResponseMessage {
 	fileSize: number | undefined;
 	isReadonly: boolean;
 	isLargeFile: boolean;
+}
+
+export interface SetEditModeMessage {
+	type: MessageType.SetEditMode;
+	mode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace;
 }
 
 export interface ReadRangeResponseMessage {
@@ -170,6 +177,7 @@ export type ToWebviewMessage =
 	| SetEditsMessage
 	| SetFocusedByteMessage
 	| SetFocusedByteRangeMessage
+	| SetEditModeMessage
 	| PopDisplayedOffsetMessage
 	| StashDisplayedOffsetMessage
 	| DeleteAcceptedMessage;

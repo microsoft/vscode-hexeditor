@@ -470,6 +470,7 @@ const DataCell: React.FC<{
 	const focusedElement = new FocusedElement(isChar, byte);
 	const ctx = useDisplayContext();
 	const setReadonlyWarning = useSetRecoilState(select.showReadonlyWarningForEl);
+	const editMode = useRecoilValue(select.editMode);
 
 	const onMouseEnter = useCallback(() => {
 		ctx.hoveredByte = focusedElement;
@@ -571,24 +572,49 @@ const DataCell: React.FC<{
 				return;
 			}
 
-			if (isChar) {
-				// b is final
-			} else if (firstOctetOfEdit !== undefined) {
-				newValue = (firstOctetOfEdit << 4) | newValue;
-			} else {
-				return setFirstOctetOfEdit(newValue);
-			}
+			if (editMode === HexDocumentEditOp.Insert) {
+				if (isChar) {
+					ctx.focusedElement = ctx.focusedElement?.shift(1);
+					// Finishes byte insertion
+				} else if (firstOctetOfEdit !== undefined) {
+					ctx.edit({
+						op: HexDocumentEditOp.Replace,
+						previous: new Uint8Array([firstOctetOfEdit]),
+						value: new Uint8Array([(firstOctetOfEdit << 4) | newValue]),
+						offset: byte,
+					});
+					ctx.focusedElement = ctx.focusedElement?.shift(1);
+					return setFirstOctetOfEdit(undefined);
+					// Starts a new byte
+				} else {
+					setFirstOctetOfEdit(newValue);
+				}
 
-			ctx.focusedElement = ctx.focusedElement?.shift(1);
-			setFirstOctetOfEdit(undefined);
-			ctx.edit({
-				op: HexDocumentEditOp.Replace,
-				previous: new Uint8Array([value]),
-				value: new Uint8Array([newValue]),
-				offset: byte,
-			});
+				ctx.edit({
+					op: HexDocumentEditOp.Insert,
+					value: new Uint8Array([newValue]),
+					offset: byte,
+				});
+			} else if (editMode === HexDocumentEditOp.Replace) {
+				if (isChar) {
+					// b is final
+				} else if (firstOctetOfEdit !== undefined) {
+					newValue = (firstOctetOfEdit << 4) | newValue;
+				} else {
+					return setFirstOctetOfEdit(newValue);
+				}
+
+				ctx.focusedElement = ctx.focusedElement?.shift(1);
+				setFirstOctetOfEdit(undefined);
+				ctx.edit({
+					op: HexDocumentEditOp.Replace,
+					previous: new Uint8Array([value]),
+					value: new Uint8Array([newValue]),
+					offset: byte,
+				});
+			}
 		},
-		[byte, isChar, firstOctetOfEdit],
+		[byte, isChar, firstOctetOfEdit, editMode],
 	);
 
 	const onFocus = useCallback(() => {
@@ -616,6 +642,10 @@ const DataCell: React.FC<{
 				isChar && style.dataCellChar,
 				dataCellCls,
 				className,
+				isFocused &&
+					(editMode === HexDocumentEditOp.Replace
+						? style.dataCellReplace
+						: style.dataCellInsertBefore),
 				isHovered && style.dataCellHovered,
 				isSelected && style.dataCellSelected,
 				isHovered && isSelected && style.dataCellSelectedHovered,

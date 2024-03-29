@@ -3,7 +3,12 @@
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
-import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
+import {
+	buildEditTimeline,
+	HexDocumentEdit,
+	HexDocumentEditOp,
+	readUsingRanges,
+} from "../../shared/hexDocumentModel";
 import {
 	FromWebviewMessage,
 	InspectorLocation,
@@ -245,6 +250,19 @@ export const offset = atom({
 			registerHandler(MessageType.GoToOffset, msg => {
 				const s = fx.getLoadable(columnWidth).getValue();
 				fx.setSelf(startOfRowContainingByte(msg.offset, s));
+			});
+		},
+	],
+});
+
+/** Current edit mode */
+export const editMode = atom({
+	key: "editMode",
+	default: HexDocumentEditOp.Insert,
+	effects_UNSTABLE: [
+		fx => {
+			registerHandler(MessageType.SetEditMode, msg => {
+				fx.setSelf(msg.mode);
 			});
 		},
 	],
