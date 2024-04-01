@@ -62,7 +62,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public lastSave = 0;
 
 	private _selectionState: ISelectionState = { selected: 0 };
-	private _hoverByte: number | undefined = undefined;
+	private _hoverState: number | undefined = undefined;
 	/** Search provider for the document. */
 	public readonly searchProvider = new SearchProvider();
 
@@ -161,19 +161,19 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._onDidChangeSelectionState.fire(state);
 	}
 
-	private readonly _onDidChangeHoverByte = this._register(
+	private readonly _onDidChangeHoverState = this._register(
 		new vscode.EventEmitter<number | undefined>(),
 	);
 
-	public readonly onDidChangeHoverByte = this._onDidChangeHoverByte.event;
+	public readonly onDidChangeHoverState = this._onDidChangeHoverState.event;
 
-	public get hoverByte() {
-		return this._hoverByte;
+	public get hoverState() {
+		return this._hoverState;
 	}
 
-	public set hoverByte(byte: number| undefined) {
-		this._hoverByte = byte;
-		this._onDidChangeHoverByte.fire(byte);
+	public set hoverState(byte: number | undefined) {
+		this._hoverState = byte;
+		this._onDidChangeHoverState.fire(byte);
 	}
 
 	private readonly _onDidRevert = this._register(new vscode.EventEmitter<void>());

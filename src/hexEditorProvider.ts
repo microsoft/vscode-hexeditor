@@ -329,7 +329,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				document.selectionState = message;
 				break;
 			case MessageType.SetHoveredByte:
-				document.hoverByte = message.hovered;
+				document.hoverState = message.hovered;
 				break;
 			case MessageType.ReadRangeRequest:
 				const data = await document.readBuffer(message.offset, message.bytes);
