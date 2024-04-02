@@ -573,6 +573,7 @@ const DataCell: React.FC<{
 			}
 
 			if (editMode === HexDocumentEditOp.Insert) {
+				newValue = newValue << 4;
 				if (isChar) {
 					ctx.focusedElement = ctx.focusedElement?.shift(1);
 					// Finishes byte insertion
@@ -580,12 +581,12 @@ const DataCell: React.FC<{
 					ctx.edit({
 						op: HexDocumentEditOp.Replace,
 						previous: new Uint8Array([firstOctetOfEdit]),
-						value: new Uint8Array([(firstOctetOfEdit << 4) | newValue]),
+						value: new Uint8Array([firstOctetOfEdit | (newValue >> 4)]),
 						offset: byte,
 					});
 					ctx.focusedElement = ctx.focusedElement?.shift(1);
 					return setFirstOctetOfEdit(undefined);
-					// Starts a new byte
+					// Starts a new byte insertion
 				} else {
 					setFirstOctetOfEdit(newValue);
 				}
@@ -631,6 +632,15 @@ const DataCell: React.FC<{
 
 	const isHovered = useIsHovered(focusedElement);
 	const isSelected = useIsSelected(byte);
+	const editStyle = useMemo(() => {
+		if (editMode === HexDocumentEditOp.Replace) {
+			return style.dataCellReplace;
+		} else if (editMode === HexDocumentEditOp.Insert) {
+			return firstOctetOfEdit !== undefined
+				? style.dataCellInsertMiddle
+				: style.dataCellInsertBefore;
+		}
+	}, [editMode, firstOctetOfEdit]);
 
 	return (
 		<span
@@ -642,10 +652,7 @@ const DataCell: React.FC<{
 				isChar && style.dataCellChar,
 				dataCellCls,
 				className,
-				isFocused &&
-					(editMode === HexDocumentEditOp.Replace
-						? style.dataCellReplace
-						: style.dataCellInsertBefore),
+				isFocused && editStyle,
 				isHovered && style.dataCellHovered,
 				isSelected && style.dataCellSelected,
 				isHovered && isSelected && style.dataCellSelectedHovered,
