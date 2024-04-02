@@ -14,6 +14,7 @@ export const enum MessageType {
 	ReloadFromDisk,
 	StashDisplayedOffset,
 	GoToOffset,
+	SetHoveredByte,
 	SetFocusedByte,
 	SetFocusedByteRange,
 	SetSelectedCount,
@@ -145,6 +146,12 @@ export interface SetSelectedCountMessage {
 	focused?: number;
 }
 
+/** Sets the hovered byte in the editor */
+export interface SetHoveredByteMessage {
+	type: MessageType.SetHoveredByte;
+	hovered?: number;
+}
+
 /** Saves the current offset shown in the editor. */
 export interface StashDisplayedOffsetMessage {
 	type: MessageType.StashDisplayedOffset;
@@ -254,6 +261,7 @@ export type FromWebviewMessage =
 	| ClearDataInspectorMessage
 	| SetInspectByteMessage
 	| SetSelectedCountMessage
+	| SetHoveredByteMessage
 	| ReadyRequestMessage
 	| UpdateEditorSettings
 	| PasteMessage

@@ -8,7 +8,8 @@ import { showGoToOffset } from "./goToOffset";
 import { HexEditorProvider } from "./hexEditorProvider";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 import { showSelectBetweenOffsets } from "./selectBetweenOffsets";
-import StatusSelectionCount from "./statusSelectionCount";
+import StatusFocus from "./statusFocus";
+import StatusHoverAndSelection from "./statusHoverAndSelection";
 
 function readConfigFromPackageJson(extension: vscode.Extension<any>): {
 	extId: string;
@@ -69,7 +70,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 		},
 	);
-	context.subscriptions.push(new StatusSelectionCount(registry));
+	context.subscriptions.push(new StatusFocus(registry));
+	context.subscriptions.push(new StatusHoverAndSelection(registry));
 	context.subscriptions.push(goToOffsetCommand);
 	context.subscriptions.push(selectBetweenOffsetsCommand);
 	context.subscriptions.push(openWithCommand);
