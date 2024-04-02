@@ -30,7 +30,7 @@ const Root: React.FC = () => {
 			setDimensions({
 				width: window.innerWidth,
 				height: window.innerHeight,
-				rowPxHeight: parseInt(theme["font-size"]) + 8,
+				rowPxHeight: parseInt(theme["editor-font-size"]) + 8,
 			});
 
 		window.addEventListener("resize", applyDimensions);
