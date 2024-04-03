@@ -65,6 +65,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	private _editMode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace =
 		HexDocumentEditOp.Insert;
+	private _hoverState: number | undefined = undefined;
 	/** Search provider for the document. */
 	public readonly searchProvider = new SearchProvider();
 
@@ -179,6 +180,21 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public set editMode(mode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace) {
 		this._editMode = mode;
 		this._onDidChangeEditMode.fire(mode);
+	}
+	
+	private readonly _onDidChangeHoverState = this._register(
+		new vscode.EventEmitter<number | undefined>(),
+	);
+
+	public readonly onDidChangeHoverState = this._onDidChangeHoverState.event;
+
+	public get hoverState() {
+		return this._hoverState;
+	}
+
+	public set hoverState(byte: number | undefined) {
+		this._hoverState = byte;
+		this._onDidChangeHoverState.fire(byte);
 	}
 
 	private readonly _onDidRevert = this._register(new vscode.EventEmitter<void>());

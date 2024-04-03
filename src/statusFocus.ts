@@ -9,11 +9,11 @@ import { HexEditorRegistry } from "./hexEditorRegistry";
 const numberFormat = new Intl.NumberFormat();
 
 /**
- * this is a class to represent the status bar item that displays the number of selected bytes
+ * Displays the focused byte in a StatusBarItem
  *
- * @class StatusSelectionCount
+ * @class StatusFocus
  */
-export default class StatusSelectionCount extends Disposable {
+export default class StatusFocus extends Disposable {
 	private readonly item: vscode.StatusBarItem;
 	private readonly docChangeListener = this._register(new DisposableValue());
 
@@ -38,25 +38,15 @@ export default class StatusSelectionCount extends Disposable {
 		trackDocument(registry.activeDocument);
 	}
 
-	update({ focused, selected }: ISelectionState): void {
-		if (focused === undefined && selected === 0) {
-			return;
-		}
-
+	update({ focused }: ISelectionState): void {
 		const nFocus = focused !== undefined ? numberFormat.format(focused) : undefined;
-		const nSelected = selected > 1 ? numberFormat.format(selected) : undefined;
-		if (nFocus && nSelected) {
-			this.item.text = vscode.l10n.t("Byte {0}/0x{1} ({2}/0x{3} selected)", nFocus, focused!.toString(16).toUpperCase(), nSelected, selected.toString(16).toUpperCase());
-		} else if (nSelected) {
-			this.item.text = vscode.l10n.t("{0}/0x{1} selected", nSelected, selected.toString(16).toUpperCase());
-		} else if (nFocus) {
-			this.item.text = vscode.l10n.t("Byte {0}/0x{1}", nFocus, focused!.toString(16).toUpperCase());
+		if (nFocus) {
+			this.item.text = vscode.l10n.t("{0}/0x{1}", nFocus, focused!.toString(16).toUpperCase());
+			this.item.show();
 		} else {
 			this.item.hide();
 			return;
 		}
-
-		this.item.show();
 	}
 
 	show() {
