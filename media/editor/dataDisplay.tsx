@@ -37,6 +37,64 @@ const EmptyDataCell = () => (
 	</span>
 );
 
+/**
+ * Data Cell used to append bytes at the end of files.
+ */
+const AppendDataCell: React.FC<{ byte: number }> = ({ byte }) => {
+	const elRef = useRef<HTMLSpanElement | null>(null);
+	const ctx = useDisplayContext();
+	const [firstOctetOfEdit, setFirstOctetOfEdit] = useState<number>();
+	const focusedElement = new FocusedElement(false, byte);
+	const isFocused = useIsFocused(focusedElement);
+
+	useEffect(() => {
+		if (isFocused) {
+			if (document.hasFocus()) {
+				elRef.current?.focus();
+			}
+		}
+	}, [isFocused]);
+	return (
+		<span
+			ref={elRef}
+			tabIndex={0}
+			className={clsx(
+				dataCellCls,
+				isFocused &&
+					(firstOctetOfEdit === undefined
+						? style.dataCellInsertBefore
+						: style.dataCellInsertMiddle),
+			)}
+			onClick={() => {
+				ctx.focusedElement = focusedElement;
+			}}
+			onKeyDown={e => {
+				let newValue: number;
+				if (keysToOctets.has(e.key)) {
+					newValue = keysToOctets.get(e.key)!;
+				} else {
+					return;
+				}
+				e.stopPropagation();
+
+				if (firstOctetOfEdit === undefined) {
+					setFirstOctetOfEdit(newValue << 4);
+				} else {
+					ctx.edit({
+						op: HexDocumentEditOp.Insert,
+						value: new Uint8Array([firstOctetOfEdit | newValue]),
+						offset: byte,
+					});
+					ctx.focusedElement = ctx.focusedElement?.shift(1);
+					return setFirstOctetOfEdit(undefined);
+				}
+			}}
+		>
+			{firstOctetOfEdit !== undefined ? firstOctetOfEdit.toString(16).toUpperCase() : "+"}
+		</span>
+	);
+};
+
 const Byte: React.FC<{ value: number }> = ({ value }) => (
 	<span className={dataCellCls}>{value.toString(16).padStart(2, "0").toUpperCase()}</span>
 );
@@ -387,10 +445,14 @@ const DataPage: React.FC<IDataPageProps> = props => (
 	</div>
 );
 
-const generateRows = (props: IDataPageProps, fn: (offset: number) => React.ReactChild) => {
+const generateRows = (
+	props: IDataPageProps,
+	fn: (offset: number, isRowWithInsertDataCell: boolean) => React.ReactChild,
+) => {
 	const rows: React.ReactNode[] = [];
 	let row = (props.rowsStart - props.pageStart) / props.columnWidth;
-	for (let i = props.rowsStart; i < props.rowsEnd && i < props.fileSize; i += props.columnWidth) {
+	const lastRowIndex = props.fileSize - (props.fileSize % props.columnWidth);
+	for (let i = props.rowsStart; i < props.rowsEnd && i <= lastRowIndex; i += props.columnWidth) {
 		rows.push(
 			<div
 				key={i}
@@ -400,7 +462,7 @@ const generateRows = (props: IDataPageProps, fn: (offset: number) => React.React
 				<DataCellGroup>
 					<Address>{i.toString(16).padStart(8, "0")}</Address>
 				</DataCellGroup>
-				{fn(i)}
+				{fn(i, i === lastRowIndex)}
 			</div>,
 		);
 	}
@@ -422,7 +484,7 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
 
 	return (
 		<>
-			{generateRows(props, offset => (
+			{generateRows(props, (offset, isRowWithInsertDataCell) => (
 				<DataRowContents
 					offset={offset}
 					rawBytes={data.subarray(
@@ -431,6 +493,7 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
 					)}
 					width={props.columnWidth}
 					showDecodedText={props.showDecodedText}
+					isRowWithInsertDataCell={isRowWithInsertDataCell}
 				/>
 			))}
 		</>
@@ -573,7 +636,6 @@ const DataCell: React.FC<{
 			}
 
 			if (editMode === HexDocumentEditOp.Insert) {
-				newValue = newValue << 4;
 				if (isChar) {
 					ctx.focusedElement = ctx.focusedElement?.shift(1);
 					// Finishes byte insertion
@@ -581,14 +643,14 @@ const DataCell: React.FC<{
 					ctx.edit({
 						op: HexDocumentEditOp.Replace,
 						previous: new Uint8Array([firstOctetOfEdit]),
-						value: new Uint8Array([firstOctetOfEdit | (newValue >> 4)]),
+						value: new Uint8Array([firstOctetOfEdit | newValue]),
 						offset: byte,
 					});
 					ctx.focusedElement = ctx.focusedElement?.shift(1);
 					return setFirstOctetOfEdit(undefined);
 					// Starts a new byte insertion
 				} else {
-					setFirstOctetOfEdit(newValue);
+					setFirstOctetOfEdit(newValue << 4);
 				}
 
 				ctx.edit({
@@ -674,7 +736,8 @@ const DataRowContents: React.FC<{
 	width: number;
 	showDecodedText: boolean;
 	rawBytes: Uint8Array;
-}> = ({ offset, width, showDecodedText, rawBytes }) => {
+	isRowWithInsertDataCell: boolean;
+}> = ({ offset, width, showDecodedText, rawBytes, isRowWithInsertDataCell }) => {
 	let memoValue = "";
 	for (const byte of rawBytes) {
 		memoValue += "," + byte;
@@ -688,8 +751,14 @@ const DataRowContents: React.FC<{
 			const value = rawBytes[i];
 
 			if (value === undefined) {
-				bytes.push(<EmptyDataCell key={i} />);
-				chars.push(<EmptyDataCell key={i} />);
+				if (isRowWithInsertDataCell) {
+					bytes.push(<AppendDataCell key={i} byte={boffset} />);
+					chars.push(<EmptyDataCell key={i} />);
+					isRowWithInsertDataCell = false;
+				} else {
+					bytes.push(<EmptyDataCell key={i} />);
+					chars.push(<EmptyDataCell key={i} />);
+				}
 				continue;
 			}
 
@@ -714,8 +783,9 @@ const DataRowContents: React.FC<{
 				);
 			}
 		}
+
 		return { bytes, chars };
-	}, [memoValue, showDecodedText]);
+	}, [memoValue, showDecodedText, isRowWithInsertDataCell]);
 
 	return (
 		<>

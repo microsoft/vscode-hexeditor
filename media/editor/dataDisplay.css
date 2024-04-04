@@ -33,8 +33,12 @@
 	outline: var(--vscode-editorCursor-foreground) 2px solid;
 }
 
+.data-cell-append {
+	color: var(--vscode-button-foreground);
+	background-color: var(--vscode-button-background);
+}
+
 .data-cell-insert-middle,
-.data-cell-insert-after,
 .data-cell-insert-before {
 	position: relative;
 	outline: 2px solid transparent;
@@ -47,8 +51,7 @@
 }
 
 .data-cell-insert-before::before,
-.data-cell-insert-middle::before,
-.data-cell-insert-after::after {
+.data-cell-insert-middle::before {
 	content: "";
 	position: absolute;
 	top: -2px;
@@ -60,10 +63,6 @@
 
 .data-cell-insert-before::before {
 	left: -1px;
-}
-
-.data-cell-insert-after::after {
-	right: -2px;
 }
 
 .data-cell-insert-middle::before {
