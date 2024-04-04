@@ -26,6 +26,7 @@ import {
 	clsx,
 	getAsciiCharacter,
 	getScrollDimensions,
+	parseHexDigit,
 	throwOnUndefinedAccessInDev,
 } from "./util";
 
@@ -44,51 +45,103 @@ const AppendDataCell: React.FC<{ byte: number }> = ({ byte }) => {
 	const elRef = useRef<HTMLSpanElement | null>(null);
 	const ctx = useDisplayContext();
 	const [firstOctetOfEdit, setFirstOctetOfEdit] = useState<number>();
+	const setReadonlyWarning = useSetRecoilState(select.showReadonlyWarningForEl);
 	const focusedElement = new FocusedElement(false, byte);
 	const isFocused = useIsFocused(focusedElement);
-
+	const isHovered = useIsHovered(focusedElement);
 	useEffect(() => {
 		if (isFocused) {
 			if (document.hasFocus()) {
 				elRef.current?.focus();
 			}
+		} else {
+			setFirstOctetOfEdit(undefined);
 		}
 	}, [isFocused]);
+
+	const onFocus = useCallback(() => {
+		ctx.focusedElement = focusedElement;
+	}, [focusedElement]);
+
+	const onBlur = useCallback(() => {
+		queueMicrotask(() => {
+			if (ctx.focusedElement?.key === focusedElement.key) {
+				ctx.focusedElement = undefined;
+			}
+		});
+	}, [focusedElement]);
+
+	const onMouseDown = useCallback(
+		(e: React.MouseEvent) => {
+			if (!(e.buttons & 1)) {
+				return;
+			}
+			ctx.focusedElement = focusedElement;
+			ctx.setSelectionRanges([Range.single(byte)]);
+		},
+		[focusedElement.key],
+	);
+
+	const onMouseEnter = useCallback(() => {
+		ctx.hoveredByte = focusedElement;
+	}, [byte, focusedElement]);
+
+	const onMouseLeave = useCallback(() => {
+		ctx.hoveredByte = undefined;
+	}, [byte]);
+
+	const onKeyDown = useCallback(
+		e => {
+			if (e.metaKey || e.ctrlKey || e.altKey) {
+				return;
+			}
+
+			let newValue = parseHexDigit(e.key);
+			if (newValue === undefined) {
+				return;
+			}
+
+			if (ctx.isReadonly) {
+				setReadonlyWarning(elRef.current);
+				return;
+			}
+
+			e.stopPropagation();
+
+			if (firstOctetOfEdit === undefined) {
+				setFirstOctetOfEdit(newValue << 4);
+			} else {
+				ctx.edit({
+					op: HexDocumentEditOp.Insert,
+					value: new Uint8Array([firstOctetOfEdit | newValue]),
+					offset: byte,
+				});
+				ctx.focusedElement = ctx.focusedElement?.shift(1);
+				return setFirstOctetOfEdit(undefined);
+			}
+		},
+		[byte, firstOctetOfEdit],
+	);
+
 	return (
 		<span
 			ref={elRef}
 			tabIndex={0}
+			onFocus={onFocus}
+			onBlur={onBlur}
 			className={clsx(
 				dataCellCls,
 				isFocused &&
 					(firstOctetOfEdit === undefined
 						? style.dataCellInsertBefore
 						: style.dataCellInsertMiddle),
+				isHovered && style.dataCellHovered,
 			)}
-			onClick={() => {
-				ctx.focusedElement = focusedElement;
-			}}
-			onKeyDown={e => {
-				let newValue: number;
-				if (keysToOctets.has(e.key)) {
-					newValue = keysToOctets.get(e.key)!;
-				} else {
-					return;
-				}
-				e.stopPropagation();
-
-				if (firstOctetOfEdit === undefined) {
-					setFirstOctetOfEdit(newValue << 4);
-				} else {
-					ctx.edit({
-						op: HexDocumentEditOp.Insert,
-						value: new Uint8Array([firstOctetOfEdit | newValue]),
-						offset: byte,
-					});
-					ctx.focusedElement = ctx.focusedElement?.shift(1);
-					return setFirstOctetOfEdit(undefined);
-				}
-			}}
+			onMouseDown={onMouseDown}
+			onKeyDown={onKeyDown}
+			onMouseEnter={onMouseEnter}
+			onMouseLeave={onMouseLeave}
+			data-key={focusedElement.key}
 		>
 			{firstOctetOfEdit !== undefined ? firstOctetOfEdit.toString(16).toUpperCase() : "+"}
 		</span>
@@ -291,7 +344,8 @@ export const DataDisplay: React.FC = () => {
 
 			const next = new FocusedElement(
 				current.char,
-				clamp(0, current.byte + delta, fileSize !== undefined ? fileSize - 1 : Infinity),
+				// Clamp on fileSize due to the added data cell for appending bytes at eof
+				clamp(0, current.byte + delta, fileSize !== undefined ? fileSize : Infinity),
 			);
 			if (next.key === current.key) {
 				return;
@@ -500,29 +554,6 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
 	);
 };
 
-const keysToOctets = new Map([
-	["0", 0x0],
-	["1", 0x1],
-	["2", 0x2],
-	["3", 0x3],
-	["4", 0x4],
-	["5", 0x5],
-	["6", 0x6],
-	["7", 0x7],
-	["8", 0x8],
-	["9", 0x9],
-	["a", 0xa],
-	["b", 0xb],
-	["c", 0xc],
-	["d", 0xd],
-	["e", 0xe],
-	["f", 0xf],
-]);
-
-for (const [key, value] of keysToOctets) {
-	keysToOctets.set(key.toUpperCase(), value);
-}
-
 const DataCell: React.FC<{
 	byte: number;
 	value: number;
@@ -619,12 +650,8 @@ const DataCell: React.FC<{
 					.then(() => ctx.setSelectionRanges([]));
 			}
 
-			let newValue: number;
-			if (isChar && e.key.length === 1) {
-				newValue = e.key.charCodeAt(0);
-			} else if (keysToOctets.has(e.key)) {
-				newValue = keysToOctets.get(e.key)!;
-			} else {
+			let newValue = isChar && e.key.length === 1 ? e.key.charCodeAt(0) : parseHexDigit(e.key);
+			if (newValue === undefined) {
 				return;
 			}
 
