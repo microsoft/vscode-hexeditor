@@ -648,6 +648,7 @@ const DataCell: React.FC<{
 				isChar && style.dataCellChar,
 				dataCellCls,
 				className,
+				isAppend && style.dataCellAppend,
 				isFocused && editStyle,
 				isHovered && style.dataCellHovered,
 				isSelected && style.dataCellSelected,

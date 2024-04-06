@@ -31,11 +31,13 @@
 .data-cell-replace {
 	outline-offset: 1px;
 	outline: var(--vscode-editorCursor-foreground) 2px solid;
+	z-index: 100;
 }
 
 .data-cell-append {
-	color: var(--vscode-button-foreground);
-	background-color: var(--vscode-button-background);
+	color: var(--vscode-button-secondaryForeground);
+	background-color: var(--vscode-button-secondaryBackground);
+	cursor: pointer;
 }
 
 .data-cell-insert-middle,
