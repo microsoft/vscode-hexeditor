@@ -673,6 +673,7 @@ const DataRowContents: React.FC<{
 	isRowWithInsertDataCell: boolean;
 }> = ({ offset, width, showDecodedText, rawBytes, isRowWithInsertDataCell }) => {
 	let memoValue = "";
+	const ctx = useDisplayContext();
 	for (const byte of rawBytes) {
 		memoValue += "," + byte;
 	}
@@ -685,7 +686,7 @@ const DataRowContents: React.FC<{
 			const value = rawBytes[i];
 
 			if (value === undefined) {
-				if (isRowWithInsertDataCell) {
+				if (isRowWithInsertDataCell && !ctx.isReadonly) {
 					bytes.push(
 						<DataCell key={i} offset={boffset} isChar={false} isAppend={true} value={value}>
 							+
