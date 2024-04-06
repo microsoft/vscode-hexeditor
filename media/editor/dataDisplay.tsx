@@ -38,116 +38,6 @@ const EmptyDataCell = () => (
 	</span>
 );
 
-/**
- * Data Cell used to append bytes at the end of files.
- */
-const AppendDataCell: React.FC<{ byte: number }> = ({ byte }) => {
-	const elRef = useRef<HTMLSpanElement | null>(null);
-	const ctx = useDisplayContext();
-	const [firstOctetOfEdit, setFirstOctetOfEdit] = useState<number>();
-	const setReadonlyWarning = useSetRecoilState(select.showReadonlyWarningForEl);
-	const focusedElement = new FocusedElement(false, byte);
-	const isFocused = useIsFocused(focusedElement);
-	const isHovered = useIsHovered(focusedElement);
-	useEffect(() => {
-		if (isFocused) {
-			if (document.hasFocus()) {
-				elRef.current?.focus();
-			}
-		} else {
-			setFirstOctetOfEdit(undefined);
-		}
-	}, [isFocused]);
-
-	const onFocus = useCallback(() => {
-		ctx.focusedElement = focusedElement;
-	}, [focusedElement]);
-
-	const onBlur = useCallback(() => {
-		queueMicrotask(() => {
-			if (ctx.focusedElement?.key === focusedElement.key) {
-				ctx.focusedElement = undefined;
-			}
-		});
-	}, [focusedElement]);
-
-	const onMouseDown = useCallback(
-		(e: React.MouseEvent) => {
-			if (!(e.buttons & 1)) {
-				return;
-			}
-			ctx.focusedElement = focusedElement;
-			ctx.setSelectionRanges([Range.single(byte)]);
-		},
-		[focusedElement.key],
-	);
-
-	const onMouseEnter = useCallback(() => {
-		ctx.hoveredByte = focusedElement;
-	}, [byte, focusedElement]);
-
-	const onMouseLeave = useCallback(() => {
-		ctx.hoveredByte = undefined;
-	}, [byte]);
-
-	const onKeyDown = useCallback(
-		e => {
-			if (e.metaKey || e.ctrlKey || e.altKey) {
-				return;
-			}
-
-			let newValue = parseHexDigit(e.key);
-			if (newValue === undefined) {
-				return;
-			}
-
-			if (ctx.isReadonly) {
-				setReadonlyWarning(elRef.current);
-				return;
-			}
-
-			e.stopPropagation();
-
-			if (firstOctetOfEdit === undefined) {
-				setFirstOctetOfEdit(newValue << 4);
-			} else {
-				ctx.edit({
-					op: HexDocumentEditOp.Insert,
-					value: new Uint8Array([firstOctetOfEdit | newValue]),
-					offset: byte,
-				});
-				ctx.focusedElement = ctx.focusedElement?.shift(1);
-				return setFirstOctetOfEdit(undefined);
-			}
-		},
-		[byte, firstOctetOfEdit],
-	);
-
-	return (
-		<span
-			ref={elRef}
-			tabIndex={0}
-			onFocus={onFocus}
-			onBlur={onBlur}
-			className={clsx(
-				dataCellCls,
-				isFocused &&
-					(firstOctetOfEdit === undefined
-						? style.dataCellInsertBefore
-						: style.dataCellInsertMiddle),
-				isHovered && style.dataCellHovered,
-			)}
-			onMouseDown={onMouseDown}
-			onKeyDown={onKeyDown}
-			onMouseEnter={onMouseEnter}
-			onMouseLeave={onMouseLeave}
-			data-key={focusedElement.key}
-		>
-			{firstOctetOfEdit !== undefined ? firstOctetOfEdit.toString(16).toUpperCase() : "+"}
-		</span>
-	);
-};
-
 const Byte: React.FC<{ value: number }> = ({ value }) => (
 	<span className={dataCellCls}>{value.toString(16).padStart(2, "0").toUpperCase()}</span>
 );
@@ -555,37 +445,38 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
 };
 
 const DataCell: React.FC<{
-	byte: number;
+	offset: number;
 	value: number;
 	isChar: boolean;
+	isAppend: boolean;
 	className?: string;
-}> = ({ byte, value, className, children, isChar }) => {
+}> = ({ offset, value, className, children, isChar, isAppend }) => {
 	const elRef = useRef<HTMLSpanElement | null>(null);
-	const focusedElement = new FocusedElement(isChar, byte);
+	const focusedElement = new FocusedElement(isChar, offset);
 	const ctx = useDisplayContext();
 	const setReadonlyWarning = useSetRecoilState(select.showReadonlyWarningForEl);
 	const editMode = useRecoilValue(select.editMode);
 
 	const onMouseEnter = useCallback(() => {
 		ctx.hoveredByte = focusedElement;
-		if (ctx.isSelecting !== undefined) {
-			ctx.replaceLastSelectionRange(Range.inclusive(ctx.isSelecting, byte));
+		if (!isAppend && ctx.isSelecting !== undefined) {
+			ctx.replaceLastSelectionRange(Range.inclusive(ctx.isSelecting, offset));
 		}
-	}, [byte, focusedElement]);
+	}, [offset, focusedElement]);
 
 	const onMouseLeave = useCallback(
 		(e: React.MouseEvent) => {
 			ctx.hoveredByte = undefined;
-			if (e.buttons & 1 && ctx.isSelecting === undefined) {
-				ctx.isSelecting = byte;
+			if (!isAppend && e.buttons & 1 && ctx.isSelecting === undefined) {
+				ctx.isSelecting = offset;
 				if (e.ctrlKey || e.metaKey) {
-					ctx.addSelectionRange(Range.single(byte));
+					ctx.addSelectionRange(Range.single(offset));
 				} else {
-					ctx.setSelectionRanges([Range.single(byte)]);
+					ctx.setSelectionRanges([Range.single(offset)]);
 				}
 			}
 		},
-		[byte],
+		[offset],
 	);
 
 	const onMouseDown = useCallback(
@@ -601,20 +492,20 @@ const DataCell: React.FC<{
 				ctx.isSelecting = undefined;
 			} else if (e.shiftKey && prevFocused) {
 				// on a shift key, the user is expanding the selection (or deselection)
-				// of an existing byte. We *don't* include that byte since we don't want
-				// to swap the byte.
+				// of an existing offset. We *don't* include that offset since we don't want
+				// to swap the offset.
 				if (e.ctrlKey || e.metaKey) {
-					ctx.addSelectionRange(Range.inclusive(prevFocused.byte, byte));
+					ctx.addSelectionRange(Range.inclusive(prevFocused.byte, offset));
 				} else {
-					ctx.setSelectionRanges([Range.inclusive(prevFocused.byte, byte)]);
+					ctx.setSelectionRanges([Range.inclusive(prevFocused.byte, offset)]);
 				}
 			} else if (e.ctrlKey || e.metaKey) {
-				ctx.addSelectionRange(Range.single(byte));
+				ctx.addSelectionRange(Range.single(offset));
 			} else {
-				ctx.setSelectionRanges([Range.single(byte)]);
+				ctx.setSelectionRanges([Range.single(offset)]);
 			}
 		},
-		[focusedElement.key, byte],
+		[focusedElement.key, offset, isAppend],
 	);
 
 	const isFocused = useIsFocused(focusedElement);
@@ -661,8 +552,25 @@ const DataCell: React.FC<{
 				setReadonlyWarning(elRef.current);
 				return;
 			}
+			// Inserting at eof
+			if (isAppend) {
+				if (isChar) {
+					// b is final
+				} else if (firstOctetOfEdit !== undefined) {
+					newValue = firstOctetOfEdit | newValue;
+				} else {
+					return setFirstOctetOfEdit(newValue << 4);
+				}
+				ctx.edit({
+					op: HexDocumentEditOp.Insert,
+					value: new Uint8Array([newValue]),
+					offset: offset,
+				});
+				ctx.focusedElement = ctx.focusedElement?.shift(1);
+				return setFirstOctetOfEdit(undefined);
 
-			if (editMode === HexDocumentEditOp.Insert) {
+				// Inserting in the middle or at the beginning
+			} else if (editMode === HexDocumentEditOp.Insert) {
 				if (isChar) {
 					ctx.focusedElement = ctx.focusedElement?.shift(1);
 					// Finishes byte insertion
@@ -671,11 +579,11 @@ const DataCell: React.FC<{
 						op: HexDocumentEditOp.Replace,
 						previous: new Uint8Array([firstOctetOfEdit]),
 						value: new Uint8Array([firstOctetOfEdit | newValue]),
-						offset: byte,
+						offset: offset,
 					});
 					ctx.focusedElement = ctx.focusedElement?.shift(1);
 					return setFirstOctetOfEdit(undefined);
-					// Starts a new byte insertion
+					// Starts byte insertion
 				} else {
 					setFirstOctetOfEdit(newValue << 4);
 				}
@@ -683,8 +591,10 @@ const DataCell: React.FC<{
 				ctx.edit({
 					op: HexDocumentEditOp.Insert,
 					value: new Uint8Array([newValue]),
-					offset: byte,
+					offset: offset,
 				});
+
+				// Replaces bytes
 			} else if (editMode === HexDocumentEditOp.Replace) {
 				if (isChar) {
 					// b is final
@@ -700,11 +610,11 @@ const DataCell: React.FC<{
 					op: HexDocumentEditOp.Replace,
 					previous: new Uint8Array([value]),
 					value: new Uint8Array([newValue]),
-					offset: byte,
+					offset: offset,
 				});
 			}
 		},
-		[byte, isChar, firstOctetOfEdit, editMode],
+		[offset, isChar, firstOctetOfEdit, isAppend, editMode],
 	);
 
 	const onFocus = useCallback(() => {
@@ -720,17 +630,14 @@ const DataCell: React.FC<{
 	}, [focusedElement]);
 
 	const isHovered = useIsHovered(focusedElement);
-	const isSelected = useIsSelected(byte);
-	const editStyle = useMemo(() => {
-		if (editMode === HexDocumentEditOp.Replace) {
-			return style.dataCellReplace;
-		} else if (editMode === HexDocumentEditOp.Insert) {
-			return firstOctetOfEdit !== undefined
-				? style.dataCellInsertMiddle
-				: style.dataCellInsertBefore;
-		}
-	}, [editMode, firstOctetOfEdit]);
+	const isSelected = useIsSelected(offset);
 
+	const editStyle =
+		editMode === HexDocumentEditOp.Replace
+			? style.dataCellReplace
+			: firstOctetOfEdit === undefined // Assumes HexDocumentEditOp.Insert
+				? style.dataCellInsertBefore
+				: style.dataCellInsertMiddle;
 	return (
 		<span
 			ref={elRef}
@@ -745,7 +652,7 @@ const DataCell: React.FC<{
 				isHovered && style.dataCellHovered,
 				isSelected && style.dataCellSelected,
 				isHovered && isSelected && style.dataCellSelectedHovered,
-				useIsUnsaved(byte) && style.dataCellUnsaved,
+				useIsUnsaved(offset) && style.dataCellUnsaved,
 			)}
 			onMouseEnter={onMouseEnter}
 			onMouseDown={onMouseDown}
@@ -779,8 +686,16 @@ const DataRowContents: React.FC<{
 
 			if (value === undefined) {
 				if (isRowWithInsertDataCell) {
-					bytes.push(<AppendDataCell key={i} byte={boffset} />);
-					chars.push(<EmptyDataCell key={i} />);
+					bytes.push(
+						<DataCell key={i} offset={boffset} isChar={false} isAppend={true} value={value}>
+							+
+						</DataCell>,
+					);
+					chars.push(
+						<DataCell key={i} offset={boffset} isChar={true} isAppend={true} value={value}>
+							+
+						</DataCell>,
+					);
 					isRowWithInsertDataCell = false;
 				} else {
 					bytes.push(<EmptyDataCell key={i} />);
@@ -790,7 +705,7 @@ const DataRowContents: React.FC<{
 			}
 
 			bytes.push(
-				<DataCell key={i} byte={boffset} isChar={false} value={value}>
+				<DataCell key={i} offset={boffset} isChar={false} isAppend={false} value={value}>
 					{value.toString(16).padStart(2, "0").toUpperCase()}
 				</DataCell>,
 			);
@@ -800,8 +715,9 @@ const DataRowContents: React.FC<{
 				chars.push(
 					<DataCell
 						key={i}
-						byte={boffset}
+						offset={boffset}
 						isChar={true}
+						isAppend={false}
 						className={char === undefined ? style.nonGraphicChar : undefined}
 						value={value}
 					>
