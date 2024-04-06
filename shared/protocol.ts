@@ -78,6 +78,7 @@ export interface ReadyResponseMessage {
 	fileSize: number | undefined;
 	isReadonly: boolean;
 	isLargeFile: boolean;
+	editMode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace;
 }
 
 export interface SetEditModeMessage {

@@ -3,12 +3,7 @@
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
-import {
-	buildEditTimeline,
-	HexDocumentEdit,
-	HexDocumentEditOp,
-	readUsingRanges,
-} from "../../shared/hexDocumentModel";
+import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import {
 	FromWebviewMessage,
 	InspectorLocation,
@@ -258,7 +253,10 @@ export const offset = atom({
 /** Current edit mode */
 export const editMode = atom({
 	key: "editMode",
-	default: HexDocumentEditOp.Insert,
+	default: selector({
+		key: "initialEditMode",
+		get: ({ get }) => get(readyQuery).editMode,
+	}),
 	effects_UNSTABLE: [
 		fx => {
 			registerHandler(MessageType.SetEditMode, msg => {

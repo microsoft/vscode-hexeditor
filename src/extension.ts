@@ -3,14 +3,13 @@
 
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
-import { ExtensionHostMessageHandler, MessageType } from "../shared/protocol";
+import { HexDocumentEditOp } from "../shared/hexDocumentModel";
 import { DataInspectorView } from "./dataInspectorView";
 import { showGoToOffset } from "./goToOffset";
 import { HexEditorProvider } from "./hexEditorProvider";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 import { showSelectBetweenOffsets } from "./selectBetweenOffsets";
 import StatusEditMode from "./statusEditMode";
-import { HexDocumentEditOp } from "../shared/hexDocumentModel";
 import StatusFocus from "./statusFocus";
 import StatusHoverAndSelection from "./statusHoverAndSelection";
 
@@ -77,11 +76,11 @@ export function activate(context: vscode.ExtensionContext): void {
 	const selectEditModeCommand = vscode.commands.registerCommand(
 		"hexEditor.selectEditMode",
 		async () => {
-			const pickEditMode = await vscode.window.showQuickPick(["Insert", "Replace"]);
-			const messaging = registry.activeMessaging[Symbol.iterator]().next().value as ExtensionHostMessageHandler | undefined;
-			if(messaging && pickEditMode && registry.activeDocument) {
-				const mode = pickEditMode === "Insert" ? HexDocumentEditOp.Insert : HexDocumentEditOp.Replace;
-				messaging.sendEvent({ type: MessageType.SetEditMode, mode: mode});
+			const insert = vscode.l10n.t("Insert");
+			const replace = vscode.l10n.t("Replace");
+			const pickEditMode = await vscode.window.showQuickPick([insert, replace]);
+			if (registry.activeDocument) {
+				const mode = pickEditMode === insert ? HexDocumentEditOp.Insert : HexDocumentEditOp.Replace;
 				registry.activeDocument.editMode = mode;
 			}
 		},

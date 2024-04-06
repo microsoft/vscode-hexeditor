@@ -181,7 +181,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		this._editMode = mode;
 		this._onDidChangeEditMode.fire(mode);
 	}
-	
+
 	private readonly _onDidChangeHoverState = this._register(
 		new vscode.EventEmitter<number | undefined>(),
 	);
