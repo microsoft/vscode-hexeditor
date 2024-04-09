@@ -63,7 +63,7 @@ export default class StatusHoverAndSelection extends Disposable {
 		} else {
 			// Hiding the element creates a flashing effect so instead set it
 			// to an empty string
-			this.item.text = vscode.l10n.t("");
+			this.item.text = "";
 		}
 
 		this.item.show();
