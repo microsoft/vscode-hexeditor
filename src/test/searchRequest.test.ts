@@ -2,12 +2,12 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
-import { SearchResult } from "../../shared/protocol";
-import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "../searchRequest";
 import { expect } from "chai";
+import { HexDocumentEditOp, HexDocumentModel } from "../../shared/hexDocumentModel";
+import { SearchResult } from "../../shared/protocol";
 import { HexDocument } from "../hexDocument";
+import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "../searchRequest";
 import { getTestFileAccessor } from "./util";
-import { HexDocumentModel } from "../../shared/hexDocumentModel";
 
 describe("searchRequest", async () => {
 	const testContent = `Esse in aliqua minim magna dolor tempor eiusmod exercitation ullamco veniam nisi ipsum cillum commodo. Velit ad aliquip dolor sint anim consequat. Excepteur culpa non adipisicing elit tempor laborum tempor qui. Do esse dolore incididunt consequat non excepteur fugiat fugiat veniam deserunt ut pariatur eiusmod. Deserunt irure qui cupidatat laboris.
@@ -59,6 +59,33 @@ Lorem ad ullamco ad deserunt voluptate ullamco et in commodo et exercitation dui
 		await expectMatches(
 			new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, true, undefined),
 			expectedForTestNeedle,
+		);
+	});
+
+	it("searches for literal in an edited document", async () => {
+		const doc = await makeDocument();
+		const editedExpectedForTestNeedle = [
+			...expectedForTestNeedle,
+			{ from: 1026, previous: new TextEncoder().encode("Laboris"), to: 1033 },
+			{ from: 1081, previous: new TextEncoder().encode("Laboris"), to: 1088 },
+			{ from: 1088, previous: new TextEncoder().encode("Laboris"), to: 1095 },
+			{ from: 1095, previous: new TextEncoder().encode("Laboris"), to: 1102 },
+		];
+		doc.makeEdits(
+			new Array(3).fill({
+				op: HexDocumentEditOp.Insert,
+				offset: testContent.length,
+				value: new TextEncoder().encode("Laboris"),
+			}),
+		);
+		await expectMatches(
+			new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, false, undefined),
+			editedExpectedForTestNeedle,
+		);
+		await doc.save();
+		await expectMatches(
+			new LiteralSearchRequest(doc, { literal: [testNeedleBytes] }, false, undefined),
+			editedExpectedForTestNeedle,
 		);
 	});
 

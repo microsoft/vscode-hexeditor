@@ -96,12 +96,20 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		return vscode.Uri.parse(this.model.uri);
 	}
 
+	// /**
+	//  * Reads data including all edits from the model, returning an iterable of
+	//  * Uint8Array chunks.
+	//  */
+	// public readWithAllEdits(offset: number): AsyncIterableIterator<Uint8Array> {
+	// 	return this.model.readWithAllEdits(offset);
+	// }
+
 	/**
-	 * Reads data including edits from the model, returning an iterable of
-	 * Uint8Array chunks.
+	 * Reads data including unsaved edits from the model, returning an iterable
+	 * of Uint8Array chunks.
 	 */
-	public readWithEdits(offset: number): AsyncIterableIterator<Uint8Array> {
-		return this.model.readWithEdits(offset);
+	public readWithUnsavedEdits(offset: number): AsyncIterableIterator<Uint8Array> {
+		return this.model.readWithUnsavedEdits(offset);
 	}
 
 	/**
@@ -111,7 +119,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public async readBufferWithEdits(offset: number, length: number): Promise<Uint8Array> {
 		const target = new Uint8Array(length);
 		let soFar = 0;
-		for await (const chunk of this.model.readWithEdits(offset)) {
+		for await (const chunk of this.model.readWithUnsavedEdits(offset)) {
 			const read = Math.min(chunk.length, target.length - soFar);
 			target.set(chunk.subarray(0, read), soFar);
 			soFar += read;
@@ -297,7 +305,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 		const newFile = await accessFile(targetResource);
 		this.lastSave = Date.now();
-		await newFile.writeStream(this.model.readWithEdits());
+		await newFile.writeStream(this.model.readWithUnsavedEdits());
 		this.lastSave = Date.now();
 		this.model.dispose();
 		this.model = new HexDocumentModel({

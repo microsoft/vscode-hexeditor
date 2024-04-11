@@ -42,7 +42,7 @@ describe("HexDocumentModel", () => {
 				},
 			]);
 
-			const timeline: IEditTimeline = (model as any).getEditTimeline();
+			const timeline: IEditTimeline = (model as any).getAllEditTimeline();
 
 			expect(timeline).to.deep.equal({
 				sizeDelta: -4,
@@ -78,22 +78,28 @@ describe("HexDocumentModel", () => {
 
 	describe("edit reading", () => {
 		const assertContents = async (value: Uint8Array) => {
+			const state = model.isSynced ? "after saving" : "before saving";
 			for (let offset = 0; offset < value.length; offset++) {
 				let built = new Uint8Array();
-				for await (const buf of model.readWithEdits(offset)) {
+				for await (const buf of model.readWithUnsavedEdits(offset)) {
 					built = Buffer.concat([built, buf]);
 				}
 
 				expect(built).to.deep.equal(
 					Buffer.from(value.subarray(offset)),
-					`expected to be equal at offset ${offset}`,
+					`expected to be equal at offset ${offset} ${state}`,
 				);
 			}
 
-			expect(await model.size()).to.equal(value.length);
+			expect(await model.sizeWithEdits()).to.equal(
+				value.length,
+				`model size does not match expected size ${state}`,
+			);
 		};
 
 		it("reads file verbatim", async () => {
+			await assertContents(new Uint8Array(original));
+			await model.save();
 			await assertContents(new Uint8Array(original));
 		});
 
@@ -102,12 +108,16 @@ describe("HexDocumentModel", () => {
 				{ op: HexDocumentEditOp.Insert, offset: 2, value: new Uint8Array([10, 11, 12]) },
 			]);
 			await assertContents(new Uint8Array([0, 1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9]));
+			await model.save();
+			await assertContents(new Uint8Array([0, 1, 10, 11, 12, 2, 3, 4, 5, 6, 7, 8, 9]));
 		});
 
 		it("reads with a simple delete", async () => {
 			model.makeEdits([
 				{ op: HexDocumentEditOp.Delete, offset: 2, previous: new Uint8Array([2, 3, 4]) },
 			]);
+			await assertContents(new Uint8Array([0, 1, 5, 6, 7, 8, 9]));
+			await model.save();
 			await assertContents(new Uint8Array([0, 1, 5, 6, 7, 8, 9]));
 		});
 
@@ -121,6 +131,8 @@ describe("HexDocumentModel", () => {
 				},
 			]);
 			await assertContents(new Uint8Array([0, 1, 10, 11, 12, 5, 6, 7, 8, 9]));
+			await model.save();
+			await assertContents(new Uint8Array([0, 1, 10, 11, 12, 5, 6, 7, 8, 9]));
 		});
 
 		it("replaces at beginning", async () => {
@@ -132,6 +144,8 @@ describe("HexDocumentModel", () => {
 					previous: new Uint8Array([0, 1, 2]),
 				},
 			]);
+			await assertContents(new Uint8Array([10, 11, 12, 3, 4, 5, 6, 7, 8, 9]));
+			await model.save();
 			await assertContents(new Uint8Array([10, 11, 12, 3, 4, 5, 6, 7, 8, 9]));
 		});
 
@@ -158,6 +172,8 @@ describe("HexDocumentModel", () => {
 
 				try {
 					await assertContents(expected);
+					await model.save();
+					await assertContents(expected);
 				} catch (e) {
 					console.log(str);
 					// console.log(JSON.stringify((model as any).getEditTimeline(), (k, v) => v instanceof Uint8Array ? Array.from(v) : v, 2));
@@ -182,6 +198,8 @@ describe("HexDocumentModel", () => {
 				},
 			]);
 			await assertContents(new Uint8Array([0, 11, 4, 5, 16, 9]));
+			await model.save();
+			await assertContents(new Uint8Array([0, 11, 4, 5, 16, 9]));
 		});
 
 		it("overlaps replace on delete", async () => {
@@ -194,6 +212,8 @@ describe("HexDocumentModel", () => {
 					previous: new Uint8Array([1, 2, 6]),
 				},
 			]);
+			await assertContents(new Uint8Array([0, 10, 11, 12, 7, 8, 9]));
+			await model.save();
 			await assertContents(new Uint8Array([0, 10, 11, 12, 7, 8, 9]));
 		});
 
@@ -208,6 +228,8 @@ describe("HexDocumentModel", () => {
 				},
 			]);
 			await assertContents(new Uint8Array([0, 20, 21, 22, 12, 2, 3, 4, 5, 6, 7, 8, 9]));
+			await model.save();
+			await assertContents(new Uint8Array([0, 20, 21, 22, 12, 2, 3, 4, 5, 6, 7, 8, 9]));
 		});
 
 		it("delete overlaps multiple", async () => {
@@ -219,6 +241,8 @@ describe("HexDocumentModel", () => {
 					previous: new Uint8Array([1, 10, 11, 12, 2, 3]),
 				},
 			]);
+			await assertContents(new Uint8Array([0, 4, 5, 6, 7, 8, 9]));
+			await model.save();
 			await assertContents(new Uint8Array([0, 4, 5, 6, 7, 8, 9]));
 		});
 	});
