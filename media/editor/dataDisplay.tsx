@@ -395,7 +395,7 @@ const generateRows = (
 ) => {
 	const rows: React.ReactNode[] = [];
 	let row = (props.rowsStart - props.pageStart) / props.columnWidth;
-	const lastRowIndex = props.fileSize - (props.fileSize % props.columnWidth);
+	const lastRowIndex = props.columnWidth * Math.floor(props.fileSize / props.columnWidth);
 	for (let i = props.rowsStart; i < props.rowsEnd && i <= lastRowIndex; i += props.columnWidth) {
 		rows.push(
 			<div
@@ -476,7 +476,7 @@ const DataCell: React.FC<{
 				}
 			}
 		},
-		[offset],
+		[offset, isAppend],
 	);
 
 	const onMouseDown = useCallback(
@@ -505,7 +505,7 @@ const DataCell: React.FC<{
 				ctx.setSelectionRanges([Range.single(offset)]);
 			}
 		},
-		[focusedElement.key, offset, isAppend],
+		[focusedElement.key, offset],
 	);
 
 	const isFocused = useIsFocused(focusedElement);

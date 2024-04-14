@@ -7,8 +7,6 @@ import { Disposable, DisposableValue } from "./dispose";
 import { HexDocument } from "./hexDocument";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 
-const numberFormat = new Intl.NumberFormat();
-
 /**
  * this is a class to represent the status bar item that displays the edit mode
  *  - Replace or Insert
