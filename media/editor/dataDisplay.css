@@ -63,6 +63,13 @@
 	animation: blink 1s steps(5, start) infinite;
 }
 
+@media (prefers-reduced-motion) {
+	.data-cell-insert-before::before,
+	.data-cell-insert-middle::before {
+		animation: none;
+	}
+}
+
 .data-cell-insert-before::before {
 	left: -1px;
 }
