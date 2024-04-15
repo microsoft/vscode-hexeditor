@@ -62,6 +62,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public lastSave = 0;
 
 	private _selectionState: ISelectionState = { selected: 0 };
+
+	private _editMode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace =
+		HexDocumentEditOp.Insert;
 	private _hoverState: number | undefined = undefined;
 	/** Search provider for the document. */
 	public readonly searchProvider = new SearchProvider();
@@ -159,6 +162,24 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public set selectionState(state: ISelectionState) {
 		this._selectionState = state;
 		this._onDidChangeSelectionState.fire(state);
+	}
+
+	private readonly _onDidChangeEditMode = this._register(
+		new vscode.EventEmitter<HexDocumentEditOp.Insert | HexDocumentEditOp.Replace>(),
+	);
+
+	/**
+	 * Fired when the edit mode changes
+	 */
+	public readonly onDidChangeEditMode = this._onDidChangeEditMode.event;
+
+	public get editMode() {
+		return this._editMode;
+	}
+
+	public set editMode(mode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace) {
+		this._editMode = mode;
+		this._onDidChangeEditMode.fire(mode);
 	}
 
 	private readonly _onDidChangeHoverState = this._register(

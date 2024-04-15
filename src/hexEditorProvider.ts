@@ -88,6 +88,15 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					messaging.sendEvent({ type: MessageType.ReloadFromDisk });
 				}
 			}),
+
+			document.onDidChangeEditMode(mode => {
+				for (const messaging of this._registry.getMessaging(document)) {
+					messaging.sendEvent({
+						type: MessageType.SetEditMode,
+						mode: mode,
+					});
+				}
+			}),
 		);
 
 		const overwrite = vscode.l10n.t("Overwrite");
@@ -324,6 +333,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					pageSize: document.pageSize,
 					isLargeFile: document.isLargeFile,
 					isReadonly: document.isReadonly,
+					editMode: document.editMode,
 				};
 			case MessageType.SetSelectedCount:
 				document.selectionState = message;

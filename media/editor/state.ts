@@ -250,6 +250,22 @@ export const offset = atom({
 	],
 });
 
+/** Current edit mode */
+export const editMode = atom({
+	key: "editMode",
+	default: selector({
+		key: "initialEditMode",
+		get: ({ get }) => get(readyQuery).editMode,
+	}),
+	effects_UNSTABLE: [
+		fx => {
+			registerHandler(MessageType.SetEditMode, msg => {
+				fx.setSelf(msg.mode);
+			});
+		},
+	],
+});
+
 /** Size of data pages, in bytes */
 export const dataPageSize = selector({
 	key: "dataPageSize",
