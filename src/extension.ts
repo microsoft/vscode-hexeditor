@@ -73,15 +73,14 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	);
 
-	const selectEditModeCommand = vscode.commands.registerCommand(
-		"hexEditor.selectEditMode",
-		async () => {
-			const insert = vscode.l10n.t("Insert");
-			const replace = vscode.l10n.t("Replace");
-			const pickEditMode = await vscode.window.showQuickPick([insert, replace]);
+	const switchEditModeCommand = vscode.commands.registerCommand(
+		"hexEditor.switchEditMode",
+		() => {
 			if (registry.activeDocument) {
-				const mode = pickEditMode === insert ? HexDocumentEditOp.Insert : HexDocumentEditOp.Replace;
-				registry.activeDocument.editMode = mode;
+				registry.activeDocument.editMode =
+					registry.activeDocument.editMode === HexDocumentEditOp.Insert
+						? HexDocumentEditOp.Replace
+						: HexDocumentEditOp.Insert;
 			}
 		},
 	);
@@ -91,7 +90,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(new StatusHoverAndSelection(registry));
 	context.subscriptions.push(goToOffsetCommand);
 	context.subscriptions.push(selectBetweenOffsetsCommand);
-	context.subscriptions.push(selectEditModeCommand);
+	context.subscriptions.push(switchEditModeCommand);
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
 	context.subscriptions.push(

@@ -114,9 +114,9 @@
         "title": "%hexEditor.selectBetweenOffsets%"
       },
       {
-        "command": "hexEditor.selectEditMode",
+        "command": "hexEditor.switchEditMode",
         "category": "%name%",
-        "title": "%hexEditor.selectEditMode%"
+        "title": "%hexEditor.switchEditMode%"
       }
     ],
     "viewsContainers": {
@@ -146,7 +146,7 @@
           "when": "hexEditor:isActive"
         },
         {
-          "command": "hexEditor.selectEditMode",
+          "command": "hexEditor.switchEditMode",
           "when": "hexEditor:isActive"
         }
       ],
@@ -163,6 +163,11 @@
         "command": "hexEditor.goToOffset",
         "key": "ctrl+g",
         "when": "activeCustomEditorId == hexEditor.hexedit"
+      },
+      {
+        "command": "hexEditor.switchEditMode",
+        "key": "Insert",
+        "when": "hexEditor:isActive"
       }
     ]
   },

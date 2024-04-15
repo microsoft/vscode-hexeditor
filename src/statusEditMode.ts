@@ -11,7 +11,7 @@ import { HexEditorRegistry } from "./hexEditorRegistry";
  * this is a class to represent the status bar item that displays the edit mode
  *  - Replace or Insert
  *
- * @class StatusSelectionCount
+ * @class StatusEditMode
  */
 export default class StatusEditMode extends Disposable {
 	private readonly item: vscode.StatusBarItem;
@@ -23,8 +23,8 @@ export default class StatusEditMode extends Disposable {
 		this.item = this._register(
 			vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99),
 		);
-		this.item.tooltip = vscode.l10n.t("Select Edit Mode");
-		this.item.command = "hexEditor.selectEditMode";
+		this.item.tooltip = vscode.l10n.t("Switch Edit Mode");
+		this.item.command = "hexEditor.switchEditMode";
 
 		const trackDocument = (doc: HexDocument | undefined) => {
 			if (doc) {
