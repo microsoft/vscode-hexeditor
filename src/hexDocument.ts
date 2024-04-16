@@ -95,15 +95,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public get uri(): vscode.Uri {
 		return vscode.Uri.parse(this.model.uri);
 	}
-
-	// /**
-	//  * Reads data including all edits from the model, returning an iterable of
-	//  * Uint8Array chunks.
-	//  */
-	// public readWithAllEdits(offset: number): AsyncIterableIterator<Uint8Array> {
-	// 	return this.model.readWithAllEdits(offset);
-	// }
-
+	
 	/**
 	 * Reads data including unsaved edits from the model, returning an iterable
 	 * of Uint8Array chunks.
