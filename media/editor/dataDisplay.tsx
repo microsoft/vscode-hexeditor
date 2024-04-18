@@ -112,7 +112,7 @@ export const DataDisplay: React.FC = () => {
 	const columnWidth = useRecoilValue(select.columnWidth);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
-	const editTimeline = useRecoilValue(select.editTimeline);
+	const allEditTimeline = useRecoilValue(select.allEditTimeline);
 	const unsavedEditIndex = useRecoilValue(select.unsavedEditIndex);
 	const ctx = useDisplayContext();
 	const [pasting, setPasting] = useState<
@@ -169,8 +169,8 @@ export const DataDisplay: React.FC = () => {
 	// Whenever the edit timeline changes, update unsaved ranges.
 	useEffect(() => {
 		const unsavedRanges: Range[] = [];
-		for (let i = 0; i < editTimeline.ranges.length; i++) {
-			const range = editTimeline.ranges[i];
+		for (let i = 0; i < allEditTimeline.ranges.length; i++) {
+			const range = allEditTimeline.ranges[i];
 			// todo: eventually support delete decorations?
 			if (range.op !== EditRangeOp.Insert || range.editIndex < unsavedEditIndex) {
 				continue;
@@ -181,7 +181,7 @@ export const DataDisplay: React.FC = () => {
 			}
 		}
 		ctx.unsavedRanges = unsavedRanges;
-	}, [editTimeline, unsavedEditIndex]);
+	}, [allEditTimeline, unsavedEditIndex]);
 
 	useGlobalHandler(
 		"keydown",

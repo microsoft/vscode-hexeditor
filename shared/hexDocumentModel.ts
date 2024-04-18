@@ -126,7 +126,7 @@ export class HexDocumentModel {
 	}
 
 	/**
-	 * Gets the document size, accounting for all edits.
+	 * Gets the document disk size.
 	 * Returns undefined if infinite.
 	 */
 	public async size(): Promise<number | undefined> {
@@ -138,8 +138,24 @@ export class HexDocumentModel {
 		if (diskSize === undefined) {
 			return undefined;
 		}
+		return diskSize;
+	}
 
-		const { sizeDelta } = this.getEditTimeline();
+	/**
+	 * Gets the document size, accounting for all edits.
+	 * Returns undefined if infinite.
+	 */
+	public async sizeWithEdits() {
+		if (!this.isFiniteSize) {
+			return undefined;
+		}
+
+		const diskSize = await this.getSizeInner();
+		if (diskSize === undefined) {
+			return undefined;
+		}
+		const { sizeDelta } = this.getUnsavedEditTimeline();
+
 		return diskSize + sizeDelta;
 	}
 
@@ -182,10 +198,28 @@ export class HexDocumentModel {
 	}
 
 	/**
-	 * Reads bytes in their edited state starting at the given offset.
+	 * Reads bytes in their edited state starting at the given offset. Includes saved and unsaved edits.
 	 */
-	public readWithEdits(fromOffset = 0, chunkSize = 128 * 1024): AsyncIterableIterator<Uint8Array> {
-		return readUsingRanges(this.accessor, this.getEditTimeline().ranges, fromOffset, chunkSize);
+	public readWithAllEdits(
+		fromOffset = 0,
+		chunkSize = 128 * 1024,
+	): AsyncIterableIterator<Uint8Array> {
+		return readUsingRanges(this.accessor, this.getAllEditTimeline().ranges, fromOffset, chunkSize);
+	}
+
+	/**
+	 * Reads bytes with only the unsaved changes at the given offset.
+	 */
+	public readWithUnsavedEdits(
+		fromOffset = 0,
+		chunkSize = 128 * 1024,
+	): AsyncIterableIterator<Uint8Array> {
+		return readUsingRanges(
+			this.accessor,
+			this.getUnsavedEditTimeline().ranges,
+			fromOffset,
+			chunkSize,
+		);
 	}
 
 	/**
@@ -196,9 +230,6 @@ export class HexDocumentModel {
 		if (toSave.length === 0) {
 			return Promise.resolve();
 		}
-
-		this._unsavedEditIndex += toSave.length;
-
 		return this.saveGuard.execute(async () => {
 			// for length changes, we must rewrite the entire file. Or at least from
 			// the offset of the first edit. For replacements we can selectively write.
@@ -212,8 +243,10 @@ export class HexDocumentModel {
 				);
 			} else {
 				// todo: technically only need to rewrite starting from the first edit
-				await this.accessor.writeStream(this.readWithEdits());
+				await this.accessor.writeStream(this.readWithUnsavedEdits());
 			}
+			this._unsavedEditIndex += toSave.length;
+			this.getUnsavedEditTimeline.forget();
 
 			this.getSizeInner.forget();
 		});
@@ -226,7 +259,8 @@ export class HexDocumentModel {
 		this._unsavedEditIndex = 0;
 		this._edits = [];
 		this.accessor.invalidate?.();
-		this.getEditTimeline.forget();
+		this.getAllEditTimeline.forget();
+		this.getUnsavedEditTimeline.forget();
 		this.getSizeInner.forget();
 	}
 
@@ -238,8 +272,8 @@ export class HexDocumentModel {
 	public makeEdits(edits: readonly HexDocumentEdit[]): HexDocumentEditReference {
 		const index = this._edits.length;
 		this._edits.push(...edits);
-		this.getEditTimeline.forget();
-
+		this.getAllEditTimeline.forget();
+		this.getUnsavedEditTimeline.forget();
 		return {
 			undo: () => {
 				// If the file wasn't saved, just removed the pending edits.
@@ -249,12 +283,14 @@ export class HexDocumentModel {
 				} else {
 					this._edits.push(...edits.map(reverseEdit));
 				}
-				this.getEditTimeline.forget();
+				this.getAllEditTimeline.forget();
+				this.getUnsavedEditTimeline.forget();
 				return this._edits;
 			},
 			redo: () => {
 				this._edits.push(...edits);
-				this.getEditTimeline.forget();
+				this.getAllEditTimeline.forget();
+				this.getUnsavedEditTimeline.forget();
 				return this._edits;
 			},
 		};
@@ -273,9 +309,14 @@ export class HexDocumentModel {
 	/**
 	 * Gets instructions for returning file data. Returns a list of contiguous
 	 * `Range` instances. Each "range" issues instructions until the next
-	 * "offset". This can be used to generate file data.
+	 * "offset". This can be used to generate file data. Includes unsaved and
+	 * saved edits.
 	 */
-	private readonly getEditTimeline = once(() => buildEditTimeline(this._edits));
+	private readonly getAllEditTimeline = once(() => buildEditTimeline(this._edits));
+
+	private readonly getUnsavedEditTimeline = once(() => {
+		return buildEditTimeline(this._edits.slice(this._unsavedEditIndex));
+	});
 }
 
 export async function* readUsingRanges(

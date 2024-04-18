@@ -121,6 +121,13 @@ const diskFileSize = atom({
 					fx.setSelf(msg.replaceFileSize ?? undefined);
 				}
 			});
+			registerHandler(MessageType.Saved, () => {
+				const size = fx.getLoadable(diskFileSize).getValue();
+				if (size === undefined) {
+					return;
+				}
+				fx.setSelf(size + fx.getLoadable(unsavedEditTimeline).getValue().sizeDelta);
+			});
 		},
 	],
 });
@@ -129,7 +136,7 @@ export const fileSize = selector({
 	key: "fileSize",
 	get: ({ get }) => {
 		const initial = get(diskFileSize);
-		const sizeDelta = get(editTimeline).sizeDelta;
+		const sizeDelta = get(unsavedEditTimeline).sizeDelta;
 		return initial === undefined ? initial : initial + sizeDelta;
 	},
 });
@@ -349,9 +356,20 @@ export const unsavedEditIndex = atom({
 	],
 });
 
-export const editTimeline = selector({
-	key: "editTimeline",
+/**
+ * Timeline of all edits of the document. Includes both saved
+ * and unsaved edits.
+ */
+export const allEditTimeline = selector({
+	key: "allEditTimeline",
 	get: ({ get }) => buildEditTimeline(get(edits)),
+});
+
+export const unsavedEditTimeline = selector({
+	key: "unsavedEditTimeline",
+	get: ({ get }) => {
+		return buildEditTimeline(get(edits).slice(get(unsavedEditIndex)));
+	},
 });
 
 export const editedDataPages = selectorFamily({
@@ -360,9 +378,8 @@ export const editedDataPages = selectorFamily({
 		(pageNumber: number) =>
 		async ({ get }) => {
 			const pageSize = get(dataPageSize);
-			const { ranges } = get(editTimeline);
+			const { ranges } = get(unsavedEditTimeline);
 			const target = new Uint8Array(pageSize);
-
 			const it = readUsingRanges(
 				{
 					read: (offset, target) => {
@@ -403,7 +420,7 @@ const rawDataPages = selectorFamily({
 		(pageNumber: number) =>
 		async ({ get }) => {
 			get(reloadGeneration); // used to trigger invalidation
-
+			get(unsavedEditIndex); // used to trigger invalidation when the user saves
 			const pageSize = get(dataPageSize);
 			const response = await messageHandler.sendRequest<ReadRangeResponseMessage>({
 				type: MessageType.ReadRangeRequest,

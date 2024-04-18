@@ -249,7 +249,7 @@ export class DisplayContext {
 			messageHandler.sendEvent({
 				type: MessageType.SetHoveredByte,
 				hovered: this._hoveredByte?.byte,
-			})
+			});
 		});
 	}
 
