@@ -7,8 +7,3 @@
 	display: inline-block;
 	user-select: none;
 }
-
-.data-cell:focus {
-	outline-offset: 1px;
-	outline: var(--vscode-focusBorder) 2px solid;
-}

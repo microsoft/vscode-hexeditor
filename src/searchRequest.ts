@@ -94,7 +94,7 @@ export class LiteralSearchRequest implements ISearchRequest {
 			isCaseSensitive ? undefined : caseInsensitiveEquivalency,
 		);
 
-		for await (const chunk of document.readWithEdits(0)) {
+		for await (const chunk of document.readWithUnsavedEdits(0)) {
 			if (this.cancelled || collector.capped) {
 				yield collector.final();
 				return;
@@ -155,7 +155,7 @@ export class RegexSearchRequest implements ISearchRequest {
 		const encoder = new TextEncoder();
 		const collector = new ResultsCollector(await document.size(), this.cap);
 
-		for await (const chunk of document.readWithEdits(0)) {
+		for await (const chunk of document.readWithUnsavedEdits(0)) {
 			if (this.cancelled || collector.capped) {
 				yield collector.final();
 				return;

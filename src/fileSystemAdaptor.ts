@@ -194,9 +194,11 @@ class NativeFileAccessor implements FileAccessor {
 
 	writeBulk(ops: readonly FileWriteOp[]): Promise<void> {
 		return this.handle.borrow<void>(async fd => {
-			for (const { data, offset } of ops) {
-				fd.write(data, 0, data.byteLength, offset);
-			}
+			return Promise.all(
+				ops.map(({ data, offset }) => {
+					return fd.write(data, 0, data.byteLength, offset);
+				}),
+			);
 		});
 	}
 

@@ -3,12 +3,15 @@
 
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
+import { HexDocumentEditOp } from "../shared/hexDocumentModel";
 import { DataInspectorView } from "./dataInspectorView";
 import { showGoToOffset } from "./goToOffset";
 import { HexEditorProvider } from "./hexEditorProvider";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 import { showSelectBetweenOffsets } from "./selectBetweenOffsets";
-import StatusSelectionCount from "./statusSelectionCount";
+import StatusEditMode from "./statusEditMode";
+import StatusFocus from "./statusFocus";
+import StatusHoverAndSelection from "./statusHoverAndSelection";
 
 function readConfigFromPackageJson(extension: vscode.Extension<any>): {
 	extId: string;
@@ -69,9 +72,25 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 		},
 	);
-	context.subscriptions.push(new StatusSelectionCount(registry));
+
+	const switchEditModeCommand = vscode.commands.registerCommand(
+		"hexEditor.switchEditMode",
+		() => {
+			if (registry.activeDocument) {
+				registry.activeDocument.editMode =
+					registry.activeDocument.editMode === HexDocumentEditOp.Insert
+						? HexDocumentEditOp.Replace
+						: HexDocumentEditOp.Insert;
+			}
+		},
+	);
+
+	context.subscriptions.push(new StatusEditMode(registry));
+	context.subscriptions.push(new StatusFocus(registry));
+	context.subscriptions.push(new StatusHoverAndSelection(registry));
 	context.subscriptions.push(goToOffsetCommand);
 	context.subscriptions.push(selectBetweenOffsetsCommand);
+	context.subscriptions.push(switchEditModeCommand);
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
 	context.subscriptions.push(

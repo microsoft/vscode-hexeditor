@@ -12,5 +12,6 @@
 	"hexEditor.openFile": "Open Active File in Hex Editor",
 	"hexEditor.goToOffset": "Go To Offset",
 	"hexEditor.selectBetweenOffsets": "Select Between Offsets",
+	"hexEditor.switchEditMode": "Switch Edit Mode",
 	"dataInspectorView": "Data Inspector"
 }
