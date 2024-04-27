@@ -1,3 +1,14 @@
+/** Reads a GUID/UUID at offset 0 from the buffer. (RFC 4122) */
+const getGUID = (arrayBuffer: ArrayBuffer, le: boolean) => {
+	const buf = new Uint8Array(arrayBuffer);
+
+	const indices = le ? [3, 2, 1, 0, 5, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15] : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+	const parts = indices.map(index => buf[index].toString(16).padStart(2, "0").toUpperCase());
+	const guid = `{${parts[0]}${parts[1]}${parts[2]}${parts[3]}-${parts[4]}${parts[5]}-${parts[6]}${parts[7]}-${parts[8]}${parts[9]}-${parts[10]}${parts[11]}${parts[12]}${parts[13]}${parts[14]}${parts[15]}}`;
+
+	return guid;
+};
+
 /** Reads a ULEB128 at offset 0 from the buffer. */
 const getULEB128 = (arrayBuffer: ArrayBuffer) => {
 	const buf = new Uint8Array(arrayBuffer);
@@ -126,6 +137,8 @@ const inspectTypesBuilder: IInspectableType[] = [
 
 	{ label: "float32", minBytes: 4, convert: (dv, le) => dv.getFloat32(0, le).toString() },
 	{ label: "float64", minBytes: 8, convert: (dv, le) => dv.getFloat64(0, le).toString() },
+
+	{ label: "GUID", minBytes: 16, convert: (dv, le) => getGUID(dv.buffer, le) },
 ];
 
 const addTextDecoder = (encoding: string, minBytes: number) => {
