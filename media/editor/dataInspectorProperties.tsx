@@ -1,4 +1,4 @@
-/** Reads a GUID/UUID at offset 0 from the buffer. */
+/** Reads a GUID/UUID at offset 0 from the buffer. (RFC 4122) */
 const getGUID = (arrayBuffer: ArrayBuffer, le: boolean) => {
 	const buf = new Uint8Array(arrayBuffer);
 
