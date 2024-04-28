@@ -1,10 +1,10 @@
 ## Release Notes
 
 ## 1.10.0 - April 22, 2024
-
 - Fix bug in saving of restored editors, thanks to [@tomilho via #513](https://github.com/microsoft/vscode-hexeditor/pull/513)
-- Add hovered byte status bar entry [@tomilho via #502](https://github.com/microsoft/vscode-hexeditor/pull/502)
-- Add insert mode [@tomilho via #503](https://github.com/microsoft/vscode-hexeditor/pull/503)
+- Add insert mode, thanks to [@tomilho via #503](https://github.com/microsoft/vscode-hexeditor/pull/503)
+- Add hovered byte status bar entry, thanks to [@tomilho via #502](https://github.com/microsoft/vscode-hexeditor/pull/502)
+- Add GUID/UUID support in data inspector, thanks to [@jogo- via #500](https://github.com/microsoft/vscode-hexeditor/pull/500)
 
 ## 1.9.14 - February 22, 2024
 - Add ULEB128 and SLEB128 support in data inspector, thanks to [@jogo- via #488](https://github.com/microsoft/vscode-hexeditor/pull/488)
