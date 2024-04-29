@@ -481,6 +481,17 @@ const DataCell: React.FC<{
 
 	const onMouseDown = useCallback(
 		(e: React.MouseEvent) => {
+			if (e.buttons === 2) {
+				// Sets a new range and focused when the user opens
+				// the context menu outside the selected range, just
+				// like the text editor.
+				if (!ctx.isSelected(focusedElement.byte)) {
+					ctx.focusedElement = focusedElement;
+					ctx.isSelecting = undefined;
+					ctx.setSelectionRanges([Range.single(offset)]);
+				}
+				return;
+			}
 			if (!(e.buttons & 1)) {
 				return;
 			}
