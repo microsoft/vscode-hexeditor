@@ -63,6 +63,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 	private _selectionState: ISelectionState = { selected: 0 };
 
+	private _editMode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace =
+		HexDocumentEditOp.Insert;
+	private _hoverState: number | undefined = undefined;
 	/** Search provider for the document. */
 	public readonly searchProvider = new SearchProvider();
 
@@ -92,13 +95,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public get uri(): vscode.Uri {
 		return vscode.Uri.parse(this.model.uri);
 	}
-
+	
 	/**
-	 * Reads data including edits from the model, returning an iterable of
-	 * Uint8Array chunks.
+	 * Reads data including unsaved edits from the model, returning an iterable
+	 * of Uint8Array chunks.
 	 */
-	public readWithEdits(offset: number): AsyncIterableIterator<Uint8Array> {
-		return this.model.readWithEdits(offset);
+	public readWithUnsavedEdits(offset: number): AsyncIterableIterator<Uint8Array> {
+		return this.model.readWithUnsavedEdits(offset);
 	}
 
 	/**
@@ -108,7 +111,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public async readBufferWithEdits(offset: number, length: number): Promise<Uint8Array> {
 		const target = new Uint8Array(length);
 		let soFar = 0;
-		for await (const chunk of this.model.readWithEdits(offset)) {
+		for await (const chunk of this.model.readWithUnsavedEdits(offset)) {
 			const read = Math.min(chunk.length, target.length - soFar);
 			target.set(chunk.subarray(0, read), soFar);
 			soFar += read;
@@ -159,6 +162,39 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public set selectionState(state: ISelectionState) {
 		this._selectionState = state;
 		this._onDidChangeSelectionState.fire(state);
+	}
+
+	private readonly _onDidChangeEditMode = this._register(
+		new vscode.EventEmitter<HexDocumentEditOp.Insert | HexDocumentEditOp.Replace>(),
+	);
+
+	/**
+	 * Fired when the edit mode changes
+	 */
+	public readonly onDidChangeEditMode = this._onDidChangeEditMode.event;
+
+	public get editMode() {
+		return this._editMode;
+	}
+
+	public set editMode(mode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace) {
+		this._editMode = mode;
+		this._onDidChangeEditMode.fire(mode);
+	}
+
+	private readonly _onDidChangeHoverState = this._register(
+		new vscode.EventEmitter<number | undefined>(),
+	);
+
+	public readonly onDidChangeHoverState = this._onDidChangeHoverState.event;
+
+	public get hoverState() {
+		return this._hoverState;
+	}
+
+	public set hoverState(byte: number | undefined) {
+		this._hoverState = byte;
+		this._onDidChangeHoverState.fire(byte);
 	}
 
 	private readonly _onDidRevert = this._register(new vscode.EventEmitter<void>());
@@ -261,7 +297,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 
 		const newFile = await accessFile(targetResource);
 		this.lastSave = Date.now();
-		await newFile.writeStream(this.model.readWithEdits());
+		await newFile.writeStream(this.model.readWithUnsavedEdits());
 		this.lastSave = Date.now();
 		this.model.dispose();
 		this.model = new HexDocumentModel({
