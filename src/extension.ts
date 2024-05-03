@@ -3,8 +3,8 @@
 
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
-import { copyAs } from "./copyAs";
 import { HexDocumentEditOp } from "../shared/hexDocumentModel";
+import { copyAs } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
 import { showGoToOffset } from "./goToOffset";
 import { HexEditorProvider } from "./hexEditorProvider";
@@ -73,36 +73,31 @@ export function activate(context: vscode.ExtensionContext): void {
 			}
 		},
 	);
-  const copyAsCommand = vscode.commands.registerCommand(
-    "hexEditor.copyAs",
-    () => {
-      const first = registry.activeMessaging[Symbol.iterator]().next();
-      if (first.value) {
-        copyAs(first.value);
-      }
-    });
-	const switchEditModeCommand = vscode.commands.registerCommand(
-		"hexEditor.switchEditMode",
-		() => {
-			if (registry.activeDocument) {
-				registry.activeDocument.editMode =
-					registry.activeDocument.editMode === HexDocumentEditOp.Insert
-						? HexDocumentEditOp.Replace
-						: HexDocumentEditOp.Insert;
-			}
-		},
-	);
+	const copyAsCommand = vscode.commands.registerCommand("hexEditor.copyAs", () => {
+		const first = registry.activeMessaging[Symbol.iterator]().next();
+		if (first.value) {
+			copyAs(first.value);
+		}
+	});
+	const switchEditModeCommand = vscode.commands.registerCommand("hexEditor.switchEditMode", () => {
+		if (registry.activeDocument) {
+			registry.activeDocument.editMode =
+				registry.activeDocument.editMode === HexDocumentEditOp.Insert
+					? HexDocumentEditOp.Replace
+					: HexDocumentEditOp.Insert;
+		}
+	});
 
 	context.subscriptions.push(new StatusEditMode(registry));
 	context.subscriptions.push(new StatusFocus(registry));
 	context.subscriptions.push(new StatusHoverAndSelection(registry));
 	context.subscriptions.push(goToOffsetCommand);
 	context.subscriptions.push(selectBetweenOffsetsCommand);
-  context.subscriptions.push(copyAsCommand);
+	context.subscriptions.push(copyAsCommand);
 	context.subscriptions.push(switchEditModeCommand);
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
-  context.subscriptions.push(
+	context.subscriptions.push(
 		HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, registry),
 	);
 }

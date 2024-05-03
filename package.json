@@ -186,7 +186,6 @@
         "key": "Insert",
         "when": "hexEditor:isActive"
       }
-      }
     ]
   },
   "scripts": {
