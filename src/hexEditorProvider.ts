@@ -26,7 +26,7 @@ import { ILocalizedStrings, placeholder1 } from "../shared/strings";
 import {
 	copyAsBase64,
 	copyAsC,
-	copyAsGolang,
+	copyAsGo,
 	copyAsHex,
 	copyAsJSON,
 	copyAsJava,
@@ -374,40 +374,27 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 						.map(s => document.readBuffer(s[0], s[1] - s[0])),
 				);
 				const flatParts = flattenBuffers(parts);
-				if (message.format !== undefined) {
-					switch (message.format) {
-						case CopyFormat.Hex:
-							copyAsHex(flatParts);
-							break;
-						case CopyFormat.Literal:
-							copyAsLiteral(flatParts);
-							break;
-						case CopyFormat.Text:
-							copyAsText(flatParts);
-							break;
-						case CopyFormat.C:
-							copyAsC(flatParts);
-							break;
-						case CopyFormat.Golang:
-							copyAsGolang(flatParts);
-							break;
-						case CopyFormat.Java:
-							copyAsJava(flatParts);
-							break;
-						case CopyFormat.JSON:
-							copyAsJSON(flatParts);
-							break;
-						case CopyFormat.Base64:
-							copyAsBase64(flatParts);
-							break;
-					}
-				} else {
-					if (message.asText) {
-						copyAsText(flatParts);
-					} else {
-						copyAsBase64(flatParts);
-					}
-				}
+				const filenameWoutExt = ((path: string): string => {
+					const filename = path.split("/").pop()!;
+					return filename.substring(0, filename.lastIndexOf(".")) || filename;
+				})(document.uri.path);
+				const copyAsFormats: { [K in CopyFormat]: (buffer: Uint8Array) => void } = {
+					[CopyFormat.Hex]: copyAsHex,
+					[CopyFormat.Literal]: copyAsLiteral,
+					[CopyFormat.Utf8]: copyAsText,
+					[CopyFormat.C]: (buffer: Uint8Array) => {
+						copyAsC(buffer, filenameWoutExt);
+					},
+					[CopyFormat.Go]: (buffer: Uint8Array) => {
+						copyAsGo(buffer, filenameWoutExt);
+					},
+					[CopyFormat.Java]: (buffer: Uint8Array) => {
+						copyAsJava(buffer, filenameWoutExt);
+					},
+					[CopyFormat.JSON]: copyAsJSON,
+					[CopyFormat.Base64]: copyAsBase64,
+				};
+				copyAsFormats[message.format](flatParts);
 				return;
 			}
 			case MessageType.RequestDeletes: {

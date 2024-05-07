@@ -179,9 +179,9 @@ export interface DeleteAcceptedMessage {
 export const enum CopyFormat {
 	Hex = "Hex",
 	Literal = "Literal",
-	Text = "Text",
+	Utf8 = "UTF-8",
 	C = "C",
-	Golang = "Golang",
+	Go = "Go",
 	Java = "Java",
 	JSON = "JSON",
 	Base64 = "Base64",
@@ -271,8 +271,7 @@ export interface PasteMessage {
 export interface CopyMessage {
 	type: MessageType.DoCopy;
 	selections: [from: number, to: number][];
-	asText: boolean;
-	format?: CopyFormat;
+	format: CopyFormat;
 }
 
 export interface RequestDeletesMessage {

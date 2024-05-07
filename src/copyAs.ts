@@ -10,15 +10,15 @@ export const copyAs = async (messaging: ExtensionHostMessageHandler): Promise<vo
 	const formats: QuickPickCopyFormat[] = [
 		{ label: CopyFormat.Hex },
 		{ label: CopyFormat.Literal },
-		{ label: CopyFormat.Text },
+		{ label: CopyFormat.Utf8 },
 		{ label: CopyFormat.C },
-		{ label: CopyFormat.Golang },
+		{ label: CopyFormat.Go },
 		{ label: CopyFormat.Java },
 		{ label: CopyFormat.JSON },
 		{ label: CopyFormat.Base64 },
 	];
 
-	vscode.window.showQuickPick(formats, { ignoreFocusOut: true }).then(format => {
+	vscode.window.showQuickPick(formats).then(format => {
 		if (format) {
 			messaging.sendEvent({ type: MessageType.TriggerCopyAs, format: format["label"] });
 		}
@@ -45,64 +45,64 @@ export function copyAsLiteral(buffer: Uint8Array) {
 	vscode.env.clipboard.writeText(encoded);
 }
 
-export function copyAsC(buffer: Uint8Array) {
+export function copyAsC(buffer: Uint8Array, filename: string) {
 	const len = buffer.length;
-	let content: string = "unsigned char rawData[" + len + "] =\n{";
+	let content: string = `unsigned char ${filename}[${len}] =\n{`;
 
 	for (let i = 0; i < len; ++i) {
 		if (i % 8 == 0) {
 			content += "\n\t";
 		}
-		const byte = buffer[i].toString(16);
-		content += (byte.length < 2 ? "0x0" : "0x") + byte + ", ";
+		const byte = buffer[i].toString(16).padStart(2, "0");
+		content += `0x${byte}, `;
 	}
 
 	content += "\n};\n";
 
-	if (/^win/.test(process.platform)) {
+	if (process.platform === "win32") {
 		content = content.replace(/\n/g, "\r\n");
 	}
 
 	vscode.env.clipboard.writeText(content);
 }
 
-export function copyAsGolang(buffer: Uint8Array) {
+export function copyAsGo(buffer: Uint8Array, filename: string) {
 	const len = buffer.length;
-	let content: string = "// RawData (" + len + " bytes)\n";
-	content += "var RawData = []byte{";
+	let content: string = `// ${filename} (${len} bytes)\n`;
+	content += `var ${filename} = []byte{`;
 
 	for (let i = 0; i < len; ++i) {
 		if (i % 8 == 0) {
 			content += "\n\t";
 		}
-		const byte = buffer[i].toString(16);
-		content += (byte.length < 2 ? "0x0" : "0x") + byte + ", ";
+		const byte = buffer[i].toString(16).padStart(2, "0");
+		content += `0x${byte}, `;
 	}
 
 	content += "\n}\n";
 
-	if (/^win/.test(process.platform)) {
+	if (process.platform === "win32") {
 		content = content.replace(/\n/g, "\r\n");
 	}
 
 	vscode.env.clipboard.writeText(content);
 }
 
-export function copyAsJava(buffer: Uint8Array) {
+export function copyAsJava(buffer: Uint8Array, filename: string) {
 	const len = buffer.length;
-	let content: string = "byte rawData[] =\n{";
+	let content: string = `byte ${filename}[] =\n{`;
 
 	for (let i = 0; i < len; ++i) {
 		if (i % 8 == 0) {
 			content += "\n\t";
 		}
-		const byte = buffer[i].toString(16);
-		content += (byte.length < 2 ? "0x0" : "0x") + byte + ", ";
+		const byte = buffer[i].toString(16).padStart(2, "0");
+		content += `0x${byte}, `;
 	}
 
 	content += "\n};\n";
 
-	if (/^win/.test(process.platform)) {
+	if (process.platform === "win32") {
 		content = content.replace(/\n/g, "\r\n");
 	}
 

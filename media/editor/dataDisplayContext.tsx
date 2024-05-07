@@ -247,7 +247,6 @@ export class DisplayContext {
 			messageHandler.sendEvent({
 				type: MessageType.DoCopy,
 				selections: this.selection.map(r => [r.start, r.end]),
-				asText: false,
 				format: msg.format,
 			});
 		});
