@@ -73,17 +73,32 @@ export function activate(context: vscode.ExtensionContext): void {
 		},
 	);
 
-	const switchEditModeCommand = vscode.commands.registerCommand(
-		"hexEditor.switchEditMode",
-		() => {
-			if (registry.activeDocument) {
-				registry.activeDocument.editMode =
-					registry.activeDocument.editMode === HexDocumentEditOp.Insert
-						? HexDocumentEditOp.Replace
-						: HexDocumentEditOp.Insert;
+	const switchEditModeCommand = vscode.commands.registerCommand("hexEditor.switchEditMode", () => {
+		if (registry.activeDocument) {
+			registry.activeDocument.editMode =
+				registry.activeDocument.editMode === HexDocumentEditOp.Insert
+					? HexDocumentEditOp.Replace
+					: HexDocumentEditOp.Insert;
+		}
+	});
+
+	const copyOffsetAsHex = vscode.commands.registerCommand("hexEditor.copyOffsetAsHex", () => {
+		if (registry.activeDocument) {
+			const focused = registry.activeDocument.selectionState.focused;
+			if (focused !== undefined) {
+				vscode.env.clipboard.writeText(focused.toString(16).toUpperCase());
 			}
-		},
-	);
+		}
+	});
+
+	const copyOffsetAsDec = vscode.commands.registerCommand("hexEditor.copyOffsetAsDec", () => {
+		if (registry.activeDocument) {
+			const focused = registry.activeDocument.selectionState.focused;
+			if (focused !== undefined) {
+				vscode.env.clipboard.writeText(focused.toString());
+			}
+		}
+	});
 
 	context.subscriptions.push(new StatusEditMode(registry));
 	context.subscriptions.push(new StatusFocus(registry));
@@ -93,6 +108,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(switchEditModeCommand);
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
+	context.subscriptions.push(copyOffsetAsDec, copyOffsetAsHex);
 	context.subscriptions.push(
 		HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, registry),
 	);
