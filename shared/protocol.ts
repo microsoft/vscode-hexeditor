@@ -22,6 +22,7 @@ export const enum MessageType {
 	SetSelectedCount,
 	PopDisplayedOffset,
 	DeleteAccepted,
+	TriggerCopyAs,
 	//#endregion
 	//#region from webview
 	ReadyRequest,
@@ -175,6 +176,22 @@ export interface DeleteAcceptedMessage {
 	type: MessageType.DeleteAccepted;
 }
 
+export const enum CopyFormat {
+	Hex = "Hex",
+	Literal = "Literal",
+	Utf8 = "UTF-8",
+	C = "C",
+	Go = "Go",
+	Java = "Java",
+	JSON = "JSON",
+	Base64 = "Base64",
+}
+
+export interface TriggerCopyAsMessage {
+	type: MessageType.TriggerCopyAs;
+	format: CopyFormat;
+}
+
 export type ToWebviewMessage =
 	| ReadyResponseMessage
 	| ReadRangeResponseMessage
@@ -188,7 +205,8 @@ export type ToWebviewMessage =
 	| SetEditModeMessage
 	| PopDisplayedOffsetMessage
 	| StashDisplayedOffsetMessage
-	| DeleteAcceptedMessage;
+	| DeleteAcceptedMessage
+	| TriggerCopyAsMessage;
 
 export interface OpenDocumentMessage {
 	type: MessageType.OpenDocument;
@@ -253,7 +271,7 @@ export interface PasteMessage {
 export interface CopyMessage {
 	type: MessageType.DoCopy;
 	selections: [from: number, to: number][];
-	asText: boolean;
+	format: CopyFormat;
 }
 
 export interface RequestDeletesMessage {

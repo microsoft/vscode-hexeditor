@@ -58,3 +58,9 @@ export const flattenBuffers = (buffers: readonly Uint8Array[]): Uint8Array => {
 
 	return target;
 };
+
+export const getBaseName = (path: string): string => {
+	let filename = path.split("/").pop()!;
+	filename = filename.substring(0, filename.lastIndexOf(".")) || filename;
+	return filename.replace(/[^a-z0-9]/gi, "");
+};

@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 import TelemetryReporter from "@vscode/extension-telemetry";
-import * as base64 from "js-base64";
 import * as vscode from "vscode";
 import {
 	HexDocumentEdit,
@@ -23,12 +22,13 @@ import {
 } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { ILocalizedStrings, placeholder1 } from "../shared/strings";
+import { copyAsFormats } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
-import { flattenBuffers, getCorrectArrayBuffer, randomString } from "./util";
+import { flattenBuffers, getBaseName, getCorrectArrayBuffer, randomString } from "./util";
 
 const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
@@ -364,10 +364,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 						.map(s => document.readBuffer(s[0], s[1] - s[0])),
 				);
 				const flatParts = flattenBuffers(parts);
-				const encoded = message.asText
-					? new TextDecoder().decode(flatParts)
-					: base64.fromUint8Array(flatParts);
-				vscode.env.clipboard.writeText(encoded);
+
+				const filenameWoutExt = getBaseName(document.uri.path);
+
+				copyAsFormats[message.format](flatParts, filenameWoutExt);
+
 				return;
 			}
 			case MessageType.RequestDeletes: {

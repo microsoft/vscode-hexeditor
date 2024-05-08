@@ -243,6 +243,14 @@ export class DisplayContext {
 			this.setSelectionRanges([Range.inclusive(msg.startingOffset, msg.endingOffset)]);
 		});
 
+		registerHandler(MessageType.TriggerCopyAs, msg => {
+			messageHandler.sendEvent({
+				type: MessageType.DoCopy,
+				selections: this.selection.map(r => [r.start, r.end]),
+				format: msg.format,
+			});
+		});
+
 		this.selectionChangeEmitter.addListener(() => this.publishSelections());
 		this.hoverChangeEmitter.addListener(() => {
 			// publishes the new hovered byte
