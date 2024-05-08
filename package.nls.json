@@ -13,7 +13,7 @@
 	"hexEditor.goToOffset": "Go To Offset",
 	"hexEditor.selectBetweenOffsets": "Select Between Offsets",
 	"hexEditor.switchEditMode": "Switch Edit Mode",
-	"hexEditor.copyOffsetAsDec": "Copy Offset as Dec",
+	"hexEditor.copyOffsetAsDec": "Copy Offset as Decimal",
 	"hexEditor.copyOffsetAsHex": "Copy Offset as Hex",
 	"dataInspectorView": "Data Inspector"
 }
