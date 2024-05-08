@@ -14,5 +14,7 @@
 	"hexEditor.selectBetweenOffsets": "Select Between Offsets",
 	"hexEditor.copyAs": "Copy As...",
 	"hexEditor.switchEditMode": "Switch Edit Mode",
+	"hexEditor.copyOffsetAsDec": "Copy Offset as Decimal",
+	"hexEditor.copyOffsetAsHex": "Copy Offset as Hex",
 	"dataInspectorView": "Data Inspector"
 }

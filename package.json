@@ -122,6 +122,16 @@
         "command": "hexEditor.switchEditMode",
         "category": "%name%",
         "title": "%hexEditor.switchEditMode%"
+      },
+      {
+        "command": "hexEditor.copyOffsetAsHex",
+        "category": "%name%",
+        "title": "%hexEditor.copyOffsetAsHex%"
+      },
+      {
+        "command": "hexEditor.copyOffsetAsDec",
+        "category": "%name%",
+        "title": "%hexEditor.copyOffsetAsDec%"
       }
     ],
     "viewsContainers": {
@@ -157,9 +167,21 @@
       ],
       "editor/title": [
         {
-          "when": "activeEditor && config.hexeditor.showOpenFileButton",
           "command": "hexEditor.openFile",
-          "group": "navigation@1"
+          "group": "navigation@1",
+          "when": "activeEditor && config.hexeditor.showOpenFileButton"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "hexEditor.copyOffsetAsDec",
+          "group": "9_cutcopypaste",
+          "when": "hexEditor:isActive"
+        },
+        {
+          "command": "hexEditor.copyOffsetAsHex",
+          "group": "9_cutcopypaste",
+          "when": "hexEditor:isActive"
         }
       ],
       "webview/context": [
