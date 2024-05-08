@@ -12,7 +12,7 @@
 	"hexEditor.openFile": "Open Active File in Hex Editor",
 	"hexEditor.goToOffset": "Go To Offset",
 	"hexEditor.selectBetweenOffsets": "Select Between Offsets",
-	"hexEditor.copyAs": "Copy As",
+	"hexEditor.copyAs": "Copy As...",
 	"hexEditor.switchEditMode": "Switch Edit Mode",
 	"dataInspectorView": "Data Inspector"
 }

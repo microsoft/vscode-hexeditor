@@ -9,7 +9,6 @@ import {
 	HexDocumentEditReference,
 } from "../shared/hexDocumentModel";
 import {
-	CopyFormat,
 	Endianness,
 	ExtensionHostMessageHandler,
 	FromWebviewMessage,
@@ -23,22 +22,13 @@ import {
 } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { ILocalizedStrings, placeholder1 } from "../shared/strings";
-import {
-	copyAsBase64,
-	copyAsC,
-	copyAsGo,
-	copyAsHex,
-	copyAsJSON,
-	copyAsJava,
-	copyAsLiteral,
-	copyAsText,
-} from "./copyAs";
+import { copyAsFormats } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
 import { disposeAll } from "./dispose";
 import { HexDocument } from "./hexDocument";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
-import { flattenBuffers, getCorrectArrayBuffer, randomString } from "./util";
+import { flattenBuffers, getBaseName, getCorrectArrayBuffer, randomString } from "./util";
 
 const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
@@ -374,27 +364,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 						.map(s => document.readBuffer(s[0], s[1] - s[0])),
 				);
 				const flatParts = flattenBuffers(parts);
-				const filenameWoutExt = ((path: string): string => {
-					const filename = path.split("/").pop()!;
-					return filename.substring(0, filename.lastIndexOf(".")) || filename;
-				})(document.uri.path);
-				const copyAsFormats: { [K in CopyFormat]: (buffer: Uint8Array) => void } = {
-					[CopyFormat.Hex]: copyAsHex,
-					[CopyFormat.Literal]: copyAsLiteral,
-					[CopyFormat.Utf8]: copyAsText,
-					[CopyFormat.C]: (buffer: Uint8Array) => {
-						copyAsC(buffer, filenameWoutExt);
-					},
-					[CopyFormat.Go]: (buffer: Uint8Array) => {
-						copyAsGo(buffer, filenameWoutExt);
-					},
-					[CopyFormat.Java]: (buffer: Uint8Array) => {
-						copyAsJava(buffer, filenameWoutExt);
-					},
-					[CopyFormat.JSON]: copyAsJSON,
-					[CopyFormat.Base64]: copyAsBase64,
-				};
-				copyAsFormats[message.format](flatParts);
+
+				const filenameWoutExt = getBaseName(document.uri.path);
+
+				copyAsFormats[message.format](flatParts, filenameWoutExt);
+
 				return;
 			}
 			case MessageType.RequestDeletes: {

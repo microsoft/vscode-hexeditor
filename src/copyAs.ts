@@ -6,6 +6,18 @@ interface QuickPickCopyFormat extends vscode.QuickPickItem {
 	label: CopyFormat;
 }
 
+export const copyAsFormats: { [K in CopyFormat]: (buffer: Uint8Array, filename: string) => void } =
+	{
+		[CopyFormat.Hex]: copyAsHex,
+		[CopyFormat.Literal]: copyAsLiteral,
+		[CopyFormat.Utf8]: copyAsText,
+		[CopyFormat.C]: copyAsC,
+		[CopyFormat.Go]: copyAsGo,
+		[CopyFormat.Java]: copyAsJava,
+		[CopyFormat.JSON]: copyAsJSON,
+		[CopyFormat.Base64]: copyAsBase64,
+	};
+
 export const copyAs = async (messaging: ExtensionHostMessageHandler): Promise<void> => {
 	const formats: QuickPickCopyFormat[] = [
 		{ label: CopyFormat.Hex },
