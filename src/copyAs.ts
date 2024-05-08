@@ -30,14 +30,14 @@ export function copyAsText(buffer: Uint8Array) {
 }
 
 export function copyAsHex(buffer: Uint8Array) {
-	vscode.env.clipboard.writeText(Buffer.from(buffer).toString("hex"));
+	const hexString = Array.from(buffer, b => b.toString(16).padStart(2, "0")).join("");
+	vscode.env.clipboard.writeText(hexString);
 }
 
 export function copyAsLiteral(buffer: Uint8Array) {
 	let encoded: string = "";
-	const digits = Buffer.from(buffer)
-		.toString("hex")
-		.match(/.{1,2}/g);
+	const hexString = Array.from(buffer, b => b.toString(16).padStart(2, "0")).join("");
+	const digits = hexString.match(/.{1,2}/g);
 	if (digits) {
 		encoded = "\\x" + digits.join("\\x");
 	}
@@ -59,7 +59,7 @@ export function copyAsC(buffer: Uint8Array, filename: string) {
 
 	content += "\n};\n";
 
-	if (process.platform === "win32") {
+	if (typeof process !== "undefined" && process.platform === "win32") {
 		content = content.replace(/\n/g, "\r\n");
 	}
 
@@ -81,7 +81,7 @@ export function copyAsGo(buffer: Uint8Array, filename: string) {
 
 	content += "\n}\n";
 
-	if (process.platform === "win32") {
+	if (typeof process !== "undefined" && process.platform === "win32") {
 		content = content.replace(/\n/g, "\r\n");
 	}
 
@@ -102,7 +102,7 @@ export function copyAsJava(buffer: Uint8Array, filename: string) {
 
 	content += "\n};\n";
 
-	if (process.platform === "win32") {
+	if (typeof process !== "undefined" && process.platform === "win32") {
 		content = content.replace(/\n/g, "\r\n");
 	}
 
