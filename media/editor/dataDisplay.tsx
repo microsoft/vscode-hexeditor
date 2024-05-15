@@ -3,6 +3,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
+import { HexEditorDecorationType } from "../../shared/decorators";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import {
 	CopyFormat,
@@ -430,7 +431,7 @@ const LoadingDataRows: React.FC<IDataPageProps> = props => (
 const DataPageContents: React.FC<IDataPageProps> = props => {
 	const pageSelector = select.editedDataPages(props.pageNo);
 	const [data] = useLastAsyncRecoilValue(pageSelector);
-
+	const [decorators] = useLastAsyncRecoilValue(select.decorators);
 	return (
 		<>
 			{generateRows(props, (offset, isRowWithInsertDataCell) => (
@@ -443,6 +444,10 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
 					width={props.columnWidth}
 					showDecodedText={props.showDecodedText}
 					isRowWithInsertDataCell={isRowWithInsertDataCell}
+					decorators={decorators.slice(
+						offset - props.pageStart,
+						offset - props.pageStart + props.columnWidth,
+					)}
 				/>
 			))}
 		</>
@@ -688,7 +693,8 @@ const DataRowContents: React.FC<{
 	showDecodedText: boolean;
 	rawBytes: Uint8Array;
 	isRowWithInsertDataCell: boolean;
-}> = ({ offset, width, showDecodedText, rawBytes, isRowWithInsertDataCell }) => {
+	decorators: HexEditorDecorationType[];
+}> = ({ offset, width, showDecodedText, rawBytes, isRowWithInsertDataCell, decorators }) => {
 	let memoValue = "";
 	const ctx = useDisplayContext();
 	for (const byte of rawBytes) {
@@ -721,9 +727,19 @@ const DataRowContents: React.FC<{
 				}
 				continue;
 			}
-
 			bytes.push(
-				<DataCell key={i} offset={boffset} isChar={false} isAppend={false} value={value}>
+				<DataCell
+					key={i}
+					className={clsx(
+						HexEditorDecorationType.DiffAdded === decorators[i] && style.diffAdded,
+						HexEditorDecorationType.DiffRemoved === decorators[i] && style.diffRemoved,
+						HexEditorDecorationType.DiffReplaced === decorators[i] && style.diffReplaced,
+					)}
+					offset={boffset}
+					isChar={false}
+					isAppend={false}
+					value={value}
+				>
 					{value.toString(16).padStart(2, "0").toUpperCase()}
 				</DataCell>,
 			);
@@ -746,7 +762,7 @@ const DataRowContents: React.FC<{
 		}
 
 		return { bytes, chars };
-	}, [memoValue, showDecodedText, isRowWithInsertDataCell]);
+	}, [memoValue, showDecodedText, isRowWithInsertDataCell, decorators]);
 
 	return (
 		<>

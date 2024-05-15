@@ -90,7 +90,7 @@ export class Range {
 	 * Returns whether this range overlaps the other one.
 	 */
 	public overlaps(other: Range): boolean {
-		return other.end > this.start && other.start < this.end;
+		return other.end >= this.start && other.start <= this.end;
 	}
 	/**
 	 * Returns one or more ranges representing ranges covered by exactly one of

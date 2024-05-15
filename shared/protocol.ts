@@ -9,6 +9,7 @@ export const enum MessageType {
 	//#region to webview
 	ReadyResponse,
 	ReadRangeResponse,
+	ReadDecoratorsResponse,
 	SearchProgress,
 	SetEdits,
 	SetEditMode,
@@ -28,6 +29,7 @@ export const enum MessageType {
 	ReadyRequest,
 	OpenDocument,
 	ReadRangeRequest,
+	ReadDecoratorsRequest,
 	MakeEdits,
 	RequestDeletes,
 	SearchRequest,
@@ -90,6 +92,11 @@ export interface SetEditModeMessage {
 export interface ReadRangeResponseMessage {
 	type: MessageType.ReadRangeResponse;
 	data: ArrayBuffer;
+}
+
+export interface ReadDecoratorsResponseMessage {
+	type: MessageType.ReadDecoratorsResponse;
+	data: any;
 }
 
 export interface SearchResult {
@@ -195,6 +202,7 @@ export interface TriggerCopyAsMessage {
 export type ToWebviewMessage =
 	| ReadyResponseMessage
 	| ReadRangeResponseMessage
+	| ReadDecoratorsResponseMessage
 	| SearchProgressMessage
 	| SavedMessage
 	| ReloadMessage
@@ -279,9 +287,14 @@ export interface RequestDeletesMessage {
 	deletes: { start: number; end: number }[];
 }
 
+export interface ReadDecoratorsRequestMessage {
+	type: MessageType.ReadDecoratorsRequest
+}
+
 export type FromWebviewMessage =
 	| OpenDocumentMessage
 	| ReadRangeMessage
+	| ReadDecoratorsRequestMessage
 	| MakeEditsMessage
 	| SearchRequestMessage
 	| CancelSearchMessage

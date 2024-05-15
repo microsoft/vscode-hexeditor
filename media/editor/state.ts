@@ -3,12 +3,14 @@
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
+import { HexEditorDecorationMap, HexEditorDecorationType } from "../../shared/decorators";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import {
 	FromWebviewMessage,
 	InspectorLocation,
 	MessageHandler,
 	MessageType,
+	ReadDecoratorsResponseMessage,
 	ReadRangeResponseMessage,
 	ReadyResponseMessage,
 	SearchResultsWithProgress,
@@ -369,6 +371,20 @@ export const unsavedEditTimeline = selector({
 	key: "unsavedEditTimeline",
 	get: ({ get }) => {
 		return buildEditTimeline(get(edits).slice(get(unsavedEditIndex)));
+	},
+});
+
+
+export const decorators = selector({
+	key: "decorators",
+	get: async () => {
+
+		const dec = new HexEditorDecorationMap();
+		const response = await messageHandler.sendRequest<ReadDecoratorsResponseMessage>({
+			type: MessageType.ReadDecoratorsRequest
+		});
+		dec.add(HexEditorDecorationType.DiffAdded, [new Range(0, 10), new Range(10, 15)]);
+		return dec;
 	},
 });
 
