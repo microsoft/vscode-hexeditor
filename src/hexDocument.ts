@@ -16,6 +16,7 @@ import { Backup } from "./backup";
 import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
 import { SearchProvider } from "./searchProvider";
+import { HexEditorDecorationMap } from "../shared/decorators";
 
 export interface ISelectionState {
 	/** Number of selected bytes */
@@ -102,12 +103,17 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		return vscode.Uri.parse(this.model.uri);
 	}
 
+	/**
+	 * Returns the decorators
+	 */
 	public async readDecorators() {
 		if(this.diffModel) {
-			return await this.diffModel.readDecorators();
+			return await this.diffModel.readDecorators(this);
 		}
-		return true;
+		const t = new HexEditorDecorationMap();
+		return t;
 	}
+
 	/**
 	 * Reads data including unsaved edits from the model, returning an iterable
 	 * of Uint8Array chunks.

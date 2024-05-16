@@ -7,7 +7,11 @@ export const enum HexEditorDecorationType {
 }
 
 export class HexEditorDecorationMap {
-	private readonly map: Map<HexEditorDecorationType, Range[]> = new Map();
+	private readonly map: Map<HexEditorDecorationType, Range[]>;
+
+	constructor() {
+		this.map = new Map();
+	}
 
 	public add(type: HexEditorDecorationType, range: Range[]) {
 		if(this.map.has(type)) {
@@ -17,17 +21,26 @@ export class HexEditorDecorationMap {
 		}
 	}
 
-	// Returns an array of each decoration type
+	public getEntries() {
+		return this.map.entries();
+	}
+	
+	// Returns an array the decoration type per byte
 	public slice(begin: number, end: number) {
 		const rowRange = new Range(begin, end);
 		const decorationPerByte: HexEditorDecorationType[] = [];
 		for(let i = rowRange.start; i < rowRange.end; i++) {
 			for(const [decorationType, ranges] of this.map.entries()) {
+				let found = false;
 				for(const range of ranges) {
 					if(range.includes(i)) {
 						decorationPerByte.push(decorationType);
+						found = true;
 						break;
 					}
+				}
+				if(!found) {
+					decorationPerByte.push(HexEditorDecorationType.None);
 				}
 			}
 		}

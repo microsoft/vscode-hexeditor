@@ -431,7 +431,7 @@ const LoadingDataRows: React.FC<IDataPageProps> = props => (
 const DataPageContents: React.FC<IDataPageProps> = props => {
 	const pageSelector = select.editedDataPages(props.pageNo);
 	const [data] = useLastAsyncRecoilValue(pageSelector);
-	const [decorators] = useLastAsyncRecoilValue(select.decorators);
+	const decorators = useRecoilValue(select.decorators);
 	return (
 		<>
 			{generateRows(props, (offset, isRowWithInsertDataCell) => (

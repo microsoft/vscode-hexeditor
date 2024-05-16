@@ -20,7 +20,7 @@ import {
 	PasteMode,
 	ToWebviewMessage,
 } from "../shared/protocol";
-import { deserializeEdits, serializeEdits } from "../shared/serialization";
+import { deserializeEdits, serializeDecorators, serializeEdits } from "../shared/serialization";
 import { ILocalizedStrings, placeholder1 } from "../shared/strings";
 import { copyAsFormats } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
@@ -347,7 +347,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
 			case MessageType.ReadDecoratorsRequest:
 				const decorators = await document.readDecorators();
-				return { type: MessageType.ReadDecoratorsResponse, data: true };
+				return { type: MessageType.ReadDecoratorsResponse, data: serializeDecorators(decorators) };
 			case MessageType.MakeEdits:
 				this.publishEdit(messaging, document, document.makeEdits(deserializeEdits(message.edits)));
 				return;

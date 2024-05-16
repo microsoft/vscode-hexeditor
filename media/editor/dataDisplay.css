@@ -135,3 +135,12 @@
 .diff-added {
 	background-color: green;
 }
+
+.diff-removed {
+	background-color: red;
+}
+
+/* background-color for testing*/
+.diff-none {
+	background-color: chocolate;
+}

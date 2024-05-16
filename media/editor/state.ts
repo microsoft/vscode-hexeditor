@@ -3,7 +3,6 @@
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
-import { HexEditorDecorationMap, HexEditorDecorationType } from "../../shared/decorators";
 import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
 import {
 	FromWebviewMessage,
@@ -16,7 +15,7 @@ import {
 	SearchResultsWithProgress,
 	ToWebviewMessage,
 } from "../../shared/protocol";
-import { deserializeEdits, serializeEdits } from "../../shared/serialization";
+import { deserializeDecorators, deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { Range } from "../../shared/util/range";
 import { clamp } from "./util";
 
@@ -374,17 +373,14 @@ export const unsavedEditTimeline = selector({
 	},
 });
 
-
 export const decorators = selector({
 	key: "decorators",
 	get: async () => {
-
-		const dec = new HexEditorDecorationMap();
-		const response = await messageHandler.sendRequest<ReadDecoratorsResponseMessage>({
-			type: MessageType.ReadDecoratorsRequest
+		const { data } = await messageHandler.sendRequest<ReadDecoratorsResponseMessage>({
+			type: MessageType.ReadDecoratorsRequest,
 		});
-		dec.add(HexEditorDecorationType.DiffAdded, [new Range(0, 10), new Range(10, 15)]);
-		return dec;
+		const decoratorMap = deserializeDecorators(data)
+		return decoratorMap;
 	},
 });
 

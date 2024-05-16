@@ -2,6 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
+import { HexEditorDecorationMap } from "./decorators";
 import { HexDocumentEditOp } from "./hexDocumentModel";
 import { ISerializedEdits } from "./serialization";
 

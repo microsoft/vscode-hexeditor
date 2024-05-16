@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
+import { HexEditorDecorationMap, HexEditorDecorationType } from "./decorators";
 import { HexDocumentModel } from "./hexDocumentModel";
+import { Range } from "./util/range";
+import { HexDocument } from "../src/hexDocument";
 
 export type HexDiffModelBuilder = typeof HexDiffModel.Builder.prototype;
 
@@ -9,7 +12,59 @@ export class HexDiffModel {
 		private readonly modifiedModel: HexDocumentModel,
 	) {}
 
-	public async readDecorators() {}
+	// Provisional algorithm to test and finalize the decorators.
+	public async readDecorators(doc: HexDocument): Promise<HexEditorDecorationMap> {
+		const originalDecoraMap = new HexEditorDecorationMap();
+		const modifiedDecorMap = new HexEditorDecorationMap();
+
+		const oChunks = this.originalModel.readWithUnsavedEdits();
+		const mChunks = this.modifiedModel.readWithUnsavedEdits();
+		const oSize = await this.originalModel.size();
+		const mSize = await this.modifiedModel.size();
+		if (oSize === undefined || mSize === undefined) {
+			console.error("Files have infinite size");
+			return new HexEditorDecorationMap();
+		}
+		const { highestSize, highestChunks } =
+			oSize > mSize
+				? { highestSize: oSize, highestChunks: oChunks }
+				: { highestSize: mSize, highestChunks: mChunks };
+
+		const lowestChunks = highestChunks === oChunks ? mChunks : oChunks;
+		let offset = 0;
+		let range: null | Range = null;
+		for await (const hChunk of highestChunks) {
+			const lChunk = await lowestChunks.next();
+			let i = 0;
+			for (; i < lChunk.value.length; i++) {
+				if (hChunk[i] !== lChunk.value[i]) {
+					if (range) {
+						range = range.expandToContain(offset + i);
+					} else {
+						range = new Range(offset + i, offset + i + 1);
+					}
+				} else {
+					if (range) {
+						originalDecoraMap.add(HexEditorDecorationType.DiffRemoved, [range]);
+						modifiedDecorMap.add(HexEditorDecorationType.DiffAdded, [range]);
+						range = null;
+					}
+				}
+			}
+			if (i < hChunk.length) {
+				if (range) {
+					originalDecoraMap.add(HexEditorDecorationType.DiffRemoved, [range]);
+					modifiedDecorMap.add(HexEditorDecorationType.DiffAdded, [range]);
+				}
+				const tmpRange = new Range(offset + i + 1, highestSize);
+				originalDecoraMap.add(HexEditorDecorationType.DiffRemoved, [tmpRange]);
+				modifiedDecorMap.add(HexEditorDecorationType.DiffAdded, [tmpRange]);
+			}
+			offset += hChunk.length;
+		}
+		return doc.uri.toString() === this.originalModel.uri.toString() ? originalDecoraMap : modifiedDecorMap;
+	}
+
 	/**
 	 * Class to coordinate the creation of HexDiffModel
 	 * as both documents have to be created first by VSCode
@@ -56,7 +111,10 @@ export class HexDiffModel {
 		}
 
 		public async build() {
-			const [originalModel, modifiedModel] = await Promise.all([this.originalModel, this.modifiedModel]);
+			const [originalModel, modifiedModel] = await Promise.all([
+				this.originalModel,
+				this.modifiedModel,
+			]);
 			if (this.onBuild) {
 				this.onBuild();
 			}
