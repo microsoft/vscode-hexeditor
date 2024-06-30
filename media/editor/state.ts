@@ -65,7 +65,21 @@ window.addEventListener("message", ev => messageHandler.handleMessage(ev.data));
 
 const readyQuery = selector({
 	key: "ready",
-	get: () => messageHandler.sendRequest<ReadyResponseMessage>({ type: MessageType.ReadyRequest }),
+	get: async () => {
+		const resp = await messageHandler.sendRequest<ReadyResponseMessage>({
+			type: MessageType.ReadyRequest,
+		});
+
+		// Due to the message exchange, decorator.range looses their class methods
+		// so re-initialize.
+		resp.decorators = resp.decorators.map(dec => {
+			return {
+				type: dec.type,
+				range: new Range(dec.range.start, dec.range.end),
+			};
+		});
+		return resp;
+	},
 });
 
 /**
@@ -412,6 +426,19 @@ export const editedDataPages = selectorFamily({
 		eviction: "lru",
 		maxSize: 1024,
 	},
+});
+
+export const decoratorsPage = selectorFamily({
+	key: "decorators",
+	get:
+		(pageNumber: number) =>
+		async ({ get }) => {
+			const allDecorators = get(readyQuery).decorators;
+			const pageSize = get(dataPageSize);
+			const pageRange = new Range(pageSize * pageNumber, pageSize);
+			const pageDecorators = allDecorators.filter(decorator => decorator.range.overlaps(pageRange));
+			return pageDecorators;
+		},
 });
 
 const rawDataPages = selectorFamily({

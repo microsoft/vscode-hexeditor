@@ -2,6 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
+import { HexDecorator } from "./decorators";
 import { HexDocumentEditOp } from "./hexDocumentModel";
 import { ISerializedEdits } from "./serialization";
 
@@ -80,6 +81,7 @@ export interface ReadyResponseMessage {
 	isReadonly: boolean;
 	isLargeFile: boolean;
 	editMode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace;
+	decorators: HexDecorator[];
 }
 
 export interface SetEditModeMessage {

@@ -334,6 +334,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 					isLargeFile: document.isLargeFile,
 					isReadonly: document.isReadonly,
 					editMode: document.editMode,
+					decorators: await document.readDecorators(),
 				};
 			case MessageType.SetSelectedCount:
 				document.selectionState = message;

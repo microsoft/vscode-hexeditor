@@ -3,6 +3,7 @@
 
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
+import { HexDecorator } from "../shared/decorators";
 import { FileAccessor } from "../shared/fileAccessor";
 import {
 	HexDocumentEdit,
@@ -95,7 +96,15 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public get uri(): vscode.Uri {
 		return vscode.Uri.parse(this.model.uri);
 	}
-	
+
+	/**
+	 * Reads decorators from models, returning an array of all
+	 * decorators.
+	 */
+	public async readDecorators(): Promise<HexDecorator[]> {
+		return [];
+	}
+
 	/**
 	 * Reads data including unsaved edits from the model, returning an iterable
 	 * of Uint8Array chunks.

@@ -3,6 +3,7 @@
 
 // Assorted helper functions
 
+import { HexDecoratorType } from "../../shared/decorators";
 import { Range } from "../../shared/util/range";
 import _style from "./util.css";
 
@@ -180,3 +181,6 @@ export const getScrollDimensions = (() => {
 		return value;
 	};
 })();
+
+export const HexDecoratorStyles: { [key in HexDecoratorType]: string } = {
+};
