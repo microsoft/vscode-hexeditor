@@ -182,9 +182,7 @@
           "command": "hexEditor.copyOffsetAsHex",
           "group": "9_cutcopypaste",
           "when": "hexEditor:isActive"
-        }
-      ],
-      "webview/context": [
+        },
         {
           "when": "webviewId == 'hexEditor.hexedit'",
           "command": "hexEditor.copyAs",
