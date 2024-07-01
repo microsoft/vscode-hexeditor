@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
+import { HexDiffModelBuilder } from "../shared/hexDiffModel";
 import { ExtensionHostMessageHandler } from "../shared/protocol";
 import { Disposable } from "./dispose";
 import { HexDocument } from "./hexDocument";
@@ -10,6 +11,7 @@ const EMPTY: never[] = [];
 
 export class HexEditorRegistry extends Disposable {
 	private readonly docs = new Map<HexDocument, Set<ExtensionHostMessageHandler>>();
+	private readonly diffsBuilder = new Map<string, HexDiffModelBuilder>();
 	private onChangeEmitter = new vscode.EventEmitter<HexDocument | undefined>();
 	private _activeDocument?: HexDocument;
 
@@ -66,6 +68,20 @@ export class HexEditorRegistry extends Disposable {
 				}
 			},
 		};
+	}
+
+	/** adds a diff model */
+	public addDiff(diffModelBuilder: HexDiffModelBuilder) {
+		this.diffsBuilder.set(diffModelBuilder.modifiedUri.toString(), diffModelBuilder);
+		this.diffsBuilder.set(diffModelBuilder.originalUri.toString(), diffModelBuilder);
+		diffModelBuilder.onBuild = () => {
+			this.diffsBuilder.delete(diffModelBuilder.modifiedUri.toString());
+			this.diffsBuilder.delete(diffModelBuilder.originalUri.toString());
+		};
+	}
+	/** returns a diff model using the file uri */
+	public getDiff(uri: vscode.Uri): HexDiffModelBuilder | undefined {
+		return this.diffsBuilder.get(uri.toString());
 	}
 
 	private onChangedTabs() {

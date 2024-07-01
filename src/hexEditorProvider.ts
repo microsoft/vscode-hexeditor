@@ -73,6 +73,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			uri,
 			openContext,
 			this._telemetryReporter,
+			this._registry.getDiff(uri)
 		);
 		const disposables: vscode.Disposable[] = [];
 

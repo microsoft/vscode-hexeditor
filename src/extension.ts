@@ -120,7 +120,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (!(leftFile instanceof vscode.Uri && rightFile instanceof vscode.Uri)) {
 				return;
 			}
-			openCompareSelected(leftFile, rightFile);
+			openCompareSelected(leftFile, rightFile, registry);
 		},
 	);
 

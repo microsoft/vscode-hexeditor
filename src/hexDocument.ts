@@ -5,6 +5,7 @@ import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
 import { HexDecorator } from "../shared/decorators";
 import { FileAccessor } from "../shared/fileAccessor";
+import { HexDiffModel, HexDiffModelBuilder } from "../shared/hexDiffModel";
 import {
 	HexDocumentEdit,
 	HexDocumentEditOp,
@@ -28,6 +29,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		uri: vscode.Uri,
 		{ backupId, untitledDocumentData }: vscode.CustomDocumentOpenContext,
 		telemetryReporter: TelemetryReporter,
+		diffModelBuilder: HexDiffModelBuilder | undefined,
 	): Promise<{ document: HexDocument; accessor: FileAccessor }> {
 		const accessor = await accessFile(uri, untitledDocumentData);
 		const model = new HexDocumentModel({
@@ -56,7 +58,10 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			(vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
 		const isLargeFile =
 			!backupId && !accessor.supportsIncremetalAccess && (fileSize ?? 0) > maxFileSize;
-		return { document: new HexDocument(model, isLargeFile, baseAddress), accessor };
+
+		const diffModel = diffModelBuilder ? await diffModelBuilder.setModel(model).build() : undefined;
+
+		return { document: new HexDocument(model, isLargeFile, baseAddress, diffModel), accessor };
 	}
 
 	// Last save time
@@ -74,6 +79,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		private model: HexDocumentModel,
 		public readonly isLargeFile: boolean,
 		public readonly baseAddress: number,
+		private diffModel?: HexDiffModel,
 	) {
 		super();
 	}
@@ -102,6 +108,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 * decorators.
 	 */
 	public async readDecorators(): Promise<HexDecorator[]> {
+		if (this.diffModel) {
+			await this.diffModel.computeDecorators();
+		}
 		return [];
 	}
 
