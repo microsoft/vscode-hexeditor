@@ -16,5 +16,6 @@
 	"hexEditor.switchEditMode": "Switch Edit Mode",
 	"hexEditor.copyOffsetAsDec": "Copy Offset as Decimal",
 	"hexEditor.copyOffsetAsHex": "Copy Offset as Hex",
+	"hexEditor.compareSelected": "Compare Selected in HexEditor (Experimental)",
 	"dataInspectorView": "Data Inspector"
 }
