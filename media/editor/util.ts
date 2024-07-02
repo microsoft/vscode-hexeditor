@@ -183,4 +183,6 @@ export const getScrollDimensions = (() => {
 })();
 
 export const HexDecoratorStyles: { [key in HexDecoratorType]: string } = {
+	[HexDecoratorType.Insert]: style.diffInsert,
+	[HexDecoratorType.Delete]: style.diffDelete,
 };

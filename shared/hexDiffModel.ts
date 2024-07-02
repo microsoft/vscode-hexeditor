@@ -1,17 +1,31 @@
+import { bulkhead } from "cockatiel";
 import * as vscode from "vscode";
 import { HexDecorator } from "./decorators";
 import { HexDocumentModel } from "./hexDocumentModel";
+import { MyersDiff } from "./util/myers";
 
 export type HexDiffModelBuilder = typeof HexDiffModel.Builder.prototype;
 
 export class HexDiffModel {
+	/** Guard to make sure only one computation operation happens */
+	private readonly saveGuard = bulkhead(1, Infinity);
+	private decorators?: { original: HexDecorator[]; modified: HexDecorator[] };
+
 	constructor(
 		private readonly originalModel: HexDocumentModel,
 		private readonly modifiedModel: HexDocumentModel,
 	) {}
 
-	public async computeDecorators(): Promise<HexDecorator[]> {
-		return [];
+	public async computeDecorators(uri: vscode.Uri): Promise<HexDecorator[]> {
+		return await this.saveGuard.execute(async () => {
+			if (this.decorators === undefined) {
+				const editScript = await MyersDiff.lcs(this.originalModel, this.modifiedModel);
+				this.decorators = MyersDiff.toDecorator(editScript);
+			}
+			return uri.toString() === this.originalModel.uri.toString()
+				? this.decorators.original
+				: this.decorators.modified;
+		});
 	}
 
 	/**

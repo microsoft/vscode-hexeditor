@@ -7,3 +7,11 @@
 }
 
 /* Decorators */
+
+.diff-insert {
+	background-color: green;
+}
+
+.diff-delete {
+	background-color: red;
+}
