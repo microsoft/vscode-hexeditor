@@ -4,16 +4,19 @@
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
 import { FileAccessor } from "../shared/fileAccessor";
+import { HexDiffModel, HexDiffModelBuilder } from "../shared/hexDiffModel";
 import {
 	HexDocumentEdit,
 	HexDocumentEditOp,
 	HexDocumentEditReference,
 	HexDocumentModel,
 } from "../shared/hexDocumentModel";
+import { parseQuery } from "../shared/util/uri";
 import { Backup } from "./backup";
 import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
 import { SearchProvider } from "./searchProvider";
+import { HexEditorDecorationMap } from "../shared/decorators";
 
 export interface ISelectionState {
 	/** Number of selected bytes */
@@ -27,6 +30,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		uri: vscode.Uri,
 		{ backupId, untitledDocumentData }: vscode.CustomDocumentOpenContext,
 		telemetryReporter: TelemetryReporter,
+		diffModelBuilder?: HexDiffModelBuilder,
 	): Promise<{ document: HexDocument; accessor: FileAccessor }> {
 		const accessor = await accessFile(uri, untitledDocumentData);
 		const model = new HexDocumentModel({
@@ -37,12 +41,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				? { unsaved: await new Backup(vscode.Uri.parse(backupId)).read(), saved: [] }
 				: undefined,
 		});
-
-		const queries = HexDocument.parseQuery(uri.query);
-		const baseAddress: number = queries["baseAddress"]
-			? HexDocument.parseHexOrDecInt(queries["baseAddress"])
-			: 0;
-
+		const queries = parseQuery(uri.query);
 		const fileSize = await accessor.getSize();
 		/* __GDPR__
 			"fileOpen" : {
@@ -55,7 +54,14 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 			(vscode.workspace.getConfiguration().get("hexeditor.maxFileSize") as number) * 1000000;
 		const isLargeFile =
 			!backupId && !accessor.supportsIncremetalAccess && (fileSize ?? 0) > maxFileSize;
-		return { document: new HexDocument(model, isLargeFile, baseAddress), accessor };
+		const baseAddress: number = queries.baseAddress
+			? HexDocument.parseHexOrDecInt(queries.baseAddress)
+			: 0;
+		// Waits until the other document has been reached to this point.
+		const diffModel = diffModelBuilder
+			? await diffModelBuilder.setModel(model).build()
+			: undefined;
+		return { document: new HexDocument(model, isLargeFile, baseAddress, diffModel), accessor };
 	}
 
 	// Last save time
@@ -73,6 +79,7 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		private model: HexDocumentModel,
 		public readonly isLargeFile: boolean,
 		public readonly baseAddress: number,
+		private diffModel?: HexDiffModel,
 	) {
 		super();
 	}
@@ -95,7 +102,18 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	public get uri(): vscode.Uri {
 		return vscode.Uri.parse(this.model.uri);
 	}
-	
+
+	/**
+	 * Returns the decorators
+	 */
+	public async readDecorators() {
+		if(this.diffModel) {
+			return await this.diffModel.readDecorators(this);
+		}
+		const t = new HexEditorDecorationMap();
+		return t;
+	}
+
 	/**
 	 * Reads data including unsaved edits from the model, returning an iterable
 	 * of Uint8Array chunks.
@@ -334,24 +352,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				}
 			},
 		};
-	}
-
-	/**
-	 * Utility function to convert a Uri query string into a map
-	 */
-	private static parseQuery(queryString: string): { [key: string]: string } {
-		const queries: { [key: string]: string } = {};
-		if (queryString) {
-			const pairs = (queryString[0] === "?" ? queryString.substr(1) : queryString).split("&");
-			for (const q of pairs) {
-				const pair = q.split("=");
-				const name = pair.shift();
-				if (name) {
-					queries[name] = pair.join("=");
-				}
-			}
-		}
-		return queries;
 	}
 
 	/**

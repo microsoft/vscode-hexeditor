@@ -7,12 +7,14 @@ import { HexDocumentEditOp } from "../shared/hexDocumentModel";
 import { copyAs } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
 import { showGoToOffset } from "./goToOffset";
+import { HexDiffFSProvider } from "./hexDiffFS";
 import { HexEditorProvider } from "./hexEditorProvider";
 import { HexEditorRegistry } from "./hexEditorRegistry";
 import { showSelectBetweenOffsets } from "./selectBetweenOffsets";
 import StatusEditMode from "./statusEditMode";
 import StatusFocus from "./statusFocus";
 import StatusHoverAndSelection from "./statusHoverAndSelection";
+import { showCompareSelected } from "./compareSelected";
 
 function readConfigFromPackageJson(extension: vscode.Extension<any>): {
 	extId: string;
@@ -64,6 +66,7 @@ export function activate(context: vscode.ExtensionContext): void {
 			showGoToOffset(first.value);
 		}
 	});
+
 	const selectBetweenOffsetsCommand = vscode.commands.registerCommand(
 		"hexEditor.selectBetweenOffsets",
 		() => {
@@ -109,6 +112,19 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 	});
 
+	const compareSelectedCommand = vscode.commands.registerCommand(
+		"hexEditor.compareSelected",
+		async (...args) => {
+			if (args.length !== 2 && !(args[1] instanceof Array)) {
+				return;
+			}
+			const [leftFile, rightFile] = args[1];
+			if (!(leftFile instanceof vscode.Uri && rightFile instanceof vscode.Uri)) {
+				return;
+			}
+			showCompareSelected(leftFile, rightFile, registry);
+		},
+	);
 	context.subscriptions.push(new StatusEditMode(registry));
 	context.subscriptions.push(new StatusFocus(registry));
 	context.subscriptions.push(new StatusHoverAndSelection(registry));
@@ -119,6 +135,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
 	context.subscriptions.push(copyOffsetAsDec, copyOffsetAsHex);
+	context.subscriptions.push(compareSelectedCommand);
+	context.subscriptions.push(vscode.workspace.registerFileSystemProvider('hexdiff', new HexDiffFSProvider, { isCaseSensitive: true }));
 	context.subscriptions.push(
 		HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, registry),
 	);

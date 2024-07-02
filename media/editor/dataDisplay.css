@@ -129,3 +129,18 @@
 .data-cell-char {
 	width: calc(var(--cell-size) * 0.7) !important;
 }
+
+/* Decorators */
+
+.diff-added {
+	background-color: green;
+}
+
+.diff-removed {
+	background-color: red;
+}
+
+/* background-color for testing*/
+.diff-none {
+	background-color: chocolate;
+}

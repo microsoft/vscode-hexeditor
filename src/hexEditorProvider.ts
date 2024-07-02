@@ -20,7 +20,7 @@ import {
 	PasteMode,
 	ToWebviewMessage,
 } from "../shared/protocol";
-import { deserializeEdits, serializeEdits } from "../shared/serialization";
+import { deserializeEdits, serializeDecorators, serializeEdits } from "../shared/serialization";
 import { ILocalizedStrings, placeholder1 } from "../shared/strings";
 import { copyAsFormats } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
@@ -73,6 +73,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			uri,
 			openContext,
 			this._telemetryReporter,
+			this._registry.getDiffBuilder(uri),
 		);
 		const disposables: vscode.Disposable[] = [];
 
@@ -151,7 +152,7 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		);
 
 		// Add the webview to our internal set of active webviews
-		const handle = this._registry.add(document, messageHandler);
+		const handle = this._registry.addDocument(document, messageHandler);
 		webviewPanel.onDidDispose(() => handle.dispose());
 
 		// Setup initial content for the webview
@@ -344,6 +345,9 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.ReadRangeRequest:
 				const data = await document.readBuffer(message.offset, message.bytes);
 				return { type: MessageType.ReadRangeResponse, data: getCorrectArrayBuffer(data) };
+			case MessageType.ReadDecoratorsRequest:
+				const decorators = await document.readDecorators();
+				return { type: MessageType.ReadDecoratorsResponse, data: serializeDecorators(decorators) };
 			case MessageType.MakeEdits:
 				this.publishEdit(messaging, document, document.makeEdits(deserializeEdits(message.edits)));
 				return;

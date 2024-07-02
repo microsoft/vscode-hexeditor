@@ -9,12 +9,13 @@ import {
 	InspectorLocation,
 	MessageHandler,
 	MessageType,
+	ReadDecoratorsResponseMessage,
 	ReadRangeResponseMessage,
 	ReadyResponseMessage,
 	SearchResultsWithProgress,
 	ToWebviewMessage,
 } from "../../shared/protocol";
-import { deserializeEdits, serializeEdits } from "../../shared/serialization";
+import { deserializeDecorators, deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { Range } from "../../shared/util/range";
 import { clamp } from "./util";
 
@@ -369,6 +370,17 @@ export const unsavedEditTimeline = selector({
 	key: "unsavedEditTimeline",
 	get: ({ get }) => {
 		return buildEditTimeline(get(edits).slice(get(unsavedEditIndex)));
+	},
+});
+
+export const decorators = selector({
+	key: "decorators",
+	get: async () => {
+		const { data } = await messageHandler.sendRequest<ReadDecoratorsResponseMessage>({
+			type: MessageType.ReadDecoratorsRequest,
+		});
+		const decoratorMap = deserializeDecorators(data)
+		return decoratorMap;
 	},
 });
 

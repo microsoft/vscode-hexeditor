@@ -84,6 +84,11 @@
         }
       }
     ],
+    "configurationDefaults": {
+      "workbench.editorAssociations": {
+        "{hexdiff}:/**/*.*": "hexEditor.hexedit"
+      }
+    },
     "customEditors": [
       {
         "viewType": "hexEditor.hexedit",
@@ -132,6 +137,11 @@
         "command": "hexEditor.copyOffsetAsDec",
         "category": "%name%",
         "title": "%hexEditor.copyOffsetAsDec%"
+      },
+      {
+        "command": "hexEditor.compareSelected",
+        "category": "%name%",
+        "title": "%hexEditor.compareSelected%"
       }
     ],
     "viewsContainers": {
@@ -163,6 +173,10 @@
         {
           "command": "hexEditor.switchEditMode",
           "when": "hexEditor:isActive"
+        },
+        {
+          "command": "hexEditor.compareSelected",
+          "when": "false"
         }
       ],
       "editor/title": [
@@ -187,6 +201,13 @@
           "when": "webviewId == 'hexEditor.hexedit'",
           "command": "hexEditor.copyAs",
           "group": "9_cutcopypaste"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "hexEditor.compareSelected",
+          "group": "3_compare",
+          "when": "listDoubleSelection"
         }
       ]
     },

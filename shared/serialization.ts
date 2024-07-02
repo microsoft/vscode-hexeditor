@@ -1,6 +1,7 @@
+import { HexEditorDecorationMap, HexEditorDecorationType } from "./decorators";
 import { HexDocumentEdit, HexDocumentEditOp } from "./hexDocumentModel";
+import { Range } from "./util/range";
 import { Uint8ArrayMap } from "./util/uint8ArrayMap";
-
 export interface ISerializedEdits {
 	edits: readonly unknown[];
 	data: Uint8Array;
@@ -64,3 +65,23 @@ export const deserializeEdits = ({ edits, data }: ISerializedEdits): HexDocument
 		}
 	});
 };
+
+export type SerializedDecorators = {
+	[key in HexEditorDecorationType]? : [number, number][];
+}
+
+export const serializeDecorators = (decoratorMap: HexEditorDecorationMap): SerializedDecorators => {
+	const serialized: SerializedDecorators = {}
+	for(const [decoratorType, ranges] of decoratorMap.getEntries()) {
+		serialized[decoratorType] = ranges.map((r) => [r.start, r.end]);
+	}
+	return serialized;
+}
+
+export const deserializeDecorators = (serializedData: SerializedDecorators): HexEditorDecorationMap => {
+	const decorationMap = new HexEditorDecorationMap();
+	for(const [decoratorType, ranges] of Object.entries(serializedData)) {
+		decorationMap.add(parseInt(decoratorType) as HexEditorDecorationType, ranges.map(([start, end]) => new Range(start, end)));
+	}
+	return decorationMap;
+}
