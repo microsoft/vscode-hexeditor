@@ -134,10 +134,10 @@ export class MyersDiff {
 					range: new Range(diffType.atPositionOriginal, diffType.atPositionOriginal + 1),
 				});
 			} else {
-				//out.modified.push({
-				//	type: HexDecoratorType.Insert,
-				//	range: new Range(diffType.atPositionOriginal, diffType.atPositionOriginal + 1),
-				//});
+				out.original.push({
+					type: HexDecoratorType.Empty,
+					range: new Range(diffType.atPositionOriginal, diffType.atPositionOriginal + 1),
+				});
 				out.modified.push({
 					type: HexDecoratorType.Insert,
 					range: new Range(diffType.valuePositionModified, diffType.valuePositionModified + 1),

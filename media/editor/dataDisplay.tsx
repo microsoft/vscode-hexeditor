@@ -430,9 +430,9 @@ const LoadingDataRows: React.FC<IDataPageProps> = props => (
 );
 
 const DataPageContents: React.FC<IDataPageProps> = props => {
+	const decorators = useRecoilValue(select.decoratorsPage(props.pageNo));
 	const dataPageSelector = select.editedDataPages(props.pageNo);
 	const [data] = useLastAsyncRecoilValue(dataPageSelector);
-	const decorators = useRecoilValue(select.decoratorsPage(props.pageNo));
 
 	return (
 		<>

@@ -3,7 +3,14 @@
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
-import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
+import { HexDecoratorType } from "../../shared/decorators";
+import {
+	buildEditTimeline,
+	HexDocumentEdit,
+	HexDocumentEditOp,
+	HexDocumentEmptyInsertEdit,
+	readUsingRanges,
+} from "../../shared/hexDocumentModel";
 import {
 	FromWebviewMessage,
 	InspectorLocation,
@@ -150,7 +157,7 @@ export const fileSize = selector({
 	key: "fileSize",
 	get: ({ get }) => {
 		const initial = get(diskFileSize);
-		const sizeDelta = get(unsavedEditTimeline).sizeDelta;
+		const sizeDelta = get(unsavedAndDecoratorEditTimeline).sizeDelta;
 		return initial === undefined ? initial : initial + sizeDelta;
 	},
 });
@@ -386,13 +393,41 @@ export const unsavedEditTimeline = selector({
 	},
 });
 
+const emptyDecoratorEdits = selector({
+	key: "emptyDecoratorEdits",
+	get: ({ get }) => {
+		return get(readyQuery)
+			.decorators.filter(record => record.type === HexDecoratorType.Empty)
+			.map(value => {
+				return {
+					op: HexDocumentEditOp.EmptyInsert,
+					offset: value.range.start,
+					length: value.range.size,
+				} as HexDocumentEmptyInsertEdit;
+			});
+	},
+});
+
+/**
+ * Creates the edit timeline for the unsaved edits and empty decorators.
+ */
+export const unsavedAndDecoratorEditTimeline = selector({
+	key: "unsavedAndDecoratorEditTimeline",
+	get: ({ get }) => {
+		return buildEditTimeline([
+			...get(edits).slice(get(unsavedEditIndex)),
+			...get(emptyDecoratorEdits),
+		]);
+	},
+});
+
 export const editedDataPages = selectorFamily({
 	key: "editedDataPages",
 	get:
 		(pageNumber: number) =>
 		async ({ get }) => {
 			const pageSize = get(dataPageSize);
-			const { ranges } = get(unsavedEditTimeline);
+			const { ranges } = get(unsavedAndDecoratorEditTimeline);
 			const target = new Uint8Array(pageSize);
 			const it = readUsingRanges(
 				{

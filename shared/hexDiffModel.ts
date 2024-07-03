@@ -17,7 +17,7 @@ export class HexDiffModel {
 	) {}
 
 	public async computeDecorators(uri: vscode.Uri): Promise<HexDecorator[]> {
-		return await this.saveGuard.execute(async () => {
+		return this.saveGuard.execute(async () => {
 			if (this.decorators === undefined) {
 				const editScript = await MyersDiff.lcs(this.originalModel, this.modifiedModel);
 				this.decorators = MyersDiff.toDecorator(editScript);
