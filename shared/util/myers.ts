@@ -6,13 +6,12 @@ type ScriptType = InsertScript | DeleteScript;
 
 interface InsertScript {
 	type: "insert";
-	valuePositionModified: number;
-	atPositionOriginal: number;
+	position: number;
 }
 
 interface DeleteScript {
 	type: "delete";
-	atPositionOriginal: number;
+	position: number;
 }
 
 /**
@@ -75,7 +74,8 @@ export class MyersDiff {
 					y++;
 				}
 
-				V[k] = x;
+				V[k < 0 ? V.length + k : k] = x;
+
 				if (x >= N && y >= M) {
 					return this.traceback(trace, N, M);
 				}
@@ -108,10 +108,13 @@ export class MyersDiff {
 			}
 
 			if (d > 0) {
-				if (x == prevX) {
-					script.push({ type: "insert", valuePositionModified: y - 1, atPositionOriginal: x - 1 });
-				} else {
-					script.push({ type: "delete", atPositionOriginal: x - 1 });
+				if (x === prevX) {
+					script.push({
+						type: "insert",
+						position: Math.max(y - 1, prevX),
+					});
+				} else if (y === prevY) {
+					script.push({ type: "delete", position: Math.max(x - 1, prevY) });
 				}
 				x = prevX;
 				y = prevY;
@@ -131,16 +134,20 @@ export class MyersDiff {
 			if (diffType.type === "delete") {
 				out.original.push({
 					type: HexDecoratorType.Delete,
-					range: new Range(diffType.atPositionOriginal, diffType.atPositionOriginal + 1),
+					range: new Range(diffType.position, diffType.position + 1),
+				});
+				out.modified.push({
+					type: HexDecoratorType.Empty,
+					range: new Range(diffType.position, diffType.position + 1),
 				});
 			} else {
 				out.original.push({
 					type: HexDecoratorType.Empty,
-					range: new Range(diffType.atPositionOriginal, diffType.atPositionOriginal + 1),
+					range: new Range(diffType.position, diffType.position + 1),
 				});
 				out.modified.push({
 					type: HexDecoratorType.Insert,
-					range: new Range(diffType.valuePositionModified, diffType.valuePositionModified + 1),
+					range: new Range(diffType.position, diffType.position + 1),
 				});
 			}
 		}
