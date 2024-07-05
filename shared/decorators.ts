@@ -1,5 +1,3 @@
-import { Range } from "./util/range";
-
 export enum HexDecoratorType {
 	Insert,
 	Delete,
@@ -8,5 +6,5 @@ export enum HexDecoratorType {
 
 export interface HexDecorator {
 	type: HexDecoratorType;
-	range: Range;
+	range: { start: number; end: number };
 }

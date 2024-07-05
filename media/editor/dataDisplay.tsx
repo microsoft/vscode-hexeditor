@@ -446,11 +446,7 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
 					width={props.columnWidth}
 					showDecodedText={props.showDecodedText}
 					isRowWithInsertDataCell={isRowWithInsertDataCell}
-					decorators={decorators.filter(decorator =>
-						decorator.range.overlaps(
-							new Range(offset - props.pageStart, offset - props.pageStart + props.columnWidth),
-						),
-					)}
+					decorators={decorators}
 				/>
 			))}
 		</>
@@ -715,7 +711,7 @@ const DataRowContents: React.FC<{
 			// Searches for the decorator, if any. Leverages the fact that
 			// the decorators are sorted by range.
 			while (j < decorators.length && decorators[j].range.start <= boffset) {
-				if (decorators[j].range.includes(boffset)) {
+				if (boffset >= decorators[j].range.start && boffset < decorators[j].range.end) {
 					decorator = decorators[j];
 					break;
 				}

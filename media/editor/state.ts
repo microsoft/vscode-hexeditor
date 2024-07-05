@@ -3,7 +3,7 @@
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
-import { HexDecoratorType } from "../../shared/decorators";
+import { HexDecorator, HexDecoratorType } from "../../shared/decorators";
 import {
 	buildEditTimeline,
 	HexDocumentEdit,
@@ -22,6 +22,7 @@ import {
 	ToWebviewMessage,
 } from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
+import { binarySearch } from "../../shared/util/binarySearch";
 import { Range } from "../../shared/util/range";
 import { clamp } from "./util";
 
@@ -72,21 +73,7 @@ window.addEventListener("message", ev => messageHandler.handleMessage(ev.data));
 
 const readyQuery = selector({
 	key: "ready",
-	get: async () => {
-		const resp = await messageHandler.sendRequest<ReadyResponseMessage>({
-			type: MessageType.ReadyRequest,
-		});
-
-		// Due to the message exchange, decorator.range looses their class methods
-		// so re-initialize.
-		resp.decorators = resp.decorators.map(dec => {
-			return {
-				type: dec.type,
-				range: new Range(dec.range.start, dec.range.end),
-			};
-		});
-		return resp;
-	},
+	get: () => messageHandler.sendRequest<ReadyResponseMessage>({ type: MessageType.ReadyRequest }),
 });
 
 /**
@@ -122,6 +109,11 @@ export const isReadonly = selector({
 export const codeSettings = selector({
 	key: "codeSettings",
 	get: ({ get }) => get(readyQuery).codeSettings,
+});
+
+export const decorators = selector({
+	key: "decorators",
+	get: ({ get }) => get(readyQuery).decorators,
 });
 
 export const showReadonlyWarningForEl = atom<HTMLElement | null>({
@@ -396,13 +388,13 @@ export const unsavedEditTimeline = selector({
 const emptyDecoratorEdits = selector({
 	key: "emptyDecoratorEdits",
 	get: ({ get }) => {
-		return get(readyQuery)
-			.decorators.filter(record => record.type === HexDecoratorType.Empty)
+		return get(decorators)
+			.filter(record => record.type === HexDecoratorType.Empty)
 			.map(value => {
 				return {
 					op: HexDocumentEditOp.EmptyInsert,
 					offset: value.range.start,
-					length: value.range.size,
+					length: value.range.end - value.range.start,
 				} as HexDocumentEmptyInsertEdit;
 			});
 	},
@@ -463,16 +455,21 @@ export const editedDataPages = selectorFamily({
 	},
 });
 
+/** Returns the starting decorator index for the given page number */
 export const decoratorsPage = selectorFamily({
-	key: "decorators",
+	key: "decoratorsPage",
 	get:
 		(pageNumber: number) =>
 		async ({ get }) => {
-			const allDecorators = get(readyQuery).decorators;
+			const allDecorators = get(decorators);
+			if (allDecorators.length === 0) {
+				return [];
+			}
 			const pageSize = get(dataPageSize);
-			const pageRange = new Range(pageSize * pageNumber, pageSize);
-			const pageDecorators = allDecorators.filter(decorator => decorator.range.overlaps(pageRange));
-			return pageDecorators;
+			const searcher = binarySearch<HexDecorator>(decorator => decorator.range.start);
+			const startIndex = searcher(pageSize * pageNumber, allDecorators);
+			const endIndex = searcher(pageSize * pageNumber + pageSize, allDecorators);
+			return allDecorators.slice(startIndex, endIndex);
 		},
 });
 
