@@ -3,7 +3,6 @@ import * as vscode from "vscode";
 import { HexDecorator } from "./decorators";
 import { HexDocumentModel } from "./hexDocumentModel";
 import { MyersDiff } from "./util/myers";
-
 export type HexDiffModelBuilder = typeof HexDiffModel.Builder.prototype;
 
 export class HexDiffModel {

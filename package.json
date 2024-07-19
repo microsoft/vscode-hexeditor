@@ -238,6 +238,7 @@
   },
   "devDependencies": {
     "@types/chai": "^4.3.0",
+    "@types/diff": "^5.2.1",
     "@types/mocha": "^9.0.0",
     "@types/node": "^18.11.9",
     "@types/react": "^17.0.38",
@@ -260,6 +261,7 @@
     "@vscode/codicons": "0.0.27",
     "@vscode/extension-telemetry": "0.6.2",
     "cockatiel": "^3.1.2",
+    "diff": "^5.2.0",
     "js-base64": "^3.7.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

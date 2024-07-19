@@ -109,7 +109,13 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 	 */
 	public async readDecorators(): Promise<HexDecorator[]> {
 		if (this.diffModel) {
-			return await this.diffModel.computeDecorators(this.uri);
+			try {
+				return await this.diffModel.computeDecorators(this.uri);
+			} catch (e: unknown) {
+				vscode.window.showErrorMessage(
+					e instanceof Error ? e.message : vscode.l10n.t("Unknown Error in HexEditor Diff"),
+				);
+			}
 		}
 		return [];
 	}

@@ -1,155 +1,72 @@
+import { ArrayChange, diffArrays } from "diff";
+import * as vscode from "vscode";
 import { HexDecorator, HexDecoratorType } from "../decorators";
 import { HexDocumentModel } from "../hexDocumentModel";
 import { Range } from "./range";
-
-type ScriptType = InsertScript | DeleteScript;
-
-interface InsertScript {
-	type: "insert";
-	position: number;
-}
-
-interface DeleteScript {
-	type: "delete";
-	position: number;
-}
 
 /**
  * O(d^2) implementation
  */
 export class MyersDiff {
-	public static async chunkified(model: HexDocumentModel) {
-		const size = await model.size();
-		if (size === undefined) {
-			throw new Error("undefined size");
+	public static async lcs(original: HexDocumentModel, modified: HexDocumentModel) {
+		const oSize = await original.sizeWithEdits();
+		const mSize = await modified.sizeWithEdits();
+		if (oSize === undefined || mSize === undefined) {
+			throw new Error(vscode.l10n.t("HexEditor Diff: Failed to get file sizes."));
 		}
-		let range = new Range(0, 1024);
-		const chunk = new Uint8Array(1024);
-		await model.readInto(0, chunk);
 
-		return {
-			get: async (offset: number) => {
-				if (!range.includes(offset)) {
-					range = new Range(
-						1024 * Math.floor(offset / 1024),
-						1024 * Math.floor(offset / 1024) + 1024,
-					);
-					await model.readInto(range.start, chunk);
-				}
-				return chunk[offset % 1024];
-			},
-		};
+		const oArray = new Uint8Array(oSize);
+		const mArray = new Uint8Array(mSize);
+		await original.readInto(0, oArray);
+		await modified.readInto(0, mArray);
+		// the types in @types/diff are incomplete.
+		const changes: ArrayChange<any>[] | undefined = diffArrays(
+			oArray as any,
+			mArray as any,
+			{
+				timeout: 30000, // timeout in milliseconds
+			} as any,
+		);
+
+		// Triggered timeout
+		if (changes === undefined) {
+			throw new Error(
+				vscode.l10n.t(
+					"HexEditor Diff: Reached maximum computation time to compute diff. This usually happens when comparing large files.",
+				),
+			);
+		}
+		return changes;
 	}
 
-	public static async lcs(
-		original: HexDocumentModel,
-		modified: HexDocumentModel,
-	): Promise<Array<ScriptType>> {
-		const originalChunk = await this.chunkified(original);
-		const modifiedChunk = await this.chunkified(modified);
-
-		const N = await original.size();
-		const M = await modified.size();
-		if (N === undefined || M === undefined) {
-			return [];
-		}
-		const max = N + M;
-		const V = new Array(2 * max + 2).fill(0);
-		V[1] = 0;
-		const trace: number[][] = [];
-
-		for (let d = 0; d <= max; d++) {
-			trace.push(V.slice());
-			for (let k = -d; k <= d; k += 2) {
-				let x: number;
-				if (k === -d || (k !== d && V.at(k - 1) < V.at(k + 1))) {
-					x = V.at(k + 1);
-				} else {
-					x = V.at(k - 1) + 1;
-				}
-
-				let y = x - k;
-				while (x < N && y < M && (await originalChunk.get(x)) === (await modifiedChunk.get(y))) {
-					x++;
-					y++;
-				}
-
-				V[k < 0 ? V.length + k : k] = x;
-
-				if (x >= N && y >= M) {
-					return this.traceback(trace, N, M);
-				}
-			}
-		}
-		return [];
-	}
-
-	private static traceback(trace: number[][], n: number, m: number): Array<ScriptType> {
-		let d = trace.length - 1;
-		let x = n;
-		let y = m;
-		const script: Array<ScriptType> = [];
-
-		while (d >= 0) {
-			const v = trace[d];
-			const k = x - y;
-			let prevK: number;
-			if (k === -d || (k !== d && v.at(k - 1)! < v.at(k + 1)!)) {
-				prevK = k + 1;
-			} else {
-				prevK = k - 1;
-			}
-
-			const prevX = v.at(prevK)!;
-			const prevY = prevX - prevK;
-			while (x > prevX && y > prevY) {
-				x--;
-				y--;
-			}
-
-			if (d > 0) {
-				if (x === prevX) {
-					script.push({
-						type: "insert",
-						position: Math.max(y - 1, prevX),
-					});
-				} else if (y === prevY) {
-					script.push({ type: "delete", position: Math.max(x - 1, prevY) });
-				}
-				x = prevX;
-				y = prevY;
-			}
-			d--;
-		}
-
-		return script.reverse();
-	}
-
-	public static toDecorator(script: ScriptType[]) {
+	public static toDecorator(script: ArrayChange<any>[]) {
 		const out: {
 			original: HexDecorator[];
 			modified: HexDecorator[];
 		} = { original: [], modified: [] };
-		for (const diffType of script) {
-			if (diffType.type === "delete") {
+		let offset = 0;
+		for (const change of script) {
+			const r = new Range(offset, offset + change.count!);
+			if (change.removed) {
 				out.original.push({
 					type: HexDecoratorType.Delete,
-					range: new Range(diffType.position, diffType.position + 1),
+					range: r,
 				});
 				out.modified.push({
 					type: HexDecoratorType.Empty,
-					range: new Range(diffType.position, diffType.position + 1),
+					range: r,
 				});
-			} else {
+			} else if (change.added) {
 				out.original.push({
 					type: HexDecoratorType.Empty,
-					range: new Range(diffType.position, diffType.position + 1),
+					range: r,
 				});
 				out.modified.push({
 					type: HexDecoratorType.Insert,
-					range: new Range(diffType.position, diffType.position + 1),
+					range: r,
 				});
 			}
+			offset += change.count!;
 		}
 		return out;
 	}
