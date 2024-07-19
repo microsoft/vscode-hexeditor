@@ -42,7 +42,8 @@ export const accessFile = async (
 						: !(fileStats.mode & 0o002); // other
 
 			if (fileStats.isFile()) {
-				return new NativeFileAccessor(uri, isReadonly, fs);
+				// Diff is readonly since the diff is only computed at the beginning once
+				return new NativeFileAccessor(uri, uri.scheme === "hexdiff" ? true : isReadonly, fs);
 			}
 		} catch {
 			// probably not node.js, or file does not exist
