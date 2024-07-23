@@ -20,5 +20,5 @@ export const openCompareSelected = async (
 
 	const diffModelBuilder = new HexDiffModel.Builder(diffOriginalUri, diffModifiedUri);
 	registry.addDiff(diffModelBuilder);
-	await vscode.commands.executeCommand("vscode.diff", diffOriginalUri, diffModifiedUri);
+	vscode.commands.executeCommand("vscode.diff", diffOriginalUri, diffModifiedUri);
 };
