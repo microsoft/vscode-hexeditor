@@ -3,7 +3,9 @@
 
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
+import { FromDiffWorkerMessage, ToDiffWorkerMessage } from "../shared/diffWorkerProtocol";
 import { HexDocumentEditOp } from "../shared/hexDocumentModel";
+import { MessageHandler } from "../shared/protocol";
 import { openCompareSelected } from "./compareSelected";
 import { copyAs } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
@@ -39,7 +41,7 @@ function reopenWithHexEditor() {
 	}
 }
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext) {
 	const registry = new HexEditorRegistry();
 	// Register the data inspector as a separate view on the side
 	const dataInspectorProvider = new DataInspectorView(context.extensionUri, registry);
@@ -110,6 +112,25 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 	});
 
+	// Initializes web-only worker for diffing
+	let worker: Worker;
+	let workerMessageHandler: MessageHandler<ToDiffWorkerMessage, FromDiffWorkerMessage> | undefined =
+		undefined;
+	try {
+		worker = new Worker(
+			vscode.Uri.joinPath(context.extensionUri, "dist", "web", "diffWorker.js").toString(),
+		);
+		workerMessageHandler = new MessageHandler<ToDiffWorkerMessage, FromDiffWorkerMessage>(
+			// Always return undefined as the diff worker
+			// does not request anything from extension host
+			async () => undefined,
+			message => worker.postMessage(message),
+		);
+		worker.onmessage = e => workerMessageHandler!.handleMessage(e.data);
+	} catch {
+		// not a vscode web instance
+	}
+
 	const compareSelectedCommand = vscode.commands.registerCommand(
 		"hexEditor.compareSelected",
 		async (...args) => {
@@ -120,7 +141,10 @@ export function activate(context: vscode.ExtensionContext): void {
 			if (!(leftFile instanceof vscode.Uri && rightFile instanceof vscode.Uri)) {
 				return;
 			}
-			openCompareSelected(leftFile, rightFile, registry);
+			//  Web-only
+			if (workerMessageHandler) {
+				openCompareSelected(leftFile, rightFile, registry, workerMessageHandler!);
+			}
 		},
 	);
 
@@ -143,6 +167,9 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(
 		HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, registry),
 	);
+	context.subscriptions.push({
+		dispose: () => worker.terminate(),
+	});
 }
 
 export function deactivate(): void {

@@ -52,6 +52,17 @@ build({
 	outfile: "dist/web/extension.js",
 });
 
+build({
+	entryPoints: ["shared/diffWorker.ts"],
+	tsconfig: "./tsconfig.json",
+	bundle: true,
+	format: "cjs",
+	external: ["vscode"],
+	minify,
+	platform: "browser",
+	outfile: "dist/web/diffWorker.js",
+});
+
 // Build the data inspector
 build({
 	entryPoints: ["media/data_inspector/inspector.ts"],

@@ -1,8 +1,12 @@
 import { bulkhead } from "cockatiel";
 import * as vscode from "vscode";
 import { HexDecorator } from "./decorators";
+import {
+	DiffDecoratorResponseMessage,
+	DiffExtensionHostMessageHandler,
+	DiffMessageType,
+} from "./diffWorkerProtocol";
 import { HexDocumentModel } from "./hexDocumentModel";
-import { MyersDiff } from "./util/myers";
 export type HexDiffModelBuilder = typeof HexDiffModel.Builder.prototype;
 
 export class HexDiffModel {
@@ -13,13 +17,29 @@ export class HexDiffModel {
 	constructor(
 		private readonly originalModel: HexDocumentModel,
 		private readonly modifiedModel: HexDocumentModel,
+		private readonly messageHandler: DiffExtensionHostMessageHandler,
 	) {}
 
 	public async computeDecorators(uri: vscode.Uri): Promise<HexDecorator[]> {
 		return this.saveGuard.execute(async () => {
 			if (this.decorators === undefined) {
-				const editScript = await MyersDiff.lcs(this.originalModel, this.modifiedModel);
-				this.decorators = MyersDiff.toDecorator(editScript);
+				//TODO: Add a warning if the file sizes are too large?
+				const oSize = await this.originalModel.sizeWithEdits();
+				const mSize = await this.modifiedModel.sizeWithEdits();
+				if (oSize === undefined || mSize === undefined) {
+					throw new Error(vscode.l10n.t("HexEditor Diff: Failed to get file sizes."));
+				}
+
+				const oArray = new Uint8Array(oSize);
+				const mArray = new Uint8Array(mSize);
+				await this.originalModel.readInto(0, oArray);
+				await this.modifiedModel.readInto(0, mArray);
+				const decorators = await this.messageHandler.sendRequest<DiffDecoratorResponseMessage>({
+					type: DiffMessageType.DiffDecoratorRequest,
+					original: oArray,
+					modified: mArray,
+				});
+				this.decorators = decorators;
 			}
 			return uri.toString() === this.originalModel.uri.toString()
 				? this.decorators.original
@@ -46,6 +66,7 @@ export class HexDiffModel {
 		constructor(
 			public readonly originalUri: vscode.Uri,
 			public readonly modifiedUri: vscode.Uri,
+			private readonly messageHandler: DiffExtensionHostMessageHandler,
 		) {
 			this.originalModel = new Promise<HexDocumentModel>(resolve => {
 				this.resolveOriginalModel = resolve;
@@ -72,7 +93,7 @@ export class HexDiffModel {
 				this.modifiedModel,
 			]);
 			if (this.builtModel === undefined) {
-				this.builtModel = new HexDiffModel(originalModel, modifiedModel);
+				this.builtModel = new HexDiffModel(originalModel, modifiedModel, this.messageHandler);
 				if (this.onBuild) {
 					this.onBuild();
 				}
