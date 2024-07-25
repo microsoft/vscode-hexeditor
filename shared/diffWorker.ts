@@ -15,9 +15,25 @@ function onMessage(message: ToDiffWorkerMessage): undefined | FromDiffWorkerMess
 	}
 }
 
-const messageHandler = new MessageHandler<FromDiffWorkerMessage, ToDiffWorkerMessage>(
-	async message => onMessage(message),
-	message => postMessage(message),
-);
+try {
+	// Web worker
+	const messageHandler = new MessageHandler<FromDiffWorkerMessage, ToDiffWorkerMessage>(
+		async message => onMessage(message),
+		message => postMessage(message),
+	);
+	onmessage = e => messageHandler.handleMessage(e.data);
+} catch {
+	// node worker
 
-onmessage = e => messageHandler.handleMessage(e.data);
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
+	const { parentPort } = require("worker_threads") as typeof import("worker_threads");
+	if (parentPort) {
+		const messageHandler = new MessageHandler<FromDiffWorkerMessage, ToDiffWorkerMessage>(
+			async message => onMessage(message),
+			message => parentPort.postMessage(message),
+		);
+		parentPort.on("message", e => {
+			messageHandler.handleMessage(e);
+		});
+	}
+}
