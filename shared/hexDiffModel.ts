@@ -34,11 +34,14 @@ export class HexDiffModel {
 				const mArray = new Uint8Array(mSize);
 				await this.originalModel.readInto(0, oArray);
 				await this.modifiedModel.readInto(0, mArray);
-				const decorators = await this.messageHandler.sendRequest<DiffDecoratorResponseMessage>({
-					type: DiffMessageType.DiffDecoratorRequest,
-					original: oArray,
-					modified: mArray,
-				});
+				const decorators = await this.messageHandler.sendRequest<DiffDecoratorResponseMessage>(
+					{
+						type: DiffMessageType.DiffDecoratorRequest,
+						original: oArray,
+						modified: mArray,
+					},
+					[oArray.buffer, mArray.buffer],
+				);
 				this.decorators = decorators;
 			}
 			return uri.toString() === this.originalModel.uri.toString()

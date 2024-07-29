@@ -137,7 +137,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		// Always return undefined as the diff worker
 		// does not request anything from extension host
 		async () => undefined,
-		message => worker.postMessage(message),
+		// worker.postMessage's transfer parameter type looks to be wrong because
+		// it should be set as optional.
+		(message, transfer) => worker.postMessage(message, transfer!),
 	);
 
 	worker.addEventListener("message", e =>
