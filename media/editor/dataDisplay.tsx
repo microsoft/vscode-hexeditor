@@ -36,6 +36,7 @@ import {
 	parseHexDigit,
 	throwOnUndefinedAccessInDev,
 } from "./util";
+import { binarySearch } from "../../shared/util/binarySearch";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
@@ -703,7 +704,8 @@ const DataRowContents: React.FC<{
 	const { bytes, chars } = useMemo(() => {
 		const bytes: React.ReactChild[] = [];
 		const chars: React.ReactChild[] = [];
-		let j = 0;
+		const searcher = binarySearch<HexDecorator>(r => r.range.start);
+		let j = searcher(offset, decorators);
 		for (let i = 0; i < width; i++) {
 			const boffset = offset + i;
 			const value = rawBytes[i];
