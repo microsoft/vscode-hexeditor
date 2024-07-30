@@ -157,10 +157,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			if (!(leftFile instanceof vscode.Uri && rightFile instanceof vscode.Uri)) {
 				return;
 			}
-			//  Web-only
-			if (workerMessageHandler) {
-				openCompareSelected(leftFile, rightFile, registry, workerMessageHandler!);
-			}
+			openCompareSelected(leftFile, rightFile, registry, workerMessageHandler!);
 		},
 	);
 
@@ -177,7 +174,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(compareSelectedCommand);
 	context.subscriptions.push(
 		vscode.workspace.registerFileSystemProvider("hexdiff", new HexDiffFSProvider(), {
-			isCaseSensitive: true,
+			isCaseSensitive: typeof process !== 'undefined' && process.platform !== 'win32' && process.platform !== 'darwin',
 		}),
 	);
 	context.subscriptions.push(
