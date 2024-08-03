@@ -704,7 +704,7 @@ const DataRowContents: React.FC<{
 	const { bytes, chars } = useMemo(() => {
 		const bytes: React.ReactChild[] = [];
 		const chars: React.ReactChild[] = [];
-		const searcher = binarySearch<HexDecorator>(r => r.range.start);
+		const searcher = binarySearch<HexDecorator>(d => d.range.end);
 		let j = searcher(offset, decorators);
 		for (let i = 0; i < width; i++) {
 			const boffset = offset + i;

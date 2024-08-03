@@ -455,7 +455,7 @@ export const editedDataPages = selectorFamily({
 	},
 });
 
-/** Returns the starting decorator index for the given page number */
+/** Returns the decorators in a page */
 export const decoratorsPage = selectorFamily({
 	key: "decoratorsPage",
 	get:
@@ -466,9 +466,10 @@ export const decoratorsPage = selectorFamily({
 				return [];
 			}
 			const pageSize = get(dataPageSize);
-			const searcher = binarySearch<HexDecorator>(decorator => decorator.range.start);
-			const startIndex = searcher(pageSize * pageNumber, allDecorators);
-			const endIndex = searcher(pageSize * pageNumber + pageSize, allDecorators);
+			const searcherByEnd = binarySearch<HexDecorator>(decorator => decorator.range.end);
+			const startIndex = searcherByEnd(pageSize * pageNumber, allDecorators);
+			const searcherByStart = binarySearch<HexDecorator>(d => d.range.start);
+			const endIndex = searcherByStart(pageSize * pageNumber + pageSize+1, allDecorators);
 			return allDecorators.slice(startIndex, endIndex);
 		},
 });
