@@ -12,6 +12,7 @@ import {
 	HexDocumentEditReference,
 	HexDocumentModel,
 } from "../shared/hexDocumentModel";
+import { parseQuery } from "../shared/util/uri";
 import { Backup } from "./backup";
 import { Disposable } from "./dispose";
 import { accessFile } from "./fileSystemAdaptor";
@@ -41,9 +42,9 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				: undefined,
 		});
 
-		const queries = HexDocument.parseQuery(uri.query);
-		const baseAddress: number = queries["baseAddress"]
-			? HexDocument.parseHexOrDecInt(queries["baseAddress"])
+		const queries = parseQuery(uri.query);
+		const baseAddress: number = queries.baseAddress
+			? HexDocument.parseHexOrDecInt(queries.baseAddress)
 			: 0;
 
 		const fileSize = await accessor.getSize();
@@ -59,7 +60,10 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		const isLargeFile =
 			!backupId && !accessor.supportsIncremetalAccess && (fileSize ?? 0) > maxFileSize;
 
-		const diffModel = diffModelBuilder ? await diffModelBuilder.setModel(model).build() : undefined;
+		const diffModel =
+			queries.side && diffModelBuilder
+				? await diffModelBuilder.setModel(queries.side, model).build()
+				: undefined;
 
 		return { document: new HexDocument(model, isLargeFile, baseAddress, diffModel), accessor };
 	}
@@ -358,24 +362,6 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				}
 			},
 		};
-	}
-
-	/**
-	 * Utility function to convert a Uri query string into a map
-	 */
-	private static parseQuery(queryString: string): { [key: string]: string } {
-		const queries: { [key: string]: string } = {};
-		if (queryString) {
-			const pairs = (queryString[0] === "?" ? queryString.substr(1) : queryString).split("&");
-			for (const q of pairs) {
-				const pair = q.split("=");
-				const name = pair.shift();
-				if (name) {
-					queries[name] = pair.join("=");
-				}
-			}
-		}
-		return queries;
 	}
 
 	/**

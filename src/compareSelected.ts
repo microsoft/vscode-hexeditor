@@ -1,30 +1,34 @@
 import * as vscode from "vscode";
-import { DiffExtensionHostMessageHandler } from "../shared/diffWorkerProtocol";
-import { HexDiffModel } from "../shared/hexDiffModel";
-import { HexEditorRegistry } from "./hexEditorRegistry";
+import { formQuery, parseQuery } from "../shared/util/uri";
+
+const uuidGenerator = () => {
+	let uuid = 0;
+	return () => (uuid++).toString();
+};
+const uuid = uuidGenerator();
 
 // Initializes our custom editor with diff capabilities
 // @see https://github.com/microsoft/vscode/issues/97683
 // @see https://github.com/microsoft/vscode/issues/138525
-export const openCompareSelected = async (
-	originalFile: vscode.Uri,
-	modifiedFile: vscode.Uri,
-	registry: HexEditorRegistry,
-	diffExtensionHostMessageHandler: DiffExtensionHostMessageHandler,
-) => {
+export const openCompareSelected = (originalFile: vscode.Uri, modifiedFile: vscode.Uri) => {
+	const token = uuid();
 	const diffOriginalUri = originalFile.with({
 		scheme: "hexdiff",
+		query: formQuery({
+			...parseQuery(originalFile.query),
+			side: "original",
+			token: token,
+		}),
 	});
 
 	const diffModifiedUri = modifiedFile.with({
 		scheme: "hexdiff",
+		query: formQuery({
+			...parseQuery(originalFile.query),
+			side: "modified",
+			token: token,
+		}),
 	});
 
-	const diffModelBuilder = new HexDiffModel.Builder(
-		diffOriginalUri,
-		diffModifiedUri,
-		diffExtensionHostMessageHandler,
-	);
-	registry.addDiff(diffModelBuilder);
 	vscode.commands.executeCommand("vscode.diff", diffOriginalUri, diffModifiedUri);
 };

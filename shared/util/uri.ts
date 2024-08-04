@@ -1,5 +1,7 @@
 export interface HexEditorUriQuery {
 	baseAddress?: string;
+	token?: string;
+	side?: "modified" | "original";
 }
 
 /**
@@ -11,11 +13,32 @@ export function parseQuery(queryString: string): HexEditorUriQuery {
 		const pairs = (queryString[0] === "?" ? queryString.substr(1) : queryString).split("&");
 		for (const q of pairs) {
 			const pair = q.split("=");
-			const name = pair.shift();
+			const name = pair.shift() as keyof HexEditorUriQuery;
 			if (name) {
-				queries[name as keyof HexEditorUriQuery] = pair.join("=");
+				const value = pair.join("=");
+				if (name === "side") {
+					if (value === "modified" || value === "original" || value === undefined) {
+						queries.side = value;
+					}
+				} else {
+					queries[name] = value;
+				}
 			}
 		}
 	}
 	return queries;
+}
+
+/**
+ * Forms a valid HexEditor Query to be used in vscode.Uri
+ */
+export function formQuery(queries: HexEditorUriQuery): string {
+	const query: string[] = [];
+	for (const q in queries) {
+		const queryValue = queries[q as keyof HexEditorUriQuery];
+		if (queryValue !== undefined && queryValue !== "") {
+			query.push(`${q}=${queryValue}`);
+		}
+	}
+	return query.join("&");
 }

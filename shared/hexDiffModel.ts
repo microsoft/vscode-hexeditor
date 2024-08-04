@@ -55,53 +55,45 @@ export class HexDiffModel {
 	 * with both HexDocumentModels
 	 */
 	static Builder = class {
-		private originalModel: Promise<HexDocumentModel>;
-		private modifiedModel: Promise<HexDocumentModel>;
-		private resolveOriginalModel!: (
-			value: HexDocumentModel | PromiseLike<HexDocumentModel>,
-		) => void;
-		private resolveModifiedModel!: (
-			value: HexDocumentModel | PromiseLike<HexDocumentModel>,
-		) => void;
-		private builtModel?: HexDiffModel;
-		public onBuild?: () => void;
+		private original: {
+			promise: Promise<HexDocumentModel>;
+			resolve: (model: HexDocumentModel) => void;
+		};
+		private modified: {
+			promise: Promise<HexDocumentModel>;
+			resolve: (model: HexDocumentModel) => void;
+		};
 
-		constructor(
-			public readonly originalUri: vscode.Uri,
-			public readonly modifiedUri: vscode.Uri,
-			private readonly messageHandler: DiffExtensionHostMessageHandler,
-		) {
-			this.originalModel = new Promise<HexDocumentModel>(resolve => {
-				this.resolveOriginalModel = resolve;
-			});
-			this.modifiedModel = new Promise<HexDocumentModel>(resolve => {
-				this.resolveModifiedModel = resolve;
-			});
+		private built?: HexDiffModel;
+
+		constructor(private readonly messageHandler: DiffExtensionHostMessageHandler) {
+			let promise: Promise<HexDocumentModel>;
+			let res: (model: HexDocumentModel) => void;
+
+			promise = new Promise<HexDocumentModel>(resolve => (res = resolve));
+			this.original = { promise: promise, resolve: res! };
+			promise = new Promise<HexDocumentModel>(resolve => (res = resolve));
+			this.modified = { promise: promise, resolve: res! };
 		}
 
-		public setModel(model: HexDocumentModel) {
-			if (this.originalUri.toString() === model.uri.toString()) {
-				this.resolveOriginalModel(model);
-			} else if (this.modifiedUri.toString() === model.uri.toString()) {
-				this.resolveModifiedModel(model);
+		public setModel(side: "original" | "modified", document: HexDocumentModel) {
+			if (side === "original") {
+				this.original.resolve(document);
 			} else {
-				throw new Error("Provided doc does not match uris.");
+				this.modified.resolve(document);
 			}
 			return this;
 		}
 
 		public async build() {
-			const [originalModel, modifiedModel] = await Promise.all([
-				this.originalModel,
-				this.modifiedModel,
+			const [original, modified] = await Promise.all([
+				this.original.promise,
+				this.modified.promise,
 			]);
-			if (this.builtModel === undefined) {
-				this.builtModel = new HexDiffModel(originalModel, modifiedModel, this.messageHandler);
-				if (this.onBuild) {
-					this.onBuild();
-				}
+			if (this.built === undefined) {
+				this.built = new HexDiffModel(original, modified, this.messageHandler);
 			}
-			return this.builtModel;
+			return this.built;
 		}
 	};
 }

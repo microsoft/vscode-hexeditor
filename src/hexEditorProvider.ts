@@ -69,14 +69,16 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 		openContext: vscode.CustomDocumentOpenContext,
 		_token: vscode.CancellationToken,
 	): Promise<HexDocument> {
+		const diff = this._registry.getDiff(uri);
+
 		const { document, accessor } = await HexDocument.create(
 			uri,
 			openContext,
 			this._telemetryReporter,
-			this._registry.getDiff(uri)
+			diff.builder,
 		);
 		const disposables: vscode.Disposable[] = [];
-
+		disposables.push(diff);
 		disposables.push(
 			document.onDidRevert(async () => {
 				const replaceFileSize = (await document.size()) ?? null;
