@@ -4,11 +4,14 @@
 import TelemetryReporter from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
 import { HexDocumentEditOp } from "../shared/hexDocumentModel";
+import { openCompareSelected } from "./compareSelected";
 import { copyAs } from "./copyAs";
 import { DataInspectorView } from "./dataInspectorView";
 import { showGoToOffset } from "./goToOffset";
+import { HexDiffFSProvider } from "./hexDiffFS";
 import { HexEditorProvider } from "./hexEditorProvider";
 import { HexEditorRegistry } from "./hexEditorRegistry";
+import { prepareLazyInitDiffWorker } from "./initWorker";
 import { showSelectBetweenOffsets } from "./selectBetweenOffsets";
 import StatusEditMode from "./statusEditMode";
 import StatusFocus from "./statusFocus";
@@ -37,8 +40,12 @@ function reopenWithHexEditor() {
 	}
 }
 
-export function activate(context: vscode.ExtensionContext): void {
-	const registry = new HexEditorRegistry();
+export async function activate(context: vscode.ExtensionContext) {
+	// Prepares the worker to be lazily initialized
+	const initWorker = prepareLazyInitDiffWorker(context.extensionUri, workerDispose =>
+		context.subscriptions.push(workerDispose),
+	);
+	const registry = new HexEditorRegistry(initWorker);
 	// Register the data inspector as a separate view on the side
 	const dataInspectorProvider = new DataInspectorView(context.extensionUri, registry);
 	const configValues = readConfigFromPackageJson(context.extension);
@@ -81,7 +88,6 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 	});
 
-
 	const switchEditModeCommand = vscode.commands.registerCommand("hexEditor.switchEditMode", () => {
 		if (registry.activeDocument) {
 			registry.activeDocument.editMode =
@@ -109,6 +115,20 @@ export function activate(context: vscode.ExtensionContext): void {
 		}
 	});
 
+	const compareSelectedCommand = vscode.commands.registerCommand(
+		"hexEditor.compareSelected",
+		async (...args) => {
+			if (args.length !== 2 && !(args[1] instanceof Array)) {
+				return;
+			}
+			const [leftFile, rightFile] = args[1];
+			if (!(leftFile instanceof vscode.Uri && rightFile instanceof vscode.Uri)) {
+				return;
+			}
+			openCompareSelected(leftFile, rightFile);
+		},
+	);
+
 	context.subscriptions.push(new StatusEditMode(registry));
 	context.subscriptions.push(new StatusFocus(registry));
 	context.subscriptions.push(new StatusHoverAndSelection(registry));
@@ -119,6 +139,12 @@ export function activate(context: vscode.ExtensionContext): void {
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
 	context.subscriptions.push(copyOffsetAsDec, copyOffsetAsHex);
+	context.subscriptions.push(compareSelectedCommand);
+	context.subscriptions.push(
+		vscode.workspace.registerFileSystemProvider("hexdiff", new HexDiffFSProvider(), {
+			isCaseSensitive: typeof process !== 'undefined' && process.platform !== 'win32' && process.platform !== 'darwin',
+		}),
+	);
 	context.subscriptions.push(
 		HexEditorProvider.register(context, telemetryReporter, dataInspectorProvider, registry),
 	);

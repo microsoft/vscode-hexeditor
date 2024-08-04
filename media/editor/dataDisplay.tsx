@@ -3,6 +3,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecoilValue, useSetRecoilState } from "recoil";
+import { HexDecorator } from "../../shared/decorators";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import {
 	CopyFormat,
@@ -14,8 +15,8 @@ import { Range } from "../../shared/util/range";
 import { PastePopup } from "./copyPaste";
 import _style from "./dataDisplay.css";
 import {
-	FocusedElement,
 	dataCellCls,
+	FocusedElement,
 	useDisplayContext,
 	useIsFocused,
 	useIsHovered,
@@ -31,9 +32,11 @@ import {
 	clsx,
 	getAsciiCharacter,
 	getScrollDimensions,
+	HexDecoratorStyles,
 	parseHexDigit,
 	throwOnUndefinedAccessInDev,
 } from "./util";
+import { binarySearch } from "../../shared/util/binarySearch";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
@@ -428,8 +431,9 @@ const LoadingDataRows: React.FC<IDataPageProps> = props => (
 );
 
 const DataPageContents: React.FC<IDataPageProps> = props => {
-	const pageSelector = select.editedDataPages(props.pageNo);
-	const [data] = useLastAsyncRecoilValue(pageSelector);
+	const decorators = useRecoilValue(select.decoratorsPage(props.pageNo));
+	const dataPageSelector = select.editedDataPages(props.pageNo);
+	const [data] = useLastAsyncRecoilValue(dataPageSelector);
 
 	return (
 		<>
@@ -443,6 +447,7 @@ const DataPageContents: React.FC<IDataPageProps> = props => {
 					width={props.columnWidth}
 					showDecodedText={props.showDecodedText}
 					isRowWithInsertDataCell={isRowWithInsertDataCell}
+					decorators={decorators}
 				/>
 			))}
 		</>
@@ -688,7 +693,8 @@ const DataRowContents: React.FC<{
 	showDecodedText: boolean;
 	rawBytes: Uint8Array;
 	isRowWithInsertDataCell: boolean;
-}> = ({ offset, width, showDecodedText, rawBytes, isRowWithInsertDataCell }) => {
+	decorators: HexDecorator[];
+}> = ({ offset, width, showDecodedText, rawBytes, isRowWithInsertDataCell, decorators }) => {
 	let memoValue = "";
 	const ctx = useDisplayContext();
 	for (const byte of rawBytes) {
@@ -698,9 +704,21 @@ const DataRowContents: React.FC<{
 	const { bytes, chars } = useMemo(() => {
 		const bytes: React.ReactChild[] = [];
 		const chars: React.ReactChild[] = [];
+		const searcher = binarySearch<HexDecorator>(d => d.range.end);
+		let j = searcher(offset, decorators);
 		for (let i = 0; i < width; i++) {
 			const boffset = offset + i;
 			const value = rawBytes[i];
+			let decorator: HexDecorator | undefined = undefined;
+			// Searches for the decorator, if any. Leverages the fact that
+			// the decorators are sorted by range.
+			while (j < decorators.length && decorators[j].range.start <= boffset) {
+				if (boffset >= decorators[j].range.start && boffset < decorators[j].range.end) {
+					decorator = decorators[j];
+					break;
+				}
+				j++;
+			}
 
 			if (value === undefined) {
 				if (isRowWithInsertDataCell && !ctx.isReadonly) {
@@ -723,7 +741,14 @@ const DataRowContents: React.FC<{
 			}
 
 			bytes.push(
-				<DataCell key={i} offset={boffset} isChar={false} isAppend={false} value={value}>
+				<DataCell
+					key={i}
+					className={clsx(decorator !== undefined && HexDecoratorStyles[decorator.type])}
+					offset={boffset}
+					isChar={false}
+					isAppend={false}
+					value={value}
+				>
 					{value.toString(16).padStart(2, "0").toUpperCase()}
 				</DataCell>,
 			);
@@ -736,7 +761,10 @@ const DataRowContents: React.FC<{
 						offset={boffset}
 						isChar={true}
 						isAppend={false}
-						className={char === undefined ? style.nonGraphicChar : undefined}
+						className={clsx(
+							char === undefined ? style.nonGraphicChar : undefined,
+							decorator !== undefined && HexDecoratorStyles[decorator.type],
+						)}
 						value={value}
 					>
 						{char === undefined ? "." : char}

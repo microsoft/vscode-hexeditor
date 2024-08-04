@@ -2,7 +2,10 @@
 // Licensed under the MIT license.
 
 import * as vscode from "vscode";
+import { DiffExtensionHostMessageHandler } from "../shared/diffWorkerProtocol";
+import { HexDiffModel, HexDiffModelBuilder } from "../shared/hexDiffModel";
 import { ExtensionHostMessageHandler } from "../shared/protocol";
+import { parseQuery } from "../shared/util/uri";
 import { Disposable } from "./dispose";
 import { HexDocument } from "./hexDocument";
 
@@ -10,6 +13,10 @@ const EMPTY: never[] = [];
 
 export class HexEditorRegistry extends Disposable {
 	private readonly docs = new Map<HexDocument, Set<ExtensionHostMessageHandler>>();
+	private readonly diffsBuilder = new Map<
+		string,
+		{ refCount: number; value: HexDiffModelBuilder }
+	>();
 	private onChangeEmitter = new vscode.EventEmitter<HexDocument | undefined>();
 	private _activeDocument?: HexDocument;
 
@@ -32,7 +39,7 @@ export class HexEditorRegistry extends Disposable {
 		return (this._activeDocument && this.docs.get(this._activeDocument)) || EMPTY;
 	}
 
-	constructor() {
+	constructor(private readonly initDiffWorker: () => DiffExtensionHostMessageHandler) {
 		super();
 		this._register(vscode.window.tabGroups.onDidChangeTabs(this.onChangedTabs, this));
 		this._register(vscode.window.tabGroups.onDidChangeTabGroups(this.onChangedTabs, this));
@@ -63,6 +70,40 @@ export class HexEditorRegistry extends Disposable {
 				collection!.delete(messaging);
 				if (collection!.size === 0) {
 					this.docs.delete(document);
+				}
+			},
+		};
+	}
+
+	/** returns a diff model using the file uri */
+	public getDiff(uri: vscode.Uri): {
+		builder: HexDiffModelBuilder | undefined;
+		dispose: () => void;
+	} {
+		const { token } = parseQuery(uri.query);
+		if (token === undefined) {
+			return { builder: undefined, dispose: () => {} };
+		}
+		// Lazily initializes the diff worker, if it isn't
+		// iniitalized already
+		const messageHandler = this.initDiffWorker();
+
+		// Creates a new diff model
+		if (!this.diffsBuilder.has(token)) {
+			this.diffsBuilder.set(token, {
+				refCount: 0,
+				value: new HexDiffModel.Builder(messageHandler),
+			});
+		}
+		const builder = this.diffsBuilder.get(token)!;
+		builder.refCount++;
+
+		return {
+			builder: builder.value,
+			dispose: () => {
+				builder.refCount--;
+				if (builder.refCount === 0) {
+					this.diffsBuilder.delete(token);
 				}
 			},
 		};
