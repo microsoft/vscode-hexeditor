@@ -2,6 +2,7 @@
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
 
+import { HexDecorator } from "./decorators";
 import { HexDocumentEditOp } from "./hexDocumentModel";
 import { ISerializedEdits } from "./serialization";
 
@@ -80,6 +81,7 @@ export interface ReadyResponseMessage {
 	isReadonly: boolean;
 	isLargeFile: boolean;
 	editMode: HexDocumentEditOp.Insert | HexDocumentEditOp.Replace;
+	decorators: HexDecorator[];
 }
 
 export interface SetEditModeMessage {
@@ -310,18 +312,21 @@ export class MessageHandler<TTo, TFrom> {
 
 	constructor(
 		public messageHandler: (msg: TFrom) => Promise<TTo | undefined>,
-		private readonly postMessage: (msg: WebviewMessage<TTo>) => void,
+		private readonly postMessage: (msg: WebviewMessage<TTo>, transfer?: Transferable[]) => void,
 	) {}
 
 	/** Sends a request without waiting for a response */
-	public sendEvent(body: TTo): void {
-		this.postMessage({ body, messageId: this.messageIdCounter++ });
+	public sendEvent(body: TTo, transfer?: Transferable[]): void {
+		this.postMessage({ body, messageId: this.messageIdCounter++ }, transfer);
 	}
 
 	/** Sends a request that expects a response */
-	public sendRequest<TResponse extends TFrom>(msg: TTo): Promise<TResponse> {
+	public sendRequest<TResponse extends TFrom>(
+		msg: TTo,
+		transfer?: Transferable[],
+	): Promise<TResponse> {
 		const id = this.messageIdCounter++;
-		this.postMessage({ body: msg, messageId: id });
+		this.postMessage({ body: msg, messageId: id }, transfer);
 		return new Promise<TResponse>((resolve, reject) => {
 			this.pendingMessages.set(id, { resolve: resolve as (msg: TFrom) => void, reject });
 		});

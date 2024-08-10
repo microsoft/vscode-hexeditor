@@ -11,6 +11,7 @@ export const enum HexDocumentEditOp {
 	Insert,
 	Delete,
 	Replace,
+	EmptyInsert,
 }
 
 export interface GenericHexDocumentEdit {
@@ -33,6 +34,19 @@ export interface HexDocumentDeleteEdit extends GenericHexDocumentEdit {
 export interface HexDocumentInsertEdit extends GenericHexDocumentEdit {
 	op: HexDocumentEditOp.Insert;
 	value: Uint8Array;
+}
+
+/**
+ * Similar to {@link HexDocumentInsertEdit} but only intended to be used
+ * when comparing files. Unlike {@link HexDocumentInsertEdit}, this allows us
+ * to align files without creating unnecessary Uint8Arrays.
+ *
+ * note: this is only a visual edit, so shouldn't be treated as a normal
+ * 		 edit (that's why HexDocumentEdit does not include it)
+ */
+export interface HexDocumentEmptyInsertEdit extends GenericHexDocumentEdit {
+	op: HexDocumentEditOp.EmptyInsert;
+	length: number;
 }
 
 export type HexDocumentEdit =
@@ -74,6 +88,7 @@ export const enum EditRangeOp {
 	Read,
 	Skip,
 	Insert,
+	EmptyInsert,
 }
 
 export type EditRange =
@@ -82,7 +97,8 @@ export type EditRange =
 	/** Skip starting at "offset" in the edited version of the file */
 	| { op: EditRangeOp.Skip; editIndex: number; offset: number }
 	/** Insert "value" at the "offset" in th edited version of the file */
-	| { op: EditRangeOp.Insert; editIndex: number; offset: number; value: Uint8Array };
+	| { op: EditRangeOp.Insert; editIndex: number; offset: number; value: Uint8Array }
+	| { op: EditRangeOp.EmptyInsert; editIndex: number; offset: number; length: number };
 
 export interface IEditTimeline {
 	/** Instructions on how to read the file, in order. */
@@ -332,6 +348,21 @@ export async function* readUsingRanges(
 			continue;
 		}
 
+		if (range.op === EditRangeOp.EmptyInsert) {
+			const readLast = range.offset + range.length - fromOffset;
+			if (readLast <= 0) {
+				continue;
+			}
+			const toYield =
+				readLast < range.length
+					? buf.fill(0, -readLast).subarray(-readLast)
+					: buf.fill(0, -range.length).subarray(-range.length);
+			if (toYield.length > 0) {
+				yield toYield;
+			}
+			continue;
+		}
+
 		if (range.op === EditRangeOp.Insert) {
 			const readLast = range.offset + range.value.length - fromOffset;
 			if (readLast <= 0) {
@@ -363,7 +394,9 @@ export async function* readUsingRanges(
 	}
 }
 
-export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimeline => {
+export const buildEditTimeline = (
+	edits: readonly (HexDocumentEdit | HexDocumentEmptyInsertEdit)[],
+): IEditTimeline => {
 	// Serialize all edits to a single, continuous "timeline", which we'll
 	// iterate through in order to read data and yield bytes.
 	const ranges: EditRange[] = [{ op: EditRangeOp.Read, editIndex: -1, roffset: 0, offset: 0 }];
@@ -389,7 +422,7 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 				before: { op: EditRangeOp.Skip, editIndex, offset: split.offset },
 				after: { op: EditRangeOp.Skip, editIndex, offset: split.offset + atByte },
 			};
-		} else {
+		} else if (split.op === EditRangeOp.Insert) {
 			return {
 				before: {
 					op: EditRangeOp.Insert,
@@ -402,6 +435,21 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 					editIndex,
 					offset: split.offset + atByte,
 					value: split.value.subarray(atByte),
+				},
+			};
+		} else {
+			return {
+				before: {
+					op: EditRangeOp.EmptyInsert,
+					editIndex,
+					offset: split.offset,
+					length: atByte,
+				},
+				after: {
+					op: EditRangeOp.EmptyInsert,
+					editIndex,
+					offset: split.offset + atByte,
+					length: split.length - atByte,
 				},
 			};
 		}
@@ -426,16 +474,18 @@ export const buildEditTimeline = (edits: readonly HexDocumentEdit[]): IEditTimel
 		}
 		const split = ranges[i];
 
-		if (edit.op === HexDocumentEditOp.Insert) {
+		if (edit.op === HexDocumentEditOp.Insert || edit.op === HexDocumentEditOp.EmptyInsert) {
 			const { before, after } = getSplit(editIndex, split, edit.offset - split.offset);
 			ranges.splice(
 				i,
 				1,
 				before,
-				{ op: EditRangeOp.Insert, editIndex, offset: edit.offset, value: edit.value },
+				edit.op === HexDocumentEditOp.Insert
+					? { op: EditRangeOp.Insert, editIndex, offset: edit.offset, value: edit.value }
+					: { op: EditRangeOp.EmptyInsert, editIndex, offset: edit.offset, length: edit.length },
 				after,
 			);
-			shiftAfter(i + 2, edit.value.length);
+			shiftAfter(i + 2, edit.op === HexDocumentEditOp.Insert ? edit.value.length : edit.length);
 		} else if (edit.op === HexDocumentEditOp.Delete || edit.op === HexDocumentEditOp.Replace) {
 			const { before } = getSplit(editIndex, split, edit.offset - split.offset);
 			let until = searcher(edit.offset + edit.previous.length, ranges);

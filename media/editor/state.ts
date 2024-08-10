@@ -3,7 +3,14 @@
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
-import { buildEditTimeline, HexDocumentEdit, readUsingRanges } from "../../shared/hexDocumentModel";
+import { HexDecorator, HexDecoratorType } from "../../shared/decorators";
+import {
+	buildEditTimeline,
+	HexDocumentEdit,
+	HexDocumentEditOp,
+	HexDocumentEmptyInsertEdit,
+	readUsingRanges,
+} from "../../shared/hexDocumentModel";
 import {
 	FromWebviewMessage,
 	InspectorLocation,
@@ -15,6 +22,7 @@ import {
 	ToWebviewMessage,
 } from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
+import { binarySearch } from "../../shared/util/binarySearch";
 import { Range } from "../../shared/util/range";
 import { clamp } from "./util";
 
@@ -103,6 +111,11 @@ export const codeSettings = selector({
 	get: ({ get }) => get(readyQuery).codeSettings,
 });
 
+export const decorators = selector({
+	key: "decorators",
+	get: ({ get }) => get(readyQuery).decorators,
+});
+
 export const showReadonlyWarningForEl = atom<HTMLElement | null>({
 	key: "showReadonlyWarningForEl",
 	default: null,
@@ -136,7 +149,7 @@ export const fileSize = selector({
 	key: "fileSize",
 	get: ({ get }) => {
 		const initial = get(diskFileSize);
-		const sizeDelta = get(unsavedEditTimeline).sizeDelta;
+		const sizeDelta = get(unsavedAndDecoratorEditTimeline).sizeDelta;
 		return initial === undefined ? initial : initial + sizeDelta;
 	},
 });
@@ -372,13 +385,41 @@ export const unsavedEditTimeline = selector({
 	},
 });
 
+const emptyDecoratorEdits = selector({
+	key: "emptyDecoratorEdits",
+	get: ({ get }) => {
+		return get(decorators)
+			.filter(record => record.type === HexDecoratorType.Empty)
+			.map(value => {
+				return {
+					op: HexDocumentEditOp.EmptyInsert,
+					offset: value.range.start,
+					length: value.range.end - value.range.start,
+				} as HexDocumentEmptyInsertEdit;
+			});
+	},
+});
+
+/**
+ * Creates the edit timeline for the unsaved edits and empty decorators.
+ */
+export const unsavedAndDecoratorEditTimeline = selector({
+	key: "unsavedAndDecoratorEditTimeline",
+	get: ({ get }) => {
+		return buildEditTimeline([
+			...get(edits).slice(get(unsavedEditIndex)),
+			...get(emptyDecoratorEdits),
+		]);
+	},
+});
+
 export const editedDataPages = selectorFamily({
 	key: "editedDataPages",
 	get:
 		(pageNumber: number) =>
 		async ({ get }) => {
 			const pageSize = get(dataPageSize);
-			const { ranges } = get(unsavedEditTimeline);
+			const { ranges } = get(unsavedAndDecoratorEditTimeline);
 			const target = new Uint8Array(pageSize);
 			const it = readUsingRanges(
 				{
@@ -412,6 +453,25 @@ export const editedDataPages = selectorFamily({
 		eviction: "lru",
 		maxSize: 1024,
 	},
+});
+
+/** Returns the decorators in a page */
+export const decoratorsPage = selectorFamily({
+	key: "decoratorsPage",
+	get:
+		(pageNumber: number) =>
+		async ({ get }) => {
+			const allDecorators = get(decorators);
+			if (allDecorators.length === 0) {
+				return [];
+			}
+			const pageSize = get(dataPageSize);
+			const searcherByEnd = binarySearch<HexDecorator>(decorator => decorator.range.end);
+			const startIndex = searcherByEnd(pageSize * pageNumber, allDecorators);
+			const searcherByStart = binarySearch<HexDecorator>(d => d.range.start);
+			const endIndex = searcherByStart(pageSize * pageNumber + pageSize+1, allDecorators);
+			return allDecorators.slice(startIndex, endIndex);
+		},
 });
 
 const rawDataPages = selectorFamily({

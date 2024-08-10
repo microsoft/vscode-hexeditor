@@ -46,10 +46,21 @@ build({
 	tsconfig: "./tsconfig.json",
 	bundle: true,
 	format: "cjs",
-	external: ["vscode", "fs"],
+	external: ["vscode", "fs", "worker_threads"],
 	minify,
 	platform: "browser",
 	outfile: "dist/web/extension.js",
+});
+
+build({
+	entryPoints: ["shared/diffWorker.ts"],
+	tsconfig: "./tsconfig.json",
+	bundle: true,
+	format: "cjs",
+	external: ["vscode", "worker_threads"],
+	minify,
+	platform: "browser",
+	outfile: "dist/diffWorker.js",
 });
 
 // Build the data inspector
