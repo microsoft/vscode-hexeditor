@@ -72,6 +72,22 @@
             "maximum": 512,
             "description": "%hexeditor.columnWidth%"
           },
+          "hexeditor.copyType": {
+            "type": "string",
+            "enum": [
+              "Raw",
+              "Hex",
+              "Literal",
+              "UTF-8",
+              "C",
+              "Go",
+              "Java",
+              "JSON",
+              "Base64"
+            ],
+            "default": "Raw",
+            "description": "%hexeditor.copyType%"
+          },
           "hexeditor.showDecodedText": {
             "type": "boolean",
             "default": true,

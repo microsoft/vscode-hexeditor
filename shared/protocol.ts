@@ -59,6 +59,7 @@ export const enum InspectorLocation {
 }
 
 export interface IEditorSettings {
+	copyType: CopyFormat;
 	showDecodedText: boolean;
 	columnWidth: number;
 	inspectorType: InspectorLocation;

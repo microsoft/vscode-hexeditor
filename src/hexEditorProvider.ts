@@ -9,6 +9,7 @@ import {
 	HexDocumentEditReference,
 } from "../shared/hexDocumentModel";
 import {
+	CopyFormat,
 	Endianness,
 	ExtensionHostMessageHandler,
 	FromWebviewMessage,
@@ -32,6 +33,7 @@ import { flattenBuffers, getBaseName, getCorrectArrayBuffer, randomString } from
 
 const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
+	copyType: CopyFormat.Raw,
 	showDecodedText: true,
 	defaultEndianness: Endianness.Little,
 	inspectorType: InspectorLocation.Aside,
