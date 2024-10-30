@@ -39,7 +39,7 @@ const resultCountFormat = new Intl.NumberFormat(undefined, { notation: "compact"
 const selectedFormat = new Intl.NumberFormat();
 
 /**
- * Parses a query like "AABB??DD" into a query looking for
+ * Parses a query like "AABB??DD" or "AA BB DD" into a query looking for
  * `[[170, 187], "*", [221]]`.
  */
 const parseHexStringWithPlaceholders = (str: string): LiteralSearchQuery | undefined => {
@@ -49,8 +49,6 @@ const parseHexStringWithPlaceholders = (str: string): LiteralSearchQuery | undef
 
 	const query: LiteralSearchQuery = { literal: [] };
 	for (let i = 0; i < str.length; i += 2) {
-		while (i < str.length && str[i] === " ") i++; // ignore spaces
-
 		if (str[i] === "?" && (i + 1 === str.length || str[i + 1] === "?")) {
 			if (valueEnd > valueStart) {
 				query.literal.push(value.subarray(valueStart, valueEnd));
@@ -90,7 +88,11 @@ const getSearchQueryOrError = (
 	isBinaryMode: boolean,
 	isRegexp: boolean,
 ): SearchRequestMessage["query"] | string => {
+	const hexPattern = /^\s*([0-9a-fA-F]{2}\s*)+$/;
 	if (isBinaryMode) {
+		if (hexPattern.test(query)) {
+			query = query.replace(/\s/g, "");
+		}
 		return parseHexStringWithPlaceholders(query) || strings.onlyHexCharsAndPlaceholders;
 	}
 
