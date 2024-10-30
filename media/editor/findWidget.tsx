@@ -49,6 +49,8 @@ const parseHexStringWithPlaceholders = (str: string): LiteralSearchQuery | undef
 
 	const query: LiteralSearchQuery = { literal: [] };
 	for (let i = 0; i < str.length; i += 2) {
+		while (i < str.length && str[i] === " ") i++; // ignore spaces
+
 		if (str[i] === "?" && (i + 1 === str.length || str[i + 1] === "?")) {
 			if (valueEnd > valueStart) {
 				query.literal.push(value.subarray(valueStart, valueEnd));
