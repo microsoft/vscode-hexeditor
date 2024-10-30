@@ -179,6 +179,7 @@ export interface DeleteAcceptedMessage {
 }
 
 export const enum CopyFormat {
+	Raw = "Raw",
 	Hex = "Hex",
 	Literal = "Literal",
 	Utf8 = "UTF-8",
