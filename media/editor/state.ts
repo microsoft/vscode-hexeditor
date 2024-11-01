@@ -34,6 +34,14 @@ const acquireVsCodeApi: () => {
 
 export const vscode = acquireVsCodeApi?.();
 
+export const setWebviewState = (key: string, value: unknown) => {
+	vscode.setState?.({ ...vscode.getState(), [key]: value });
+};
+
+export const getWebviewState = <T>(key: string, defaultValue: T): T => {
+	return vscode.getState?.()[key] ?? defaultValue;
+};
+
 type HandlerFn = (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined;
 
 const handles: { [T in ToWebviewMessage["type"]]?: HandlerFn | HandlerFn[] } = {};
@@ -469,7 +477,7 @@ export const decoratorsPage = selectorFamily({
 			const searcherByEnd = binarySearch<HexDecorator>(decorator => decorator.range.end);
 			const startIndex = searcherByEnd(pageSize * pageNumber, allDecorators);
 			const searcherByStart = binarySearch<HexDecorator>(d => d.range.start);
-			const endIndex = searcherByStart(pageSize * pageNumber + pageSize+1, allDecorators);
+			const endIndex = searcherByStart(pageSize * pageNumber + pageSize + 1, allDecorators);
 			return allDecorators.slice(startIndex, endIndex);
 		},
 });
