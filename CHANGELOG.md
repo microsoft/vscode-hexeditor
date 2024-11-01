@@ -1,5 +1,11 @@
 ## Release Notes
 
+## 1.11.0 - November 1, 2024
+
+- Add an experimental diff mode for the hex editor [@tomilho via #522](https://github.com/microsoft/vscode-hexeditor/pull/522)
+- Add a "Copy As..." action [@lorsanta via #498](https://github.com/microsoft/vscode-hexeditor/pull/498)
+- Add a UUID/GUID mode in the data inspectorq [@jogo- via #500](https://github.com/microsoft/vscode-hexeditor/pull/500)
+
 ## 1.10.0 - April 22, 2024
 
 - Fix bug in saving of restored editors, thanks to [@tomilho via #513](https://github.com/microsoft/vscode-hexeditor/pull/513)
