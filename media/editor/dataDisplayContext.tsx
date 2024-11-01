@@ -3,9 +3,9 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { SetterOrUpdater } from "recoil";
 import { HexDocumentEdit } from "../../shared/hexDocumentModel";
 import { MessageType } from "../../shared/protocol";
-import { Range, getRangeSelectionsFromStack } from "../../shared/util/range";
+import { Range, RangeDirection, getRangeSelectionsFromStack } from "../../shared/util/range";
 import _style from "./dataDisplayContext.css";
-import { messageHandler, registerHandler } from "./state";
+import { getWebviewState, messageHandler, registerHandler, setWebviewState } from "./state";
 import { throwOnUndefinedAccessInDev } from "./util";
 
 const style = throwOnUndefinedAccessInDev(_style);
@@ -34,12 +34,18 @@ export class FocusedElement {
 	}
 }
 
+const selectionStateKey = "DisplayContextSelection";
+
+type SelectionState = { start: number; end: number; dir: RangeDirection }[];
+
 /**
  * Data management context component. Initially we used Recoil for this, but
  * this ended up introducing performance issues with very many components.
  */
 export class DisplayContext {
-	private _selection: Range[] = [];
+	private _selection: Range[] = getWebviewState<SelectionState>(selectionStateKey, []).map(
+		r => new Range(r.start, r.end, r.dir),
+	);
 	private _hoveredByte?: FocusedElement;
 	private _focusedByte?: FocusedElement;
 	private _unsavedRanges: readonly Range[] = [];
@@ -287,6 +293,15 @@ export class DisplayContext {
 		for (const range of this.getSelectionRanges()) {
 			selected += range.size;
 		}
+
+		setWebviewState(
+			selectionStateKey,
+			this._selection.map(r => ({
+				start: r.start,
+				end: r.end,
+				dir: r.direction,
+			})) satisfies SelectionState,
+		);
 
 		messageHandler.sendEvent({
 			type: MessageType.SetSelectedCount,
