@@ -264,6 +264,7 @@ export const offset = atom({
 
 			registerHandler(MessageType.GoToOffset, msg => {
 				const s = fx.getLoadable(columnWidth).getValue();
+				vscode.setState({ ...vscode.getState(), offset: msg.offset });
 				fx.setSelf(startOfRowContainingByte(msg.offset, s));
 			});
 		},
