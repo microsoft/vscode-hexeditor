@@ -30,10 +30,14 @@ export const copyAs = async (messaging: ExtensionHostMessageHandler): Promise<vo
 		{ label: CopyFormat.Java },
 		{ label: CopyFormat.JSON },
 		{ label: CopyFormat.Base64 },
+		{ label: "Configure HexEditor: Copy Type" as CopyFormat }
 	];
 
 	vscode.window.showQuickPick(formats).then(format => {
-		if (format) {
+		if (format?.label == formats.at(-1)?.label) {
+			vscode.commands.executeCommand('workbench.action.openSettings2', { query: '@id:hexeditor.copyType' });
+		}
+		else if (format) {
 			messaging.sendEvent({ type: MessageType.TriggerCopyAs, format: format["label"] });
 		}
 	});
