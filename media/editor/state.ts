@@ -190,6 +190,11 @@ export const columnWidth = selector({
 	get: ({ get }) => get(editorSettings).columnWidth,
 });
 
+export const copyType = selector({
+	key: "copyType",
+	get: ({ get }) => get(editorSettings).copyType,
+});
+
 export const showDecodedText = selector({
 	key: "showDecodedText",
 	get: ({ get }) => get(editorSettings).showDecodedText,

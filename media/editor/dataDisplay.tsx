@@ -11,6 +11,7 @@ import {
 	InspectorLocation,
 	MessageType,
 } from "../../shared/protocol";
+import { binarySearch } from "../../shared/util/binarySearch";
 import { Range } from "../../shared/util/range";
 import { PastePopup } from "./copyPaste";
 import _style from "./dataDisplay.css";
@@ -36,7 +37,6 @@ import {
 	parseHexDigit,
 	throwOnUndefinedAccessInDev,
 } from "./util";
-import { binarySearch } from "../../shared/util/binarySearch";
 
 const style = throwOnUndefinedAccessInDev(_style);
 
@@ -120,6 +120,7 @@ export const DataDisplay: React.FC = () => {
 	const columnWidth = useRecoilValue(select.columnWidth);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize);
+	const copyType = useRecoilValue(select.copyType);
 	const allEditTimeline = useRecoilValue(select.allEditTimeline);
 	const unsavedEditIndex = useRecoilValue(select.unsavedEditIndex);
 	const ctx = useDisplayContext();
@@ -296,7 +297,7 @@ export const DataDisplay: React.FC = () => {
 			select.messageHandler.sendEvent({
 				type: MessageType.DoCopy,
 				selections: ctx.selection.map(r => [r.start, r.end]),
-				format: ctx.focusedElement.char ? CopyFormat.Utf8 : CopyFormat.Base64,
+				format: ctx.focusedElement.char ? CopyFormat.Utf8 : copyType,
 			});
 		}
 	});

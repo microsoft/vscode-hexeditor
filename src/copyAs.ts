@@ -8,6 +8,7 @@ interface QuickPickCopyFormat extends vscode.QuickPickItem {
 
 export const copyAsFormats: { [K in CopyFormat]: (buffer: Uint8Array, filename: string) => void } =
 	{
+		[CopyFormat.Raw]: copyAsRaw,
 		[CopyFormat.Hex]: copyAsHex,
 		[CopyFormat.Literal]: copyAsLiteral,
 		[CopyFormat.Utf8]: copyAsText,
@@ -20,6 +21,7 @@ export const copyAsFormats: { [K in CopyFormat]: (buffer: Uint8Array, filename: 
 
 export const copyAs = async (messaging: ExtensionHostMessageHandler): Promise<void> => {
 	const formats: QuickPickCopyFormat[] = [
+		{ label: CopyFormat.Raw },
 		{ label: CopyFormat.Hex },
 		{ label: CopyFormat.Literal },
 		{ label: CopyFormat.Utf8 },
@@ -39,6 +41,11 @@ export const copyAs = async (messaging: ExtensionHostMessageHandler): Promise<vo
 
 export function copyAsText(buffer: Uint8Array) {
 	vscode.env.clipboard.writeText(new TextDecoder().decode(buffer));
+}
+
+export function copyAsRaw(buffer: Uint8Array) {
+	const hexString = Array.from(buffer, (b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ')
+	vscode.env.clipboard.writeText(hexString)
 }
 
 export function copyAsHex(buffer: Uint8Array) {
