@@ -35,11 +35,11 @@ const acquireVsCodeApi: () => {
 export const vscode = acquireVsCodeApi?.();
 
 export const setWebviewState = (key: string, value: unknown) => {
-	vscode.setState?.({ ...vscode.getState(), [key]: value });
+	vscode.setState?.({ ...(vscode.getState?.() ?? {}), [key]: value });
 };
 
 export const getWebviewState = <T>(key: string, defaultValue: T): T => {
-	return vscode.getState?.()[key] ?? defaultValue;
+	return (vscode.getState?.() ?? {})[key] ?? defaultValue;
 };
 
 type HandlerFn = (message: ToWebviewMessage) => Promise<FromWebviewMessage> | undefined;
