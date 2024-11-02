@@ -75,7 +75,7 @@
           "hexeditor.copyType": {
             "type": "string",
             "enum": [
-              "Raw",
+              "Hex Octets",
               "Hex",
               "Literal",
               "UTF-8",
@@ -85,7 +85,7 @@
               "JSON",
               "Base64"
             ],
-            "default": "Raw",
+            "default": "Hex Octets",
             "description": "%hexeditor.copyType%"
           },
           "hexeditor.showDecodedText": {

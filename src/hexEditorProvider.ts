@@ -33,7 +33,7 @@ import { flattenBuffers, getBaseName, getCorrectArrayBuffer, randomString } from
 
 const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
-	copyType: CopyFormat.Raw,
+	copyType: CopyFormat.HexOctets,
 	showDecodedText: true,
 	defaultEndianness: Endianness.Little,
 	inspectorType: InspectorLocation.Aside,
