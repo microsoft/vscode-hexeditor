@@ -1,7 +1,16 @@
 ## Release Notes
 
+## 1.11.1 - November 2, 2024
+
+- Add a setting to configure the default "Copy As..." format, thanks to [@Antecer via #540](https://github.com/microsoft/vscode-hexeditor/pull/540)
+- Fix a display issue causing a blank editor [@Hexa3333 via #548](https://github.com/microsoft/vscode-hexeditor/pull/548)
+
 ## 1.11.0 - November 1, 2024
 
+- Fix: ctrl+g scroll state being lost when restoring editor [#545](https://github.com/microsoft/vscode-hexeditor/pull/545)
+- Fix: retain selection state when restoring webview [#544](https://github.com/microsoft/vscode-hexeditor/pull/544)
+- Fix: not able to edit empty files [#543](https://github.com/microsoft/vscode-hexeditor/pull/543)
+- Fix: correctly show big-endian utf-16 chars [#542](https://github.com/microsoft/vscode-hexeditor/pull/542)
 - Add an experimental diff mode for the hex editor [@tomilho via #522](https://github.com/microsoft/vscode-hexeditor/pull/522)
 - Add a "Copy As..." action [@lorsanta via #498](https://github.com/microsoft/vscode-hexeditor/pull/498)
 - Add a UUID/GUID mode in the data inspectorq [@jogo- via #500](https://github.com/microsoft/vscode-hexeditor/pull/500)
