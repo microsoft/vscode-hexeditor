@@ -8,6 +8,7 @@ interface QuickPickCopyFormat extends vscode.QuickPickItem {
 
 export const copyAsFormats: { [K in CopyFormat]: (buffer: Uint8Array, filename: string) => void } =
 	{
+		[CopyFormat.HexOctets]: copyAsHexOctets,
 		[CopyFormat.Hex]: copyAsHex,
 		[CopyFormat.Literal]: copyAsLiteral,
 		[CopyFormat.Utf8]: copyAsText,
@@ -20,6 +21,7 @@ export const copyAsFormats: { [K in CopyFormat]: (buffer: Uint8Array, filename: 
 
 export const copyAs = async (messaging: ExtensionHostMessageHandler): Promise<void> => {
 	const formats: QuickPickCopyFormat[] = [
+		{ label: CopyFormat.HexOctets },
 		{ label: CopyFormat.Hex },
 		{ label: CopyFormat.Literal },
 		{ label: CopyFormat.Utf8 },
@@ -28,10 +30,14 @@ export const copyAs = async (messaging: ExtensionHostMessageHandler): Promise<vo
 		{ label: CopyFormat.Java },
 		{ label: CopyFormat.JSON },
 		{ label: CopyFormat.Base64 },
+		{ label: "Configure HexEditor: Copy Type" as CopyFormat }
 	];
 
 	vscode.window.showQuickPick(formats).then(format => {
-		if (format) {
+		if (format?.label == formats.at(-1)?.label) {
+			vscode.commands.executeCommand('workbench.action.openSettings2', { query: '@id:hexeditor.copyType' });
+		}
+		else if (format) {
 			messaging.sendEvent({ type: MessageType.TriggerCopyAs, format: format["label"] });
 		}
 	});
@@ -39,6 +45,11 @@ export const copyAs = async (messaging: ExtensionHostMessageHandler): Promise<vo
 
 export function copyAsText(buffer: Uint8Array) {
 	vscode.env.clipboard.writeText(new TextDecoder().decode(buffer));
+}
+
+export function copyAsHexOctets(buffer: Uint8Array) {
+	const hexString = Array.from(buffer, (b) => b.toString(16).toUpperCase().padStart(2, "0")).join(" ")
+	vscode.env.clipboard.writeText(hexString)
 }
 
 export function copyAsHex(buffer: Uint8Array) {

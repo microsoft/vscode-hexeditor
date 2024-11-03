@@ -20,6 +20,7 @@
     "Other"
   ],
   "icon": "icon.png",
+	"activationEvents": [],
   "main": "./dist/extension.js",
   "browser": "./dist/web/extension.js",
   "l10n": "./l10n",
@@ -70,6 +71,22 @@
             "minimum": 1,
             "maximum": 512,
             "description": "%hexeditor.columnWidth%"
+          },
+          "hexeditor.copyType": {
+            "type": "string",
+            "enum": [
+              "Hex Octets",
+              "Hex",
+              "Literal",
+              "UTF-8",
+              "C",
+              "Go",
+              "Java",
+              "JSON",
+              "Base64"
+            ],
+            "default": "Hex Octets",
+            "description": "%hexeditor.copyType%"
           },
           "hexeditor.showDecodedText": {
             "type": "boolean",

@@ -59,6 +59,7 @@ export const enum InspectorLocation {
 }
 
 export interface IEditorSettings {
+	copyType: CopyFormat;
 	showDecodedText: boolean;
 	columnWidth: number;
 	inspectorType: InspectorLocation;
@@ -179,6 +180,7 @@ export interface DeleteAcceptedMessage {
 }
 
 export const enum CopyFormat {
+	HexOctets = "Hex Octets",
 	Hex = "Hex",
 	Literal = "Literal",
 	Utf8 = "UTF-8",
