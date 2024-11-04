@@ -11,15 +11,15 @@
 - Fix: retain selection state when restoring webview [#544](https://github.com/microsoft/vscode-hexeditor/pull/544)
 - Fix: not able to edit empty files [#543](https://github.com/microsoft/vscode-hexeditor/pull/543)
 - Fix: correctly show big-endian utf-16 chars [#542](https://github.com/microsoft/vscode-hexeditor/pull/542)
-- Add an experimental diff mode for the hex editor [@tomilho via #522](https://github.com/microsoft/vscode-hexeditor/pull/522)
-- Add a "Copy As..." action [@lorsanta via #498](https://github.com/microsoft/vscode-hexeditor/pull/498)
-- Add a UUID/GUID mode in the data inspectorq [@jogo- via #500](https://github.com/microsoft/vscode-hexeditor/pull/500)
+- Add an experimental diff mode for the hex editor, thanks to [@tomilho via #522](https://github.com/microsoft/vscode-hexeditor/pull/522)
+- Add a "Copy As..." action, thanks to [@lorsanta via #498](https://github.com/microsoft/vscode-hexeditor/pull/498)
+- Add a UUID/GUID mode in the data inspector, thanks to [@jogo- via #500](https://github.com/microsoft/vscode-hexeditor/pull/500)
 
 ## 1.10.0 - April 22, 2024
 
 - Fix bug in saving of restored editors, thanks to [@tomilho via #513](https://github.com/microsoft/vscode-hexeditor/pull/513)
-- Add hovered byte status bar entry [@tomilho via #502](https://github.com/microsoft/vscode-hexeditor/pull/502)
-- Add insert mode [@tomilho via #503](https://github.com/microsoft/vscode-hexeditor/pull/503)
+- Add hovered byte status bar entry, thanks to [@tomilho via #502](https://github.com/microsoft/vscode-hexeditor/pull/502)
+- Add insert mode, thanks to [@tomilho via #503](https://github.com/microsoft/vscode-hexeditor/pull/503)
 
 ## 1.9.14 - February 22, 2024
 - Add ULEB128 and SLEB128 support in data inspector, thanks to [@jogo- via #488](https://github.com/microsoft/vscode-hexeditor/pull/488)
