@@ -13,11 +13,11 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRecoilState, useRecoilValue } from "recoil";
 import { HexDocumentEditOp, HexDocumentReplaceEdit } from "../../shared/hexDocumentModel";
 import {
-	LiteralSearchQuery,
-	MessageType,
-	SearchRequestMessage,
-	SearchResult,
-	SearchResultsWithProgress,
+    LiteralSearchQuery,
+    MessageType,
+    SearchRequestMessage,
+    SearchResult,
+    SearchResultsWithProgress,
 } from "../../shared/protocol";
 import { placeholder1 } from "../../shared/strings";
 import { Range } from "../../shared/util/range";
@@ -39,7 +39,7 @@ const resultCountFormat = new Intl.NumberFormat(undefined, { notation: "compact"
 const selectedFormat = new Intl.NumberFormat();
 
 /**
- * Parses a query like "AABB??DD" into a query looking for
+ * Parses a query like "AABB??DD" or "AA BB DD" into a query looking for
  * `[[170, 187], "*", [221]]`.
  */
 const parseHexStringWithPlaceholders = (str: string): LiteralSearchQuery | undefined => {
@@ -88,7 +88,11 @@ const getSearchQueryOrError = (
 	isBinaryMode: boolean,
 	isRegexp: boolean,
 ): SearchRequestMessage["query"] | string => {
+	const hexPattern = /^\s*([0-9a-fA-F?]{2}\s*)+$/;
 	if (isBinaryMode) {
+		if (hexPattern.test(query)) {
+			query = query.replace(/\s/g, "");
+		}
 		return parseHexStringWithPlaceholders(query) || strings.onlyHexCharsAndPlaceholders;
 	}
 
