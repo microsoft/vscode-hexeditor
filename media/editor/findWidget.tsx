@@ -168,7 +168,7 @@ export const FindWidget: React.FC = () => {
 
 	useEffect(() => {
 		const l = (evt: KeyboardEvent) => {
-			if (evt.key === "f" && (evt.metaKey || evt.ctrlKey)) {
+			if ((evt.key === "f" || evt.key === "F") && (evt.metaKey || evt.ctrlKey)) {
 				setVisible(true);
 				previouslyFocusedElement.current = ctx.focusedElement;
 				textFieldRef.current?.focus();
