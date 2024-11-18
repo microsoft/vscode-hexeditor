@@ -37,6 +37,7 @@ const defaultEditorSettings: Readonly<IEditorSettings> = {
 	showDecodedText: true,
 	defaultEndianness: Endianness.Little,
 	inspectorType: InspectorLocation.Aside,
+	dimZeroBytes: false,
 };
 
 const editorSettingsKeys = Object.keys(defaultEditorSettings) as readonly (keyof IEditorSettings)[];

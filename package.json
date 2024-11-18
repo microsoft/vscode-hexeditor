@@ -97,6 +97,11 @@
             "type": "boolean",
             "default": false,
             "description": "%hexeditor.showOpenFileButton%"
+          },
+          "hexeditor.dimZeroBytes": {
+            "type": "boolean",
+            "default": false,
+            "description": "%hexeditor.dimZeroBytes%"
           }
         }
       }
