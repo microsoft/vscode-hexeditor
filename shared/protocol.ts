@@ -64,6 +64,7 @@ export interface IEditorSettings {
 	columnWidth: number;
 	inspectorType: InspectorLocation;
 	defaultEndianness: Endianness;
+	dimZeroBytes: boolean;
 }
 
 export interface ICodeSettings {

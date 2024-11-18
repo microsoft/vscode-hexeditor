@@ -661,6 +661,8 @@ const DataCell: React.FC<{
 			: firstOctetOfEdit === undefined // Assumes HexDocumentEditOp.Insert
 				? style.dataCellInsertBefore
 				: style.dataCellInsertMiddle;
+
+	const dimZeroBytes = useRecoilValue(select.dimZeroBytes);
 	return (
 		<span
 			ref={elRef}
@@ -677,6 +679,7 @@ const DataCell: React.FC<{
 				isSelected && style.dataCellSelected,
 				isHovered && isSelected && style.dataCellSelectedHovered,
 				useIsUnsaved(offset) && style.dataCellUnsaved,
+				dimZeroBytes && value === 0 && style.dimZeroBytes,
 			)}
 			onMouseEnter={onMouseEnter}
 			onMouseDown={onMouseDown}

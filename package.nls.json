@@ -9,6 +9,7 @@
 	"hexeditor.columnWidth": "The number of bytes per row to show in the editor.",
 	"hexeditor.showDecodedText": "Whether decoded text should be shown in the editor.",
 	"hexeditor.showOpenFileButton": "Show Hex Editor button in editor menu.",
+	"hexeditor.dimZeroBytes": "Whether to dim all zero bytes to help non-zero data stand out",
 	"hexEditor.openFile": "Open Active File in Hex Editor",
 	"hexEditor.goToOffset": "Go To Offset",
 	"hexEditor.selectBetweenOffsets": "Select Between Offsets",
