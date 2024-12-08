@@ -223,7 +223,7 @@
       "explorer/context": [
         {
           "command": "hexEditor.compareSelected",
-          "group": "3_compare",
+          "group": "3_compare@30",
           "when": "listDoubleSelection"
         }
       ]
