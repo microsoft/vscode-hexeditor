@@ -200,6 +200,11 @@ export const showDecodedText = selector({
 	get: ({ get }) => get(editorSettings).showDecodedText,
 });
 
+export const dimZeroBytes = selector({
+	key: "dimZeroBytes",
+	get: ({ get }) => get(editorSettings).dimZeroBytes,
+});
+
 // Atom used to invalidate data when a reload is requested.
 const reloadGeneration = atom({
 	key: "reloadGeneration",
