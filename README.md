@@ -26,6 +26,12 @@ The hex editor can be set as the default editor for certain file types by using 
 },
 ```
 
+## Data Inspector
+
+The Data Inspector shows the intepreted value of the next n bytes following the cursor position, independent of any selection made.
+n depends on the data interpretetion, e.g. 1 for uint8 or 8 for uint64.
+If not enough bytes are available right of the cursor to the end of the file the value is displayed as "End of File".
+
 ## Configuring the Data Inspector
 
 By default, the data inspector is shown just to the right of the data grid (or decoded text if enabled), but it can be configured (via the `hexeditor.inspectorType` setting) to instead show up while hovering over a data cell.
