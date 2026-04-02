@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import TelemetryReporter from "@vscode/extension-telemetry";
+import { TelemetryReporter } from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
 import { HexDocumentEditOp } from "../shared/hexDocumentModel";
 import { openCompareSelected } from "./compareSelected";
@@ -18,14 +18,10 @@ import StatusFocus from "./statusFocus";
 import StatusHoverAndSelection from "./statusHoverAndSelection";
 
 function readConfigFromPackageJson(extension: vscode.Extension<any>): {
-	extId: string;
-	version: string;
 	aiKey: string;
 } {
 	const packageJSON = extension.packageJSON;
 	return {
-		extId: `${packageJSON.publisher}.${packageJSON.name}`,
-		version: packageJSON.version,
 		aiKey: packageJSON.aiKey,
 	};
 }
@@ -55,11 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.registerWebviewViewProvider(DataInspectorView.viewType, dataInspectorProvider),
 	);
 
-	const telemetryReporter = new TelemetryReporter(
-		configValues.extId,
-		configValues.version,
-		configValues.aiKey,
-	);
+	const telemetryReporter = new TelemetryReporter(configValues.aiKey);
 	context.subscriptions.push(telemetryReporter);
 	const openWithCommand = vscode.commands.registerCommand(
 		"hexEditor.openFile",

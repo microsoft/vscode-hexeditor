@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-import TelemetryReporter from "@vscode/extension-telemetry";
+import { TelemetryReporter } from "@vscode/extension-telemetry";
 import * as vscode from "vscode";
 import { HexDecorator } from "../shared/decorators";
 import { FileAccessor } from "../shared/fileAccessor";

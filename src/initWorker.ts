@@ -33,7 +33,7 @@ function initDiffWorker(extensionUri: vscode.Uri): {
 	try {
 		worker = new Worker(workerFilePath);
 	} catch {
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const { Worker } = require("worker_threads") as typeof import("worker_threads");
 		const nodeWorker = new Worker(new URL(workerFilePath));
 		// Web and node js have different worker interfaces, so we share a function
