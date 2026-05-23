@@ -52,7 +52,8 @@ const Byte: React.FC<{ value: number }> = ({ value }) => (
 
 // Byte cells are square, and show two (hex) characters, but text cells show a
 // single character so can be narrower--by this constant multiplier.
-const textCellWidth = 0.7;
+// (must match value at dataDisplay.css#.data-cell-char)
+const textCellWidth = 0.5;
 
 const DataCellGroup: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, ...props }) => (
 	<div className={style.dataCellGroup} {...props}>
