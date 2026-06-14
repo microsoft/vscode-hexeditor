@@ -22,10 +22,16 @@ function build(options) {
 const svgr = {
 	name: "svgr",
 	setup(build) {
-		build.onLoad({ filter: /\.svg$/ }, async args => ({
-			contents: await transform(await fs.readFile(args.path, "utf8"), { plugins: [svgrPluginJsx] }, { filePath: args.path }),
-			loader: "jsx",
-		}));
+		build.onLoad({ filter: /\.svg$/ }, async args => {
+			try {
+				return {
+					contents: await transform(await fs.readFile(args.path, "utf8"), { plugins: [svgrPluginJsx] }, { filePath: args.path }),
+					loader: "jsx",
+				};
+			} catch (error) {
+				throw new Error(`Failed to transform SVG '${args.path}': ${error instanceof Error ? error.message : String(error)}`);
+			}
+		});
 	},
 };
 
