@@ -31,7 +31,9 @@ export async function openOffsetInput(): Promise<string | undefined> {
  * are allowed to point at subsets of the underlying ArrayBuffers.
  */
 export const getCorrectArrayBuffer = (u8: Uint8Array): ArrayBuffer =>
-	u8.byteLength === u8.buffer.byteLength ? u8.buffer : u8.buffer.slice(0, u8.byteLength);
+	u8.byteLength === u8.buffer.byteLength
+		? (u8.buffer as ArrayBuffer)
+		: (u8.buffer.slice(0, u8.byteLength) as ArrayBuffer);
 
 /** Returns the number of bytes in the str when interpreted as utf-8 */
 export const utf8Length = (str: string): number => {

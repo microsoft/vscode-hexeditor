@@ -43,9 +43,18 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		});
 
 		const queries = parseQuery(uri.query);
-		const baseAddress: number = queries.baseAddress
-			? HexDocument.parseHexOrDecInt(queries.baseAddress)
-			: 0;
+
+		// Use explicit baseAddress from query, or from hex decoder, or default to 0
+		let baseAddress: number = 0;
+		if (queries.baseAddress) {
+			baseAddress = HexDocument.parseHexOrDecInt(queries.baseAddress);
+		} else if ((accessor as any).hexBaseAddress !== undefined) {
+			baseAddress = (accessor as any).hexBaseAddress;
+			console.log(
+				"[HexDocument] Using base address from hex decoder:",
+				"0x" + baseAddress.toString(16),
+			);
+		}
 
 		const fileSize = await accessor.getSize();
 		/* __GDPR__

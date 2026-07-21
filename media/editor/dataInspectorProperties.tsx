@@ -106,12 +106,16 @@ const inspectTypesBuilder: IInspectableType[] = [
 	{ label: "uint16", minBytes: 2, convert: (dv, le) => dv.getUint16(0, le).toString() },
 	{ label: "int16", minBytes: 2, convert: (dv, le) => dv.getInt16(0, le).toString() },
 
-	{ label: "uint24", minBytes: 3, convert: (dv, le) => getUint24(dv.buffer, le).toString() },
+	{
+		label: "uint24",
+		minBytes: 3,
+		convert: (dv, le) => getUint24(dv.buffer as ArrayBuffer, le).toString(),
+	},
 	{
 		label: "int24",
 		minBytes: 3,
 		convert: (dv, le) => {
-			const uint = getUint24(dv.buffer, le);
+			const uint = getUint24(dv.buffer as ArrayBuffer, le);
 			const isNegative = !!(uint & 0x800000);
 			return String(isNegative ? -(0xffffff - uint + 1) : uint);
 		},
@@ -123,24 +127,24 @@ const inspectTypesBuilder: IInspectableType[] = [
 	{ label: "uint64", minBytes: 8, convert: (dv, le) => dv.getBigUint64(0, le).toString() },
 	{ label: "int64", minBytes: 8, convert: (dv, le) => dv.getBigInt64(0, le).toString() },
 
-	{ label: "ULEB128", minBytes: 1, convert: dv => getULEB128(dv.buffer).toString() },
-	{ label: "SLEB128", minBytes: 1, convert: dv => getSLEB128(dv.buffer).toString() },
+	{ label: "ULEB128", minBytes: 1, convert: dv => getULEB128(dv.buffer as ArrayBuffer).toString() },
+	{ label: "SLEB128", minBytes: 1, convert: dv => getSLEB128(dv.buffer as ArrayBuffer).toString() },
 
 	{
 		label: "float16",
 		minBytes: 2,
-		convert: (dv, le) => getFloat16(5, 10)(dv.buffer, le).toString(),
+		convert: (dv, le) => getFloat16(5, 10)(dv.buffer as ArrayBuffer, le).toString(),
 	},
 	{
 		label: "bfloat16",
 		minBytes: 2,
-		convert: (dv, le) => getFloat16(8, 7)(dv.buffer, le).toString(),
+		convert: (dv, le) => getFloat16(8, 7)(dv.buffer as ArrayBuffer, le).toString(),
 	},
 
 	{ label: "float32", minBytes: 4, convert: (dv, le) => dv.getFloat32(0, le).toString() },
 	{ label: "float64", minBytes: 8, convert: (dv, le) => dv.getFloat64(0, le).toString() },
 
-	{ label: "GUID", minBytes: 16, convert: (dv, le) => getGUID(dv.buffer, le) },
+	{ label: "GUID", minBytes: 16, convert: (dv, le) => getGUID(dv.buffer as ArrayBuffer, le) },
 ];
 
 const addTextDecoder = (encoding: string, minBytes: number, bigEndianAlt?: string) => {

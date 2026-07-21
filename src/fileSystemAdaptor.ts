@@ -5,6 +5,7 @@ import type fs from "fs";
 import type os from "os";
 import * as vscode from "vscode";
 import { FileAccessor, FileWriteOp } from "../shared/fileAccessor";
+import { tryDecodeHexEncodedText } from "./hexFormat";
 
 declare function require(_name: "fs"): typeof fs;
 declare function require(_name: "os"): typeof os;
@@ -13,13 +14,24 @@ export const accessFile = async (
 	uri: vscode.Uri,
 	untitledDocumentData?: Uint8Array,
 ): Promise<FileAccessor> => {
+	// Check if file ends with .hex (case-insensitive)
+	// Handle both Windows paths (C:\...\file.hex) and URI paths (/c:/...file.hex or /path/file.hex)
+	const filename = uri.fsPath || uri.path;
+	console.log("[HexDecoder] accessFile called for:", filename);
+	const shouldDecodeHex = /\.hex$/i.test(filename);
+	console.log("[HexDecoder] shouldDecodeHex:", shouldDecodeHex);
+	const withHexDecode = (accessor: FileAccessor) =>
+		shouldDecodeHex ? new HexDecodedFileAccessor(accessor) : accessor;
+
 	if (uri.scheme === "untitled") {
-		return new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array());
+		return withHexDecode(new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array()));
 	}
 
 	if (uri.scheme === "vscode-debug-memory") {
 		const { permissions = 0 } = await vscode.workspace.fs.stat(uri);
-		return new DebugFileAccessor(uri, !!(permissions & vscode.FilePermission.Readonly));
+		return withHexDecode(
+			new DebugFileAccessor(uri, !!(permissions & vscode.FilePermission.Readonly)),
+		);
 	}
 
 	// try to use native file access for local files to allow large files to be handled efficiently
@@ -43,15 +55,161 @@ export const accessFile = async (
 
 			if (fileStats.isFile()) {
 				// Diff is readonly since the diff is only computed at the beginning once
-				return new NativeFileAccessor(uri, uri.scheme === "hexdiff" ? true : isReadonly, fs);
+				return withHexDecode(
+					new NativeFileAccessor(uri, uri.scheme === "hexdiff" ? true : isReadonly, fs),
+				);
 			}
 		} catch {
 			// probably not node.js, or file does not exist
 		}
 	}
 
-	return new SimpleFileAccessor(uri);
+	return withHexDecode(new SimpleFileAccessor(uri));
 };
+
+class HexDecodedFileAccessor implements FileAccessor {
+	public readonly uri: string;
+	public readonly pageSize: number;
+	public readonly isReadonly: boolean;
+	public readonly supportsIncremetalAccess = false;
+
+	private decodedContents?: Uint8Array;
+	public hexBaseAddress?: number;
+
+	constructor(private readonly inner: FileAccessor) {
+		this.uri = inner.uri;
+		this.pageSize = inner.pageSize;
+		this.isReadonly = inner.isReadonly ?? false;
+		console.log("[HexDecoder] Initialized for file:", this.uri);
+	}
+
+	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable {
+		return this.inner.watch(() => {
+			this.invalidate();
+			onDidChange();
+		}, onDidDelete);
+	}
+
+	async getSize(): Promise<number | undefined> {
+		return (await this.getDecodedContents()).byteLength;
+	}
+
+	async read(offset: number, target: Uint8Array): Promise<number> {
+		const data = await this.getDecodedContents();
+		if (offset >= data.length) {
+			return 0;
+		}
+
+		const cpy = Math.min(target.length, data.length - offset);
+		target.set(data.subarray(offset, offset + cpy));
+		return cpy;
+	}
+
+	async writeBulk(ops: readonly FileWriteOp[]): Promise<void> {
+		const currentData = await this.getDecodedContents();
+		const data = new Uint8Array(currentData.length);
+		data.set(currentData);
+
+		for (const { data: writeData, offset } of ops) {
+			data.set(writeData, offset);
+		}
+
+		await this.writeDataAsHex(data);
+		this.decodedContents = data;
+	}
+
+	async writeStream(
+		stream: AsyncIterable<Uint8Array>,
+		_cancellation?: vscode.CancellationToken,
+	): Promise<void> {
+		const chunks: Uint8Array[] = [];
+		for await (const chunk of stream) {
+			chunks.push(chunk);
+		}
+
+		let totalLength = 0;
+		for (const chunk of chunks) {
+			totalLength += chunk.byteLength;
+		}
+
+		const data = new Uint8Array(totalLength);
+		let offset = 0;
+		for (const chunk of chunks) {
+			data.set(chunk, offset);
+			offset += chunk.byteLength;
+		}
+
+		await this.writeDataAsHex(data);
+		this.decodedContents = data;
+	}
+
+	private async writeDataAsHex(data: Uint8Array): Promise<void> {
+		const hexEncoded = this.encodeToHex(data);
+		const encoder = new TextEncoder();
+		await this.inner.writeStream(
+			(async function* () {
+				yield encoder.encode(hexEncoded);
+			})(),
+		);
+	}
+
+	private encodeToHex(data: Uint8Array): string {
+		// Encode as plain hex format with 16 bytes per line
+		const lines: string[] = [];
+		for (let i = 0; i < data.length; i += 16) {
+			const chunk = data.subarray(i, Math.min(i + 16, data.length));
+			const hexValues = Array.from(chunk)
+				.map(b => b.toString(16).padStart(2, "0").toUpperCase())
+				.join(" ");
+			lines.push(hexValues);
+		}
+		return lines.join("\n");
+	}
+
+	invalidate(): void {
+		this.decodedContents = undefined;
+		this.inner.invalidate?.();
+	}
+
+	dispose(): void {
+		this.decodedContents = undefined;
+		this.inner.dispose();
+	}
+
+	private async getDecodedContents(): Promise<Uint8Array> {
+		if (this.decodedContents) {
+			return this.decodedContents;
+		}
+
+		const size = (await this.inner.getSize()) ?? 0;
+		console.log("[HexDecoder] Reading file size:", size);
+		const source = new Uint8Array(size);
+		let offset = 0;
+		while (offset < source.length) {
+			const read = await this.inner.read(offset, source.subarray(offset));
+			if (read <= 0) {
+				break;
+			}
+			offset += read;
+		}
+
+		const loaded = offset === source.length ? source : source.slice(0, offset);
+		console.log("[HexDecoder] Loaded bytes:", loaded.length, "Attempting hex decode...");
+		const result = tryDecodeHexEncodedText(loaded);
+		if (result) {
+			console.log(
+				"[HexDecoder] Decode result:",
+				`Success (${result.data.length} bytes)${result.baseAddress !== undefined ? `, baseAddress: 0x${result.baseAddress.toString(16)}` : ""}`,
+			);
+			this.hexBaseAddress = result.baseAddress;
+			this.decodedContents = result.data;
+		} else {
+			console.log("[HexDecoder] Decode result: Failed, using original");
+			this.decodedContents = loaded;
+		}
+		return this.decodedContents;
+	}
+}
 
 class FileHandleContainer {
 	private borrowQueue: ((h: fs.promises.FileHandle | Error) => Promise<void>)[] = [];
