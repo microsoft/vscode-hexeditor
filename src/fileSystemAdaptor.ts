@@ -5,7 +5,7 @@ import type fs from "fs";
 import type os from "os";
 import * as vscode from "vscode";
 import { FileAccessor, FileWriteOp } from "../shared/fileAccessor";
-import { tryDecodeHexEncodedText } from "./hexFormat";
+import { encodeToIntelHex, tryDecodeHexEncodedText } from "./hexFormat";
 
 declare function require(_name: "fs"): typeof fs;
 declare function require(_name: "os"): typeof os;
@@ -144,26 +144,21 @@ class HexDecodedFileAccessor implements FileAccessor {
 	}
 
 	private async writeDataAsHex(data: Uint8Array): Promise<void> {
+		console.log("[HexDecoder] Writing", data.length, "bytes as Intel HEX format");
 		const hexEncoded = this.encodeToHex(data);
+		console.log("[HexDecoder] Encoded to", hexEncoded.length, "character Intel HEX");
 		const encoder = new TextEncoder();
 		await this.inner.writeStream(
 			(async function* () {
 				yield encoder.encode(hexEncoded);
 			})(),
 		);
+		console.log("[HexDecoder] Write completed successfully");
 	}
 
 	private encodeToHex(data: Uint8Array): string {
-		// Encode as plain hex format with 16 bytes per line
-		const lines: string[] = [];
-		for (let i = 0; i < data.length; i += 16) {
-			const chunk = data.subarray(i, Math.min(i + 16, data.length));
-			const hexValues = Array.from(chunk)
-				.map(b => b.toString(16).padStart(2, "0").toUpperCase())
-				.join(" ");
-			lines.push(hexValues);
-		}
-		return lines.join("\n");
+		// Encode as Intel HEX format, preserving the original base address
+		return encodeToIntelHex(data, this.hexBaseAddress);
 	}
 
 	invalidate(): void {
