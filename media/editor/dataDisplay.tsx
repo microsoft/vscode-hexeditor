@@ -318,6 +318,7 @@ const DataRows: React.FC = () => {
 	const showDecodedText = useRecoilValue(select.showDecodedText);
 	const dimensions = useRecoilValue(select.dimensions);
 	const fileSize = useRecoilValue(select.fileSize) ?? Infinity;
+	const baseAddress = useRecoilValue(select.baseAddress);
 
 	const displayedBytes = select.getDisplayedBytes(dimensions, columnWidth);
 	const dataPageSize = useRecoilValue(select.dataPageSize);
@@ -329,7 +330,11 @@ const DataRows: React.FC = () => {
 
 	const rows: React.ReactChild[] = [];
 	// i === startPageStartsAt so that we always show at least 1 page, allowing users to append to empty files (#534)
-	for (let i = startPageStartsAt; i <= endPageStartsAt && (i === startPageStartsAt || i < fileSize); i += dataPageSize) {
+	for (
+		let i = startPageStartsAt;
+		i <= endPageStartsAt && (i === startPageStartsAt || i < fileSize);
+		i += dataPageSize
+	) {
 		rows.push(
 			<DataPage
 				key={i}
@@ -342,6 +347,7 @@ const DataRows: React.FC = () => {
 				showDecodedText={showDecodedText}
 				fileSize={fileSize}
 				dimensions={dimensions}
+				baseAddress={baseAddress}
 			/>,
 		);
 	}
@@ -389,6 +395,7 @@ interface IDataPageProps {
 	fileSize: number;
 	showDecodedText: boolean;
 	dimensions: select.IDimensions;
+	baseAddress: number;
 }
 
 const DataPage: React.FC<IDataPageProps> = props => (
@@ -407,6 +414,7 @@ const generateRows = (
 	let row = (props.rowsStart - props.pageStart) / props.columnWidth;
 	const lastRowIndex = props.columnWidth * Math.floor(props.fileSize / props.columnWidth);
 	for (let i = props.rowsStart; i < props.rowsEnd && i <= lastRowIndex; i += props.columnWidth) {
+		const displayAddress = (i + props.baseAddress).toString(16).padStart(8, "0");
 		rows.push(
 			<div
 				key={i}
@@ -414,7 +422,7 @@ const generateRows = (
 				style={{ top: `${row++ * props.dimensions.rowPxHeight}px` }}
 			>
 				<DataCellGroup>
-					<Address>{i.toString(16).padStart(8, "0")}</Address>
+					<Address>{displayAddress}</Address>
 				</DataCellGroup>
 				{fn(i, i === lastRowIndex)}
 			</div>,

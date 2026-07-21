@@ -200,6 +200,11 @@ export const showDecodedText = selector({
 	get: ({ get }) => get(editorSettings).showDecodedText,
 });
 
+export const baseAddress = selector({
+	key: "baseAddress",
+	get: ({ get }) => get(readyQuery).initialOffset,
+});
+
 // Atom used to invalidate data when a reload is requested.
 const reloadGeneration = atom({
 	key: "reloadGeneration",

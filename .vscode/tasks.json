@@ -15,6 +15,70 @@
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "Build VSIX",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"compile"
+			],
+			"problemMatcher": "$tsc",
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"runOptions": {
+				"runOn": "folderOpen": false
+			}
+		},
+		{
+			"label": "Package VSIX",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"@vscode/vsce",
+				"package"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"dependsOn": [
+				"Build VSIX"
+			],
+			"runOptions": {
+				"runOn": "folderOpen": false
+			},
+			"group": {
+				"kind": "build"
+			}
+		},
+		{
+			"label": "ReInstall VSIX and Restart",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-Command",
+				"code --uninstall-extension ms-vscode.hexeditor; Start-Sleep -Seconds 2; $vsixFile = Get-ChildItem -Filter 'hexeditor-*.vsix' -File | Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1; if ($vsixFile) { code --install-extension $vsixFile.FullName; Write-Host \"Extension installed from $($vsixFile.Name)\"; Start-Sleep -Seconds 2; code } else { Write-Error \"No VSIX file found\" }"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"dependsOn": [
+				"Package VSIX"
+			],
+			"runOptions": {
+				"runOn": "folderOpen": false
+			},
+			"group": {
+				"kind": "build"
+			}
 		}
 	]
 }

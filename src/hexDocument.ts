@@ -74,7 +74,14 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 				? await diffModelBuilder.setModel(queries.side, model).build()
 				: undefined;
 
-		return { document: new HexDocument(model, isLargeFile, baseAddress, diffModel), accessor };
+		// Check if this is a .hex file
+		const filename = uri.fsPath || uri.path;
+		const isHexFile = /\.hex$/i.test(filename);
+
+		return {
+			document: new HexDocument(model, isLargeFile, baseAddress, diffModel, isHexFile),
+			accessor,
+		};
 	}
 
 	// Last save time
@@ -93,8 +100,11 @@ export class HexDocument extends Disposable implements vscode.CustomDocument {
 		public readonly isLargeFile: boolean,
 		public readonly baseAddress: number,
 		private diffModel?: HexDiffModel,
+		isHexFile: boolean = false,
 	) {
 		super();
+		// Default to Replace mode for .hex files, Insert for others
+		this._editMode = isHexFile ? HexDocumentEditOp.Replace : HexDocumentEditOp.Insert;
 	}
 
 	/**

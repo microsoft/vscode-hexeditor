@@ -20,23 +20,14 @@ export const accessFile = async (
 	console.log("[HexDecoder] accessFile called for:", filename);
 	const shouldDecodeHex = /\.hex$/i.test(filename);
 	console.log("[HexDecoder] shouldDecodeHex:", shouldDecodeHex);
-	const withHexDecode = (accessor: FileAccessor) =>
-		shouldDecodeHex ? new HexDecodedFileAccessor(accessor) : accessor;
 
+	let baseAccessor: FileAccessor;
 	if (uri.scheme === "untitled") {
-		return withHexDecode(new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array()));
-	}
-
-	if (uri.scheme === "vscode-debug-memory") {
+		baseAccessor = new UntitledFileAccessor(uri, untitledDocumentData ?? new Uint8Array());
+	} else if (uri.scheme === "vscode-debug-memory") {
 		const { permissions = 0 } = await vscode.workspace.fs.stat(uri);
-		return withHexDecode(
-			new DebugFileAccessor(uri, !!(permissions & vscode.FilePermission.Readonly)),
-		);
-	}
-
-	// try to use native file access for local files to allow large files to be handled efficiently
-	// todo@connor4312/lramos: push forward extension host API for this.
-	if (uri.scheme === "file" || uri.scheme === "hexdiff") {
+		baseAccessor = new DebugFileAccessor(uri, !!(permissions & vscode.FilePermission.Readonly));
+	} else if (uri.scheme === "file" || uri.scheme === "hexdiff") {
 		try {
 			// eslint-disable @typescript-eslint/no-var-requires
 			const fs = require("fs");
@@ -55,16 +46,29 @@ export const accessFile = async (
 
 			if (fileStats.isFile()) {
 				// Diff is readonly since the diff is only computed at the beginning once
-				return withHexDecode(
-					new NativeFileAccessor(uri, uri.scheme === "hexdiff" ? true : isReadonly, fs),
+				baseAccessor = new NativeFileAccessor(
+					uri,
+					uri.scheme === "hexdiff" ? true : isReadonly,
+					fs,
 				);
+			} else {
+				baseAccessor = new SimpleFileAccessor(uri);
 			}
 		} catch {
 			// probably not node.js, or file does not exist
+			baseAccessor = new SimpleFileAccessor(uri);
 		}
+	} else {
+		baseAccessor = new SimpleFileAccessor(uri);
 	}
 
-	return withHexDecode(new SimpleFileAccessor(uri));
+	if (shouldDecodeHex) {
+		const hexAccessor = new HexDecodedFileAccessor(baseAccessor);
+		await hexAccessor.initialize();
+		return hexAccessor;
+	}
+
+	return baseAccessor;
 };
 
 class HexDecodedFileAccessor implements FileAccessor {
@@ -75,12 +79,21 @@ class HexDecodedFileAccessor implements FileAccessor {
 
 	private decodedContents?: Uint8Array;
 	public hexBaseAddress?: number;
+	private initPromise?: Promise<void>;
 
 	constructor(private readonly inner: FileAccessor) {
 		this.uri = inner.uri;
 		this.pageSize = inner.pageSize;
 		this.isReadonly = inner.isReadonly ?? false;
 		console.log("[HexDecoder] Initialized for file:", this.uri);
+	}
+
+	async initialize(): Promise<void> {
+		if (this.initPromise) {
+			return this.initPromise;
+		}
+		this.initPromise = this.getDecodedContents().then(() => {});
+		return this.initPromise;
 	}
 
 	watch(onDidChange: () => void, onDidDelete: () => void): vscode.Disposable {
