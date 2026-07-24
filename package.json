@@ -20,7 +20,7 @@
     "Other"
   ],
   "icon": "icon.png",
-	"activationEvents": [],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "browser": "./dist/web/extension.js",
   "l10n": "./l10n",
@@ -159,6 +159,11 @@
         "command": "hexEditor.compareSelected",
         "category": "%name%",
         "title": "%hexEditor.compareSelected%"
+      },
+      {
+        "command": "hexEditor.about",
+        "category": "%name%",
+        "title": "%hexEditor.about%"
       }
     ],
     "viewsContainers": {

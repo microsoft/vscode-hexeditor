@@ -1,5 +1,5 @@
 /*---------------------------------------------------------
- * Copyright (C) Microsoft Corporation. All rights reserved.
+ * Copyright (C) shreyes shalgar. All rights reserved.
  *--------------------------------------------------------*/
 
 import { bulkhead } from "cockatiel";
@@ -50,9 +50,7 @@ export interface HexDocumentEmptyInsertEdit extends GenericHexDocumentEdit {
 }
 
 export type HexDocumentEdit =
-	| HexDocumentInsertEdit
-	| HexDocumentDeleteEdit
-	| HexDocumentReplaceEdit;
+	HexDocumentInsertEdit | HexDocumentDeleteEdit | HexDocumentReplaceEdit;
 
 /**
  * Reference returned from a hexdocument edit. Undo and redo return the

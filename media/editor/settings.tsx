@@ -34,6 +34,17 @@ const SettingsContent: React.FC = () => (
 	<div className={style.content}>
 		<TextCheckbox />
 		<ColumnWidth />
+		<div
+			style={{
+				fontSize: "11px",
+				opacity: 0.6,
+				marginTop: "12px",
+				paddingTop: "8px",
+				borderTop: "1px solid var(--vscode-panel-border)",
+			}}
+		>
+			Hex Editor by Shreyes Shalgar
+		</div>
 	</div>
 );
 

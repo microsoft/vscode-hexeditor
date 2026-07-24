@@ -1,5 +1,5 @@
 /*---------------------------------------------------------
- * Copyright (C) Microsoft Corporation. All rights reserved.
+ * Copyright (C) shreyes shalgar. All rights reserved.
  *--------------------------------------------------------*/
 
 export const binarySearch =

@@ -1,5 +1,5 @@
 /*---------------------------------------------------------
- * Copyright (C) Microsoft Corporation. All rights reserved.
+ * Copyright (C) shreyes shalgar. All rights reserved.
  *--------------------------------------------------------*/
 
 import { HexDecorator } from "./decorators";
@@ -73,6 +73,7 @@ export interface ICodeSettings {
 export interface ReadyResponseMessage {
 	type: MessageType.ReadyResponse;
 	initialOffset: number;
+	baseAddress: number;
 	pageSize: number;
 	edits: ISerializedEdits;
 	editorSettings: IEditorSettings;

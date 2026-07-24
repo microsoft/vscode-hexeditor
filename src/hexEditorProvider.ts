@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+// Copyright (c) shreyes shalgar.
 // Licensed under the MIT license.
 
 import { TelemetryReporter } from "@vscode/extension-telemetry";
@@ -329,7 +329,8 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 			case MessageType.ReadyRequest:
 				return {
 					type: MessageType.ReadyResponse,
-					initialOffset: document.baseAddress,
+					initialOffset: 0,
+					baseAddress: document.baseAddress,
 					editorSettings: this.readEditorSettings(),
 					codeSettings: this.readCodeSettings(),
 					edits: serializeEdits(document.edits),
@@ -381,13 +382,11 @@ export class HexEditorProvider implements vscode.CustomEditorProvider<HexDocumen
 				const bytes = await Promise.all(
 					message.deletes.map(d => document.readBufferWithEdits(d.start, d.end - d.start)),
 				);
-				const edits = bytes.map(
-					(e, i): HexDocumentEdit => ({
-						op: HexDocumentEditOp.Delete,
-						previous: e,
-						offset: message.deletes[i].start,
-					}),
-				);
+				const edits = bytes.map((e, i): HexDocumentEdit => ({
+					op: HexDocumentEditOp.Delete,
+					previous: e,
+					offset: message.deletes[i].start,
+				}));
 				messaging.sendEvent({
 					type: MessageType.SetEdits,
 					edits: serializeEdits(edits),

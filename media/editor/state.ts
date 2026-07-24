@@ -1,25 +1,25 @@
 /*---------------------------------------------------------
- * Copyright (C) Microsoft Corporation. All rights reserved.
+ * Copyright (C) shreyes shalgar. All rights reserved.
  *--------------------------------------------------------*/
 
 import { atom, DefaultValue, selector, selectorFamily } from "recoil";
 import { HexDecorator, HexDecoratorType } from "../../shared/decorators";
 import {
-	buildEditTimeline,
-	HexDocumentEdit,
-	HexDocumentEditOp,
-	HexDocumentEmptyInsertEdit,
-	readUsingRanges,
+    buildEditTimeline,
+    HexDocumentEdit,
+    HexDocumentEditOp,
+    HexDocumentEmptyInsertEdit,
+    readUsingRanges,
 } from "../../shared/hexDocumentModel";
 import {
-	FromWebviewMessage,
-	InspectorLocation,
-	MessageHandler,
-	MessageType,
-	ReadRangeResponseMessage,
-	ReadyResponseMessage,
-	SearchResultsWithProgress,
-	ToWebviewMessage,
+    FromWebviewMessage,
+    InspectorLocation,
+    MessageHandler,
+    MessageType,
+    ReadRangeResponseMessage,
+    ReadyResponseMessage,
+    SearchResultsWithProgress,
+    ToWebviewMessage,
 } from "../../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../../shared/serialization";
 import { binarySearch } from "../../shared/util/binarySearch";
@@ -202,7 +202,7 @@ export const showDecodedText = selector({
 
 export const baseAddress = selector({
 	key: "baseAddress",
-	get: ({ get }) => get(readyQuery).initialOffset,
+	get: ({ get }) => get(readyQuery).baseAddress,
 });
 
 // Atom used to invalidate data when a reload is requested.

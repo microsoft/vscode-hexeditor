@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+// Copyright (c) shreyes shalgar.
 // Licensed under the MIT license.
 
 import { Disposable } from "vscode";

@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+// Copyright (c) shreyes shalgar.
 // Licensed under the MIT license.
 
 import { TelemetryReporter } from "@vscode/extension-telemetry";
@@ -107,6 +107,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	const aboutCommand = vscode.commands.registerCommand("hexEditor.about", () => {
+		vscode.window.showInformationMessage(
+			"Hex Editor by shreyes shalgar • A lightweight hex editor for VS Code",
+		);
+	});
+
 	const compareSelectedCommand = vscode.commands.registerCommand(
 		"hexEditor.compareSelected",
 		async (...args) => {
@@ -131,10 +137,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
 	context.subscriptions.push(copyOffsetAsDec, copyOffsetAsHex);
+	context.subscriptions.push(aboutCommand);
 	context.subscriptions.push(compareSelectedCommand);
 	context.subscriptions.push(
 		vscode.workspace.registerFileSystemProvider("hexdiff", new HexDiffFSProvider(), {
-			isCaseSensitive: typeof process !== 'undefined' && process.platform !== 'win32' && process.platform !== 'darwin',
+			isCaseSensitive:
+				typeof process !== "undefined" &&
+				process.platform !== "win32" &&
+				process.platform !== "darwin",
 		}),
 	);
 	context.subscriptions.push(
