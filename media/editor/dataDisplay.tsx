@@ -896,12 +896,15 @@ function dedicatedGlyphOrElse(byte: number, defaultCharacter: string): string {
  * (see https://github.com/sharkdp/hexyl/pull/247)
  */
 function asBraillePattern(byte: number): string {
-	// Braille bit positions <=> byte bit positions:
-	// 0 3 <=> 0 1
-	// 1 4 <=> 2 3
-	// 2 5 <=> 4 5
-	// 6 7 <=> 6 7
-	const brailleBits: number[] = [0, 3, 1, 4, 2, 5, 6, 7];
+	/* Maps bit positions to Braille bit positions:
+	 * - Maps left/right nibbles to left/right Braille columns
+	 * - Least significant bit down, most significant bit up
+	 * (bit) 7 3 <=> 0 3 (braille bit)
+	 *       6 2 <=> 1 4
+	 *       5 1 <=> 2 5
+	 *       4 0 <=> 6 7
+	 */
+	const brailleBits: number[] = [7, 5, 4, 3, 6, 2, 1, 0];
 
 	let brailleCharCode = 0x2800;
 	for (let bit = 0; bit < 8; bit++) {
