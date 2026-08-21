@@ -78,7 +78,7 @@ export const DataInspectorAside: React.FC<{ onInspecting?(isInspecting: boolean)
 	);
 };
 
-const lookahead = 8;
+const lookahead = 16;
 
 /** Inner contents of the data inspector, reused between the hover and aside inspector views. */
 const InspectorContents: React.FC<{
