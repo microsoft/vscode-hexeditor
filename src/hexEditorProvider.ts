@@ -9,6 +9,7 @@ import {
 	HexDocumentEditReference,
 } from "../shared/hexDocumentModel";
 import {
+	ColorScheme,
 	CopyFormat,
 	Endianness,
 	ExtensionHostMessageHandler,
@@ -16,10 +17,14 @@ import {
 	ICodeSettings,
 	IEditorSettings,
 	InspectorLocation,
+	IStyleSettings,
 	MessageHandler,
 	MessageType,
+	NonAsciiStyleCharacter,
+	NonPrintableAsciiStyleCharacter,
 	PasteMode,
-	ToWebviewMessage,
+	PrintableAsciiStyleCharacter,
+	ToWebviewMessage
 } from "../shared/protocol";
 import { deserializeEdits, serializeEdits } from "../shared/serialization";
 import { ILocalizedStrings, placeholder1 } from "../shared/strings";
@@ -31,11 +36,20 @@ import { HexEditorRegistry } from "./hexEditorRegistry";
 import { ISearchRequest, LiteralSearchRequest, RegexSearchRequest } from "./searchRequest";
 import { flattenBuffers, getBaseName, getCorrectArrayBuffer, randomString } from "./util";
 
+const defaultStyleSettings: Readonly<IStyleSettings> = {
+	byteColorScheme: ColorScheme.Default,
+	decodedTextColorScheme: ColorScheme.Default,
+	nonPrintableAsciiCharacter: NonPrintableAsciiStyleCharacter.Dot,
+	printableAsciiCharacter: PrintableAsciiStyleCharacter.Ascii,
+	nonAsciiCharacter: NonAsciiStyleCharacter.Dot
+};
+
 const defaultEditorSettings: Readonly<IEditorSettings> = {
 	columnWidth: 16,
 	copyType: CopyFormat.HexOctets,
 	showDecodedText: true,
 	defaultEndianness: Endianness.Little,
+	style: defaultStyleSettings,
 	inspectorType: InspectorLocation.Aside,
 };
 
