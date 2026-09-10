@@ -120,6 +120,12 @@
     ],
     "commands": [
       {
+        "command": "hexEditor.reopenFile",
+        "category": "%name%",
+        "title": "%hexEditor.reopenFile%",
+        "icon": "$(file-binary)"
+      },
+      {
         "command": "hexEditor.openFile",
         "category": "%name%",
         "title": "%hexEditor.openFile%",
@@ -198,7 +204,7 @@
       ],
       "editor/title": [
         {
-          "command": "hexEditor.openFile",
+          "command": "hexEditor.reopenFile",
           "group": "navigation@1",
           "when": "activeEditor && config.hexeditor.showOpenFileButton"
         }
@@ -221,6 +227,11 @@
         }
       ],
       "explorer/context": [
+        {
+          "command": "hexEditor.openFile",
+          "group": "2_open",
+          "when": "!explorerResourceIsFolder"
+        },
         {
           "command": "hexEditor.compareSelected",
           "group": "3_compare@30",
