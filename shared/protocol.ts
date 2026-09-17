@@ -58,12 +58,52 @@ export const enum InspectorLocation {
 	Sidebar = "sidebar",
 }
 
+export const enum ColorScheme {
+	Default = "default",
+    RainbowDark = "rainbow",
+    RainbowLight = "rainbowLight",
+    CategoriesDark = "categories",
+    CategoriesLight = "categoriesLight",
+	Gradient = "gradient"
+}
+
+export const enum NonPrintableAsciiStyleCharacter {
+	Dot = "dot",
+	Middot = "middot",
+	Bullet = "bullet",
+	Cross = "cross",
+	Symbol = "symbol",
+	Braille = "braille"
+}
+
+export const enum PrintableAsciiStyleCharacter {
+	Ascii = "ascii",
+	Braille = "braille"
+}
+
+export const enum NonAsciiStyleCharacter {
+	Dot = "dot",
+	Middot = "middot",
+	Bullet = "bullet",
+	Cross = "cross",
+	Braille = "braille"
+}
+
+export interface IStyleSettings {
+	byteColorScheme: ColorScheme;
+	decodedTextColorScheme: ColorScheme;
+	nonPrintableAsciiCharacter: NonPrintableAsciiStyleCharacter;
+	printableAsciiCharacter: PrintableAsciiStyleCharacter;
+	nonAsciiCharacter: NonAsciiStyleCharacter;
+}
+
 export interface IEditorSettings {
 	copyType: CopyFormat;
 	showDecodedText: boolean;
 	columnWidth: number;
 	inspectorType: InspectorLocation;
 	defaultEndianness: Endianness;
+	style: IStyleSettings;
 }
 
 export interface ICodeSettings {

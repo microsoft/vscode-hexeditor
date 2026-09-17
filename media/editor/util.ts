@@ -4,7 +4,6 @@
 // Assorted helper functions
 
 import { HexDecoratorType } from "../../shared/decorators";
-import { Range } from "../../shared/util/range";
 import _style from "./util.css";
 
 /**
@@ -42,46 +41,6 @@ export const clsx = (...classes: (string | false | undefined | null)[]): string 
 	}
 
 	return out;
-};
-
-/**
- * @description Checks if the given number is in any of the ranges
- * @param {number} num The number to use when checking the ranges
- * @param {Range[]} ranges The ranges to check the number against
- * @returns {boolean} True if the number is in any of the ranges, false otherwise
- */
-export function withinAnyRange(num: number, ranges: Range[]): boolean {
-	for (const range of ranges) {
-		if (range.includes(num)) {
-			return true;
-		}
-	}
-	return false;
-}
-
-/**
- * @description Creates a list of ranges containing the non renderable 8 bit char codes
- * @returns {Range[]} The ranges which represent the non renderable 8 bit char codes
- */
-export function generateCharacterRanges(): Range[] {
-	const ranges: Range[] = [];
-	ranges.push(new Range(0, 32));
-	ranges.push(new Range(127));
-	return ranges;
-}
-
-const nonPrintableAsciiRange = generateCharacterRanges();
-
-/**
- * Gets the ascii character for the byte, if it's printable.
- * @returns
- */
-export const getAsciiCharacter = (byte: number): string | undefined => {
-	if (withinAnyRange(byte, nonPrintableAsciiRange)) {
-		return undefined;
-	} else {
-		return String.fromCharCode(byte);
-	}
 };
 
 /**
