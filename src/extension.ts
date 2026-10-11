@@ -32,7 +32,13 @@ function reopenWithHexEditor() {
 		uri: vscode.Uri | undefined;
 	};
 	if (activeTabInput.uri) {
-		vscode.commands.executeCommand("vscode.openWith", activeTabInput.uri, "hexEditor.hexedit");
+		openWithHexEditor(activeTabInput.uri);
+	}
+}
+
+function openWithHexEditor(resource: vscode.Uri | undefined) {
+    if (resource) {
+        vscode.commands.executeCommand("vscode.openWith", resource, "hexEditor.hexedit");
 	}
 }
 
@@ -53,9 +59,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const telemetryReporter = new TelemetryReporter(configValues.aiKey);
 	context.subscriptions.push(telemetryReporter);
+	const reopenWithCommand = vscode.commands.registerCommand(
+		"hexEditor.reopenFile",
+		reopenWithHexEditor,
+	);
 	const openWithCommand = vscode.commands.registerCommand(
 		"hexEditor.openFile",
-		reopenWithHexEditor,
+		openWithHexEditor,
 	);
 	const goToOffsetCommand = vscode.commands.registerCommand("hexEditor.goToOffset", () => {
 		const first = registry.activeMessaging[Symbol.iterator]().next();
@@ -128,6 +138,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(selectBetweenOffsetsCommand);
 	context.subscriptions.push(copyAsCommand);
 	context.subscriptions.push(switchEditModeCommand);
+	context.subscriptions.push(reopenWithCommand);
 	context.subscriptions.push(openWithCommand);
 	context.subscriptions.push(telemetryReporter);
 	context.subscriptions.push(copyOffsetAsDec, copyOffsetAsHex);
