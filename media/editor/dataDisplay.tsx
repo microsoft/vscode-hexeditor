@@ -6,10 +6,15 @@ import { useRecoilValue, useSetRecoilState } from "recoil";
 import { HexDecorator } from "../../shared/decorators";
 import { EditRangeOp, HexDocumentEditOp } from "../../shared/hexDocumentModel";
 import {
+	ColorScheme,
 	CopyFormat,
 	DeleteAcceptedMessage,
 	InspectorLocation,
+	IStyleSettings,
 	MessageType,
+	NonAsciiStyleCharacter,
+	NonPrintableAsciiStyleCharacter,
+	PrintableAsciiStyleCharacter
 } from "../../shared/protocol";
 import { binarySearch } from "../../shared/util/binarySearch";
 import { Range } from "../../shared/util/range";
@@ -31,7 +36,6 @@ import { strings } from "./strings";
 import {
 	clamp,
 	clsx,
-	getAsciiCharacter,
 	getScrollDimensions,
 	HexDecoratorStyles,
 	parseHexDigit,
@@ -699,6 +703,7 @@ const DataRowContents: React.FC<{
 }> = ({ offset, width, showDecodedText, rawBytes, isRowWithInsertDataCell, decorators }) => {
 	let memoValue = "";
 	const ctx = useDisplayContext();
+	const styleSettings = useRecoilValue(select.editorSettings).style;
 	for (const byte of rawBytes) {
 		memoValue += "," + byte;
 	}
@@ -745,7 +750,10 @@ const DataRowContents: React.FC<{
 			bytes.push(
 				<DataCell
 					key={i}
-					className={clsx(decorator !== undefined && HexDecoratorStyles[decorator.type])}
+					className={clsx(
+						computeByteColorClass(value, styleSettings),
+						decorator !== undefined && HexDecoratorStyles[decorator.type]
+					)}
 					offset={boffset}
 					isChar={false}
 					isAppend={false}
@@ -756,7 +764,6 @@ const DataRowContents: React.FC<{
 			);
 
 			if (showDecodedText) {
-				const char = getAsciiCharacter(value);
 				chars.push(
 					<DataCell
 						key={i}
@@ -764,12 +771,12 @@ const DataRowContents: React.FC<{
 						isChar={true}
 						isAppend={false}
 						className={clsx(
-							char === undefined ? style.nonGraphicChar : undefined,
+							computeDecodedTextColorClass(value, styleSettings),
 							decorator !== undefined && HexDecoratorStyles[decorator.type],
 						)}
 						value={value}
 					>
-						{char === undefined ? "." : char}
+						{computeDecodedTextCharacter(value, styleSettings)}
 					</DataCell>,
 				);
 			}
@@ -785,3 +792,187 @@ const DataRowContents: React.FC<{
 		</>
 	);
 };
+
+const computeDecodedTextCharacter = (byte: number, styleSettings: IStyleSettings): string => {
+
+	// Non-printable ASCII
+	if ((byte <= 0x1F) || (byte === 0x7F)) {
+		switch (styleSettings.nonPrintableAsciiCharacter) {
+
+			case NonPrintableAsciiStyleCharacter.Dot:
+				return dedicatedGlyphOrElse(byte, '.');
+
+			// U+00B7 MIDDLE DOT
+			case NonPrintableAsciiStyleCharacter.Middot:
+				return dedicatedGlyphOrElse(byte, `\u00B7`);
+
+			// U+2022 BULLET
+			case NonPrintableAsciiStyleCharacter.Bullet:
+				return dedicatedGlyphOrElse(byte, '\u2022');
+
+			// U+00D7 MULTIPLICATION SIGN
+			case NonPrintableAsciiStyleCharacter.Cross:
+				return dedicatedGlyphOrElse(byte, '\u00D7');
+
+			// Control Pictures (U+2400..U+243F)
+			case NonPrintableAsciiStyleCharacter.Symbol:
+				return (byte === 0x7F) ? '\u2421' : String.fromCharCode(0x2400 + byte);
+
+			// Braille Patterns (U+2800..U+28FF)
+			case NonPrintableAsciiStyleCharacter.Braille:
+				return asBraillePattern(byte);
+		}
+	}
+
+	// Printable ASCII
+	if ((byte >= 0x20) && (byte < 0x7F)) {
+		switch (styleSettings.printableAsciiCharacter) {
+
+			case PrintableAsciiStyleCharacter.Ascii:
+				return String.fromCharCode(byte);
+
+			// Braille Patterns (U+2800..U+28FF)
+			case PrintableAsciiStyleCharacter.Braille:
+				return asBraillePattern(byte);
+		}
+	}
+
+	// Non-ASCII
+	switch (styleSettings.nonAsciiCharacter) {
+
+		case NonAsciiStyleCharacter.Dot:
+			return '.';
+
+		// U+00B7 MIDDLE DOT
+		case NonAsciiStyleCharacter.Middot:
+			return `\u00B7`;
+
+		// U+2022 BULLET
+		case NonAsciiStyleCharacter.Bullet:
+			return '\u2022';
+
+		// U+00D7 MULTIPLICATION SIGN
+		case NonAsciiStyleCharacter.Cross:
+			return '\u00D7';
+
+		// Braille Patterns (U+2800..U+28FF)
+		case NonAsciiStyleCharacter.Braille:
+			return asBraillePattern(byte);
+	}
+}
+
+function dedicatedGlyphOrElse(byte: number, defaultCharacter: string): string {
+	switch (byte) {
+
+		// NUL: U+22C4 Diamond Operator
+		case 0x00:
+			return '\u22C4';
+
+		// TAB "\t": U+21E5 (rightwards arrow to bar)
+		case 0x09:
+			return '\u21E5';
+
+		// LF "\n": U+2190 (leftwards arrow)
+		// DEL: U+2190 (leftwards arrow)
+		case 0x0A:
+		case 0x7F:
+			return '\u2190';
+
+		// CR "\r": U+21B5 (downwards arrow corner lefwards)
+		case 0x0D:
+			return '\u21B5';
+
+		// " ": U+00B7 Middle Dot
+		case 0x20:
+			return defaultCharacter !== `\u00B7` ? '\u00B7' : ' ';
+
+		default:
+			return defaultCharacter;
+	}
+}
+
+/*
+ * Braille glyph rendering inspired by aticu's contribution to Hexyl
+ * (see https://github.com/sharkdp/hexyl/pull/247)
+ */
+function asBraillePattern(byte: number): string {
+	/* Maps bit positions to Braille bit positions:
+	 * - Maps left/right nibbles to left/right Braille columns
+	 * - Least significant bit down, most significant bit up
+	 * (bit) 7 3 <=> 0 3 (braille bit)
+	 *       6 2 <=> 1 4
+	 *       5 1 <=> 2 5
+	 *       4 0 <=> 6 7
+	 */
+	const brailleBits: number[] = [7, 5, 4, 3, 6, 2, 1, 0];
+
+	let brailleCharCode = 0x2800;
+	for (let bit = 0; bit < 8; bit++) {
+		brailleCharCode |= (byte >> bit & 1) << brailleBits[bit];
+	}
+	return String.fromCharCode(brailleCharCode);
+}
+
+const computeByteColorClass = (byte: number, styleSettings: IStyleSettings): string | undefined => {
+
+	return computeColorClass(byte, styleSettings.byteColorScheme);
+}
+
+const computeDecodedTextColorClass = (byte: number, styleSettings: IStyleSettings): string | undefined => {
+
+	return computeColorClass(byte, styleSettings.decodedTextColorScheme)
+			// Falls back to legacy decoded text color style
+			?? ((byte < 0x20) || (byte >= 0x7F) ? style.nonGraphicChar : undefined);
+}
+
+const computeColorClass = (byte: number, colorScheme: ColorScheme): string | undefined => {
+
+	// CategoriesDark, CategoriesLight
+	if (colorScheme === ColorScheme.CategoriesDark
+			|| colorScheme === ColorScheme.CategoriesLight) {
+
+		const prefix = colorScheme === ColorScheme.CategoriesDark
+				? "colorSchemeCategoriesDark"
+				: "colorSchemeCategoriesLight";
+
+		return (byte === 0x00) ? style[`${prefix}00` as keyof typeof style]
+				: (byte <= 0x1F) ? style[`${prefix}AsciiNonGraphic` as keyof typeof style]
+				: (byte <= 0x7E) ? style[`${prefix}Ascii` as keyof typeof style]
+				: style[`${prefix}NonAscii` as keyof typeof style];
+	}
+
+	// RainbowDark, RainbowLight
+	if (colorScheme === ColorScheme.RainbowDark
+			|| colorScheme === ColorScheme.RainbowLight) {
+
+		const prefix = colorScheme === ColorScheme.RainbowDark
+				? "colorSchemeRainbowDark"
+				: "colorSchemeRainbowLight";
+
+		switch (byte) {
+			case 0x00:
+				return style[`${prefix}00` as keyof typeof style];
+			case 0xff:
+				return style[`${prefix}Ff` as keyof typeof style];
+			default: {
+				const highNibble = (byte >> 4).toString(16).toUpperCase();
+				return style[`${prefix}${highNibble}` as keyof typeof style];
+			}
+		}
+	}
+
+	// Gradient
+	if (colorScheme === ColorScheme.Gradient) {
+
+		const highNibble = (byte >> 4).toString(16);
+		const lowNibble = (byte & 0x0f).toString(16);
+		const suffix = (highNibble >= '0' && highNibble <= '9')
+				? highNibble + lowNibble.toUpperCase()
+				: highNibble.toUpperCase() + lowNibble.toLowerCase();
+		return style[`colorSchemeGradient${suffix}` as keyof typeof style];
+	}
+
+	// (Default)
+	return undefined;
+};
+

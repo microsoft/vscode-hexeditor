@@ -97,6 +97,98 @@
             "type": "boolean",
             "default": false,
             "description": "%hexeditor.showOpenFileButton%"
+          },
+          "hexeditor.style.byteColorScheme": {
+            "type": "string",
+            "enum": [
+              "default",
+              "rainbow",
+              "rainbowLight",
+              "categories",
+              "categoriesLight",
+              "gradient"
+            ],
+            "default": "gradient",
+            "description": "%hexeditor.style.byteColorScheme%",
+            "enumDescriptions": [
+              "%hexeditor.style.colorscheme.default%",
+              "%hexeditor.style.colorscheme.rainbow%",
+              "%hexeditor.style.colorscheme.rainbowLight%",
+              "%hexeditor.style.colorscheme.categories%",
+              "%hexeditor.style.colorscheme.categoriesLight%",
+              "%hexeditor.style.colorscheme.gradient%"
+            ]
+          },
+          "hexeditor.style.decodedTextColorScheme": {
+            "type": "string",
+            "enum": [
+              "default",
+              "rainbow",
+              "rainbowLight",
+              "categories",
+              "categoriesLight",
+              "gradient"
+            ],
+            "default": "default",
+            "description": "%hexeditor.style.decodedTextColorScheme%",
+            "enumDescriptions": [
+              "%hexeditor.style.colorscheme.default%",
+              "%hexeditor.style.colorscheme.rainbow%",
+              "%hexeditor.style.colorscheme.rainbowLight%",
+              "%hexeditor.style.colorscheme.categories%",
+              "%hexeditor.style.colorscheme.categoriesLight%",
+              "%hexeditor.style.colorscheme.gradient%"
+            ]
+          },
+          "hexeditor.style.nonPrintableAsciiCharacter": {
+            "type": "string",
+            "enum": [
+              "dot",
+              "middot",
+              "bullet",
+              "cross",
+              "symbol",
+              "braille"
+            ],
+            "default": "bullet",
+            "enumDescriptions": [
+              "%hexeditor.style.character.dot%",
+              "%hexeditor.style.character.middot%",
+              "%hexeditor.style.character.bullet%",
+              "%hexeditor.style.character.cross%",
+              "%hexeditor.style.character.symbol%",
+              "%hexeditor.style.character.braille%"
+            ]
+          },
+          "hexeditor.style.printableAsciiCharacter": {
+            "type": "string",
+            "enum": [
+              "ascii",
+              "braille"
+            ],
+            "default": "ascii",
+            "enumDescriptions": [
+              "%hexeditor.style.character.ascii%",
+              "%hexeditor.style.character.braille%"
+            ]
+          },
+          "hexeditor.style.nonAsciiCharacter": {
+            "type": "string",
+            "enum": [
+              "dot",
+              "middot",
+              "bullet",
+              "cross",
+              "braille"
+            ],
+            "default": "cross",
+            "enumDescriptions": [
+              "%hexeditor.style.character.dot%",
+              "%hexeditor.style.character.middot%",
+              "%hexeditor.style.character.bullet%",
+              "%hexeditor.style.character.cross%",
+              "%hexeditor.style.character.braille%"
+            ]
           }
         }
       }
