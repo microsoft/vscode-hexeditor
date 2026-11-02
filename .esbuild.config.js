@@ -1,6 +1,8 @@
 const esbuild = require("esbuild");
-const svgr = require("esbuild-plugin-svgr");
+const { transform } = require("@svgr/core");
+const svgrPluginJsx = require("@svgr/plugin-jsx");
 const css = require("esbuild-css-modules-plugin");
+const fs = require("node:fs/promises");
 
 const watch = process.argv.includes("--watch");
 const minify = !watch || process.argv.includes("--minify");
@@ -16,6 +18,22 @@ function build(options) {
 		}
 	})().catch(() => process.exit(1));
 }
+
+const svgr = {
+	name: "svgr",
+	setup(build) {
+		build.onLoad({ filter: /\.svg$/ }, async args => {
+			try {
+				return {
+					contents: await transform(await fs.readFile(args.path, "utf8"), { plugins: [svgrPluginJsx] }, { filePath: args.path }),
+					loader: "jsx",
+				};
+			} catch (error) {
+				throw new Error(`Failed to transform SVG '${args.path}': ${error instanceof Error ? error.message : String(error)}`);
+			}
+		});
+	},
+};
 
 // Build the editor provider
 build({
@@ -90,5 +108,5 @@ build({
 				"process.env.NODE_ENV": defineProd ? '"production"' : '"development"',
 			}
 		: undefined,
-	plugins: [svgr(), css({ v2: true, filter: /\.css$/i })],
+	plugins: [svgr, css({ v2: true, filter: /\.css$/i })],
 });

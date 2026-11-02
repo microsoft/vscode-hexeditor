@@ -254,6 +254,8 @@
     "test": "tsc --noEmit && node ./src/test/runTest.js"
   },
   "devDependencies": {
+    "@svgr/core": "^8.1.0",
+    "@svgr/plugin-jsx": "^8.1.0",
     "@types/chai": "^5",
     "@types/diff": "^5.2.1",
     "@types/mocha": "^10",
@@ -263,9 +265,8 @@
     "@types/vscode": "^1.89.0",
     "@vscode/test-electron": "^2.5.2",
     "chai": "^6",
-    "esbuild": "^0.25",
+    "esbuild": "^0.28",
     "esbuild-css-modules-plugin": "^3.1.0",
-    "esbuild-plugin-svgr": "^3",
     "eslint": "^9",
     "globals": "^16",
     "mocha": "^12.0.0",
