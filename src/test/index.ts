@@ -2,6 +2,7 @@ import Mocha from "mocha";
 
 const fileImports = [
 	() => import("./backup.test"),
+	() => import("./dataInspectorProperties.test"),
 	() => import("./hexDocumentModel.test"),
 	() => import("./searchRequest.test"),
 	() => import("./range.test"),
