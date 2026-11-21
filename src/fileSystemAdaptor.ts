@@ -424,13 +424,20 @@ const watchWorkspaceFile = (
 	onDidChange: () => void,
 	onDidDelete: () => void,
 ): vscode.Disposable => {
-	const base = uri.split("/");
-	const fileName = base.pop()!;
-	const pattern = new vscode.RelativePattern(vscode.Uri.parse(base.join("/")), fileName);
+	const target = vscode.Uri.parse(uri);
+	const slash = target.path.lastIndexOf("/");
+	const fileName = target.path.slice(slash + 1);
+	const folder = target.with({ path: target.path.slice(0, slash), query: "", fragment: "" });
 
-	const watcher = vscode.workspace.createFileSystemWatcher(pattern);
-	const l1 = watcher.onDidChange(onDidChange);
-	const l2 = watcher.onDidDelete(onDidDelete);
+	// Watch every direct child of the folder and filter by name, because a file
+	// name used as the glob pattern does not match itself when it contains glob
+	// characters such as "[" or "{".
+	const isTarget = (changed: vscode.Uri) =>
+		changed.path.slice(changed.path.lastIndexOf("/") + 1) === fileName;
+
+	const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, "*"));
+	const l1 = watcher.onDidChange(changed => isTarget(changed) && onDidChange());
+	const l2 = watcher.onDidDelete(changed => isTarget(changed) && onDidDelete());
 	return new vscode.Disposable(() => {
 		l1.dispose();
 		l2.dispose();

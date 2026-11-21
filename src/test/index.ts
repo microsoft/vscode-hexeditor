@@ -5,6 +5,7 @@ const fileImports = [
 	() => import("./hexDocumentModel.test"),
 	() => import("./searchRequest.test"),
 	() => import("./range.test"),
+	() => import("./fileWatcher.test"),
 ];
 
 export async function run(): Promise<void> {
