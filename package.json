@@ -255,7 +255,6 @@
   },
   "devDependencies": {
     "@types/chai": "^5",
-    "@types/diff": "^5.2.1",
     "@types/mocha": "^10",
     "@types/node": "^22",
     "@types/react": "^17.0.38",

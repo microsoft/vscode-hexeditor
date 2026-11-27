@@ -7,7 +7,7 @@ import { Range } from "./range";
  */
 export class MyersDiff {
 	public static lcs(original: Uint8Array, modified: Uint8Array) {
-		// the types in @types/diff are incomplete.
+		// diffArrays expects arrays rather than Uint8Array.
 		const changes: ArrayChange<any>[] | undefined = diffArrays(
 			original as any,
 			modified as any,
